@@ -31,7 +31,40 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load favourites for booking dropdown
     loadFavourites();
+    
+    // Load user's upcoming reservations
+    loadUserReservations();
 });
+
+/**
+ * Change date by offset (days)
+ */
+function changeDate(offset) {
+    const date = new Date(currentDate);
+    date.setDate(date.getDate() + offset);
+    currentDate = date.toISOString().split('T')[0];
+    
+    const dateSelector = document.getElementById('date-selector');
+    if (dateSelector) {
+        dateSelector.value = currentDate;
+    }
+    
+    loadAvailability();
+}
+
+/**
+ * Go to today's date
+ */
+function goToToday() {
+    currentDate = new Date().toISOString().split('T')[0];
+    
+    const dateSelector = document.getElementById('date-selector');
+    if (dateSelector) {
+        dateSelector.value = currentDate;
+    }
+    
+    loadAvailability();
+}
 
 /**
  * Load court availability for the selected date
@@ -59,9 +92,13 @@ function renderGrid(grid) {
     const gridBody = document.getElementById('grid-body');
     if (!gridBody) return;
     
-    // Time slots from 06:00 to 20:00
+    // Get current user ID from the booking dropdown
+    const bookingForSelect = document.getElementById('booking-for');
+    const currentUserId = bookingForSelect ? parseInt(bookingForSelect.querySelector('option')?.value) : null;
+    
+    // Time slots from 06:00 to 21:00
     const timeSlots = [];
-    for (let hour = 6; hour <= 20; hour++) {
+    for (let hour = 6; hour <= 21; hour++) {
         timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
     }
     
@@ -87,7 +124,16 @@ function renderGrid(grid) {
             } else if (slot.status === 'reserved') {
                 cellClass += ' bg-red-500 text-white text-xs';
                 cellContent = `Gebucht für ${slot.details.booked_for}<br>von ${slot.details.booked_by}`;
-                clickHandler = '';
+                
+                // Check if current user can cancel this reservation
+                const canCancel = currentUserId && (
+                    slot.details.booked_for_id === currentUserId || 
+                    slot.details.booked_by_id === currentUserId
+                );
+                
+                if (canCancel) {
+                    clickHandler = `onclick="handleReservationClick(${slot.details.reservation_id}, '${slot.details.booked_for}', '${time}')"`;
+                }
             } else if (slot.status === 'blocked') {
                 cellClass += ' bg-gray-400 text-white';
                 cellContent = 'Gesperrt';
@@ -101,6 +147,36 @@ function renderGrid(grid) {
     });
     
     gridBody.innerHTML = html;
+}
+
+/**
+ * Handle click on a reserved slot
+ */
+async function handleReservationClick(reservationId, bookedFor, time) {
+    const confirmed = confirm(`Möchten Sie die Buchung für ${bookedFor} um ${time} Uhr stornieren?`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/reservations/${reservationId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showSuccess('Buchung erfolgreich storniert');
+            loadAvailability(); // Reload grid
+            loadUserReservations(); // Reload user reservations list
+        } else {
+            showError(data.error || 'Fehler beim Stornieren der Buchung');
+        }
+    } catch (error) {
+        console.error('Error cancelling reservation:', error);
+        showError('Fehler beim Stornieren der Buchung');
+    }
 }
 
 /**
@@ -159,6 +235,7 @@ async function handleBookingSubmit(event) {
             showSuccess('Buchung erfolgreich erstellt!');
             closeBookingModal();
             loadAvailability(); // Reload grid
+            loadUserReservations(); // Reload user reservations list
         } else {
             showError(data.error || 'Fehler beim Erstellen der Buchung');
         }
@@ -175,11 +252,33 @@ async function loadFavourites() {
     const bookingForSelect = document.getElementById('booking-for');
     if (!bookingForSelect) return;
     
-    // Keep the current user option
-    const currentUserOption = bookingForSelect.querySelector('option');
-    
-    // In a full implementation, we would fetch favourites from the API
-    // For now, the dropdown will just show the current user
+    try {
+        // Get current user ID from the existing option
+        const currentUserOption = bookingForSelect.querySelector('option');
+        const currentUserId = currentUserOption ? currentUserOption.value : null;
+        
+        if (!currentUserId) return;
+        
+        // Fetch user's favourites
+        const response = await fetch(`/members/${currentUserId}/favourites`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Add favourites to dropdown
+            if (data.favourites && data.favourites.length > 0) {
+                data.favourites.forEach(fav => {
+                    const option = document.createElement('option');
+                    option.value = fav.id;
+                    option.textContent = fav.name;
+                    bookingForSelect.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading favourites:', error);
+        // Silently fail - user can still book for themselves
+    }
 }
 
 /**
@@ -253,6 +352,93 @@ async function cancelReservation(reservationId) {
             showSuccess('Buchung erfolgreich storniert');
             // Reload the page or update the list
             window.location.reload();
+        } else {
+            showError(data.error || 'Fehler beim Stornieren der Buchung');
+        }
+    } catch (error) {
+        console.error('Error cancelling reservation:', error);
+        showError('Fehler beim Stornieren der Buchung');
+    }
+}
+
+/**
+ * Load user's upcoming reservations
+ */
+async function loadUserReservations() {
+    const container = document.getElementById('user-reservations');
+    if (!container) return;
+    
+    try {
+        const response = await fetch('/reservations/?format=json');
+        const data = await response.json();
+        
+        if (response.ok && data.reservations && data.reservations.length > 0) {
+            // Sort by date and time
+            const sortedReservations = data.reservations.sort((a, b) => {
+                const dateCompare = a.date.localeCompare(b.date);
+                if (dateCompare !== 0) return dateCompare;
+                return a.start_time.localeCompare(b.start_time);
+            });
+            
+            // Show only next 5 reservations
+            const upcomingReservations = sortedReservations.slice(0, 5);
+            
+            container.innerHTML = upcomingReservations.map(res => `
+                <div class="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition-colors">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="font-semibold text-lg">Platz ${res.court_number}</span>
+                                <span class="text-gray-600">•</span>
+                                <span class="text-gray-700">${formatDateGerman(res.date)}</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mb-1">
+                                <span class="font-medium">Zeit:</span> ${res.start_time} - ${res.end_time} Uhr
+                            </div>
+                            <div class="text-gray-600 text-sm">
+                                <span class="font-medium">Gebucht für:</span> ${res.booked_for}
+                                ${res.booked_by !== res.booked_for ? `<span class="text-gray-500">(von ${res.booked_by})</span>` : ''}
+                            </div>
+                        </div>
+                        <button 
+                            onclick="cancelReservationFromDashboard(${res.id}, '${res.booked_for}', '${formatDateGerman(res.date)}', '${res.start_time}')"
+                            class="bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2 px-4 rounded transition-colors"
+                            title="Buchung stornieren">
+                            Stornieren
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="text-gray-500 text-center py-4">Keine kommenden Buchungen vorhanden.</p>';
+        }
+    } catch (error) {
+        console.error('Error loading user reservations:', error);
+        container.innerHTML = '<p class="text-red-500 text-center py-4">Fehler beim Laden der Buchungen</p>';
+    }
+}
+
+/**
+ * Cancel reservation from dashboard
+ */
+async function cancelReservationFromDashboard(reservationId, bookedFor, date, time) {
+    const confirmed = confirm(`Möchten Sie die Buchung für ${bookedFor} am ${date} um ${time} Uhr wirklich stornieren?`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/reservations/${reservationId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showSuccess('Buchung erfolgreich storniert');
+            loadUserReservations(); // Reload reservations list
+            loadAvailability(); // Reload grid if on same date
         } else {
             showError(data.error || 'Fehler beim Stornieren der Buchung');
         }

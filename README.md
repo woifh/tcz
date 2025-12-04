@@ -7,11 +7,13 @@ A comprehensive web-based court reservation system for tennis clubs, built with 
 ### For Members
 - **Court Reservations**: Book tennis courts with an intuitive visual grid interface
 - **Availability View**: See real-time court availability (available/reserved/blocked)
+- **One-Click Cancellation**: Cancel reservations directly from the dashboard by clicking on your bookings
 - **Favourites System**: Maintain a list of preferred playing partners for quick booking
+- **Booking on Behalf**: Book courts for yourself or any of your favourite members
 - **Email Notifications**: Receive German-language emails for all booking events
 - **Responsive Design**: Access from desktop, tablet, or mobile devices
 - **Flexible Booking**: Reserve courts for 1-hour slots between 06:00-21:00
-- **Booking Management**: View, modify, and cancel your reservations
+- **Booking Management**: View, modify, and cancel your reservations from multiple locations
 
 ### For Administrators
 - **Member Management**: Create, update, and delete member accounts
@@ -106,6 +108,44 @@ flask run
 ```
 
 Visit `http://localhost:5000` in your browser.
+
+## 🎯 Key User Workflows
+
+### Making a Reservation
+1. Log in to the system
+2. Select a date from the date picker on the dashboard
+3. Click on any green (available) slot in the grid
+4. Choose who to book for (yourself or a favourite)
+5. Click "Buchung bestätigen" to confirm
+6. The slot turns red and you receive a confirmation
+
+### Cancelling a Reservation
+**From Dashboard (Quick Method):**
+1. Navigate to the dashboard
+2. Find your reservation (red slot with your name)
+3. Click directly on the reservation
+4. Confirm the cancellation dialog
+5. The slot turns green (available) again
+
+**From Reservations Page:**
+1. Click "Meine Buchungen" in navigation
+2. Find the reservation in your list
+3. Click the cancel button
+4. Confirm cancellation
+
+### Managing Favourites
+1. Click "Meine Favoriten" in navigation
+2. Click "Favorit hinzufügen" button
+3. Select a member from the dropdown
+4. Click "Hinzufügen"
+5. The member appears in your favourites list
+6. Use favourites when booking to quickly select them
+
+### Booking for Others
+1. Add members to your favourites first
+2. When booking, select their name from "Gebucht für" dropdown
+3. They can view and cancel the reservation
+4. Both of you receive email notifications
 
 ## 📚 Documentation
 
@@ -229,11 +269,30 @@ The system sends German-language email notifications for:
 
 ## 🎨 User Interface
 
-- **Responsive Design**: Works on desktop, tablet, and mobile
-- **Color-Coded Grid**: Green (available), Red (reserved), Grey (blocked)
-- **Interactive Booking**: Click any available slot to book
+### Dashboard Features
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+- **Color-Coded Grid**: 
+  - 🟢 Green: Available slots (click to book)
+  - 🔴 Red: Reserved slots (click your own to cancel)
+  - ⚫ Grey: Blocked slots (maintenance/weather)
+- **Interactive Booking**: Click any available slot to open booking modal
+- **One-Click Cancellation**: Click your own reservations to cancel them instantly
+- **Smart Authorization**: Only your reservations are clickable for cancellation
 - **Real-Time Updates**: AJAX-based updates without page reload
 - **Touch-Friendly**: Optimized for mobile touch interactions
+
+### Booking Workflow
+1. **Select Date**: Choose date from date picker
+2. **View Availability**: See color-coded grid for all 6 courts
+3. **Book Court**: Click green slot → Select who to book for → Confirm
+4. **Cancel Booking**: Click your red slot → Confirm cancellation
+5. **Instant Feedback**: Grid updates immediately with success message
+
+### Favourites Management
+- **Dedicated Page**: "Meine Favoriten" in navigation
+- **Quick Access**: Add/remove favourite members
+- **Fast Booking**: Book courts for favourites without searching
+- **Visual List**: See all your favourites with email addresses
 
 ## 🚀 Deployment
 
@@ -292,6 +351,15 @@ For issues or questions:
 - Consult the deployment guide for platform-specific issues
 
 ## 🔄 Version History
+
+- **v1.1.0** - Enhanced User Experience (Current)
+  - ✨ One-click cancellation from dashboard grid
+  - ✨ Favourites management system with dedicated page
+  - ✨ Booking on behalf of favourite members
+  - ✨ Smart authorization for reservation actions
+  - ✨ Improved grid interactivity with visual feedback
+  - 🐛 Fixed unique constraint issue for cancelled reservations
+  - 📝 Enhanced documentation with user workflows
 
 - **v1.0.0** - Initial release
   - Complete booking system

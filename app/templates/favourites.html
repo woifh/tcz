@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Meine Favoriten - Tennisclub{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Meine Favoriten</h2>
+        <button onclick="showAddFavouriteForm()" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+            Favorit hinzufügen
+        </button>
+    </div>
+    
+    <p class="text-gray-600 mb-6">
+        Fügen Sie Mitglieder zu Ihren Favoriten hinzu, um schnell Buchungen für sie zu erstellen.
+    </p>
+    
+    <!-- Add Favourite Form (Hidden by default) -->
+    <div id="add-favourite-form" class="hidden bg-gray-50 p-6 rounded-lg mb-6">
+        <h3 class="text-lg font-semibold mb-4">Favorit hinzufügen</h3>
+        <form id="add-favourite-form-element" class="space-y-4">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Mitglied auswählen</label>
+                <select id="favourite-member-select" class="w-full border border-gray-300 rounded px-3 py-2" required>
+                    <option value="">-- Bitte wählen --</option>
+                </select>
+            </div>
+            <div class="flex gap-4">
+                <button type="submit" class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700">
+                    Hinzufügen
+                </button>
+                <button type="button" onclick="hideAddFavouriteForm()" class="bg-gray-300 text-gray-700 py-2 px-6 rounded hover:bg-gray-400">
+                    Abbrechen
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Favourites List -->
+    <div id="favourites-list" class="space-y-4">
+        <p class="text-center text-gray-500 py-8">Lade Favoriten...</p>
+    </div>
+    
+    <div class="mt-8">
+        <a href="{{ url_for('dashboard.index') }}" class="text-green-600 hover:underline">← Zurück zur Übersicht</a>
+    </div>
+</div>
+
+<script>
+const currentUserId = {{ current_user.id }};
+
+// Load favourites on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadFavourites();
+    loadAllMembers();
+});
+
+async function loadFavourites() {
+    try {
+        const response = await fetch(`/members/${currentUserId}/favourites`);
+        const data = await response.json();
+        
+        const listContainer = document.getElementById('favourites-list');
+        
+        if (response.ok && data.favourites && data.favourites.length > 0) {
+            listContainer.innerHTML = data.favourites.map(fav => `
+                <div class="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div>
+                        <h3 class="font-semibold text-lg">${fav.name}</h3>
+                        <p class="text-gray-600 text-sm">${fav.email}</p>
+                    </div>
+                    <button onclick="removeFavourite(${fav.id})" class="text-red-600 hover:text-red-900 font-semibold">
+                        Entfernen
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            listContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Keine Favoriten vorhanden. Fügen Sie Mitglieder hinzu, um schnell für sie zu buchen.</p>';
+        }
+    } catch (error) {
+        console.error('Error loading favourites:', error);
+        document.getElementById('favourites-list').innerHTML = '<p class="text-center text-red-500 py-8">Fehler beim Laden der Favoriten</p>';
+    }
+}
+
+async function loadAllMembers() {
+    try {
+        // Fetch all members
+        const membersResponse = await fetch('/members/all');
+        const membersData = await membersResponse.json();
+        
+        // Fetch current favourites
+        const favouritesResponse = await fetch(`/members/${currentUserId}/favourites`);
+        const favouritesData = await favouritesResponse.json();
+        
+        const select = document.getElementById('favourite-member-select');
+        
+        if (membersResponse.ok && membersData.members) {
+            // Create a set of favourite IDs for quick lookup
+            const favouriteIds = new Set(
+                favouritesData.favourites ? favouritesData.favourites.map(f => f.id) : []
+            );
+            
+            // Clear existing options except the first one
+            select.innerHTML = '<option value="">-- Bitte wählen --</option>';
+            
+            // Add only members who are not current user and not already favourites
+            membersData.members.forEach(member => {
+                if (member.id !== currentUserId && !favouriteIds.has(member.id)) {
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = `${member.name} (${member.email})`;
+                    select.appendChild(option);
+                }
+            });
+            
+            // Show message if no members available to add
+            if (select.options.length === 1) {
+                select.innerHTML = '<option value="">Alle Mitglieder sind bereits Favoriten</option>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading members:', error);
+    }
+}
+
+function showAddFavouriteForm() {
+    document.getElementById('add-favourite-form').classList.remove('hidden');
+}
+
+function hideAddFavouriteForm() {
+    document.getElementById('add-favourite-form').classList.add('hidden');
+    document.getElementById('add-favourite-form-element').reset();
+}
+
+document.getElementById('add-favourite-form-element').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const favouriteId = document.getElementById('favourite-member-select').value;
+    
+    if (!favouriteId) {
+        alert('Bitte wählen Sie ein Mitglied aus');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/members/${currentUserId}/favourites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ favourite_id: favouriteId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Favorit erfolgreich hinzugefügt!');
+            hideAddFavouriteForm();
+            loadFavourites();
+            loadAllMembers(); // Refresh the dropdown to remove the added member
+        } else {
+            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    } catch (error) {
+        alert('Fehler beim Hinzufügen des Favoriten');
+    }
+});
+
+async function removeFavourite(favouriteId) {
+    if (!confirm('Möchten Sie diesen Favoriten wirklich entfernen?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/members/${currentUserId}/favourites/${favouriteId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Favorit erfolgreich entfernt');
+            loadFavourites();
+            loadAllMembers(); // Refresh the dropdown to add the removed member back
+        } else {
+            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    } catch (error) {
+        alert('Fehler beim Entfernen des Favoriten');
+    }
+}
+</script>
+{% endblock %}

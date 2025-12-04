@@ -21,8 +21,8 @@ def list_reservations():
             query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             reservations = ReservationService.get_reservations_by_date(query_date)
             
-            # Format for JSON response
-            if request.accept_mimetypes.accept_json:
+            # Format for JSON response (only if explicitly requested via query param or content type)
+            if request.args.get('format') == 'json' or (request.is_json and request.accept_mimetypes.best == 'application/json'):
                 return jsonify({
                     'date': date_str,
                     'reservations': [
@@ -50,7 +50,8 @@ def list_reservations():
         # List user's own reservations
         reservations = ReservationService.get_member_active_reservations(current_user.id)
         
-        if request.accept_mimetypes.accept_json:
+        # Only return JSON if explicitly requested
+        if request.args.get('format') == 'json' or (request.is_json and request.accept_mimetypes.best == 'application/json'):
             return jsonify({
                 'reservations': [
                     {

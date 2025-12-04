@@ -49,9 +49,9 @@ def get_availability():
     blocks = BlockService.get_blocks_by_date(query_date)
     
     # Build availability grid
-    # Time slots from 06:00 to 20:00 (15 slots)
+    # Time slots from 06:00 to 21:00 (16 slots)
     time_slots = []
-    for hour in range(6, 21):
+    for hour in range(6, 22):
         time_slots.append(time(hour, 0))
     
     grid = []

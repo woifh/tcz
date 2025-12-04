@@ -28,6 +28,30 @@ def list_members():
     return render_template('members.html', members=members)
 
 
+@bp.route('/all', methods=['GET'])
+@login_required
+def get_all_members():
+    """Get all members (for favourites dropdown)."""
+    members = Member.query.order_by(Member.name).all()
+    return jsonify({
+        'members': [
+            {
+                'id': m.id,
+                'name': m.name,
+                'email': m.email
+            }
+            for m in members
+        ]
+    }), 200
+
+
+@bp.route('/favourites', methods=['GET'])
+@login_required
+def favourites_page():
+    """Show favourites management page."""
+    return render_template('favourites.html')
+
+
 @bp.route('/', methods=['POST'])
 @login_required
 @admin_required
@@ -176,6 +200,34 @@ def add_favourite(id):
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/<int:id>/favourites', methods=['GET'])
+@login_required
+def get_favourites(id):
+    """Get user's favourites."""
+    try:
+        member = Member.query.get_or_404(id)
+        
+        # Check authorization: user can only view own favourites
+        if member.id != current_user.id:
+            return jsonify({'error': 'Sie haben keine Berechtigung für diese Aktion'}), 403
+        
+        favourites = member.favourites.all()
+        
+        return jsonify({
+            'favourites': [
+                {
+                    'id': fav.id,
+                    'name': fav.name,
+                    'email': fav.email
+                }
+                for fav in favourites
+            ]
+        }), 200
+        
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 

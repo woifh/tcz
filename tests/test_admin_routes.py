@@ -8,7 +8,15 @@ from app.models import Member, Court, Reservation
 
 # Hypothesis strategies
 valid_emails = st.emails()
-valid_passwords = st.text(min_size=8, max_size=50, alphabet=st.characters(blacklist_characters='\x00'))
+# Exclude surrogate characters that can't be UTF-8 encoded
+valid_passwords = st.text(
+    min_size=8, 
+    max_size=50, 
+    alphabet=st.characters(
+        blacklist_characters='\x00',
+        blacklist_categories=('Cs',)  # Exclude surrogates
+    )
+)
 valid_names = st.text(min_size=1, max_size=100, alphabet=st.characters(
     whitelist_categories=('Lu', 'Ll', 'Nd', 'Zs'),
     blacklist_characters='\x00'

@@ -33,7 +33,7 @@ class Config:
     # Application settings
     COURTS_COUNT = 6
     BOOKING_START_HOUR = 6
-    BOOKING_END_HOUR = 21
+    BOOKING_END_HOUR = 22
     BOOKING_DURATION_HOURS = 1
     MAX_ACTIVE_RESERVATIONS = 2
 

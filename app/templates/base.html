@@ -14,6 +14,7 @@
             <div class="flex gap-4">
                 <a href="{{ url_for('dashboard.index') }}" class="hover:underline">Übersicht</a>
                 <a href="{{ url_for('reservations.list_reservations') }}" class="hover:underline">Meine Buchungen</a>
+                <a href="{{ url_for('members.favourites_page') }}" class="hover:underline">Meine Favoriten</a>
                 <span>{{ current_user.name }}</span>
                 <a href="{{ url_for('auth.logout') }}" class="hover:underline">Abmelden</a>
             </div>

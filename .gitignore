@@ -53,3 +53,9 @@ htmlcov/
 
 # Node modules (for Tailwind)
 node_modules/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+node_modules/

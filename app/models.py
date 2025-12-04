@@ -99,11 +99,18 @@ class Court(db.Model):
 
 
 class Reservation(db.Model):
-    """Reservation model representing court bookings."""
+    """Reservation model representing court bookings.
+    
+    Note: The unique constraint on (court_id, date, start_time) is implemented
+    as a partial unique index (unique_active_booking) that only applies to 
+    active reservations. This allows cancelled reservations to exist without
+    blocking new bookings for the same slot.
+    """
     
     __tablename__ = 'reservation'
     __table_args__ = (
-        db.UniqueConstraint('court_id', 'date', 'start_time', name='unique_booking'),
+        # Note: unique_booking constraint removed in favor of partial index
+        # See migration for unique_active_booking partial index
         db.Index('idx_reservation_date', 'date'),
         db.Index('idx_reservation_booked_for', 'booked_for_id'),
         db.Index('idx_reservation_booked_by', 'booked_by_id'),
