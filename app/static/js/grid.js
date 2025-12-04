@@ -8,18 +8,28 @@ import { generateTimeSlots, showError } from './utils.js';
  * Load court availability for the selected date
  */
 export async function loadAvailability(currentDate) {
+    console.log('Loading availability for date:', currentDate);
     try {
         const response = await fetch(`/courts/availability?date=${currentDate}`);
-        const data = await response.json();
+        console.log('Response status:', response.status);
         
-        if (response.ok) {
+        if (!response.ok) {
+            console.error('Response not OK:', response.status, response.statusText);
+            showError(`Fehler beim Laden: ${response.status}`);
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('Received data:', data);
+        
+        if (data.grid) {
             renderGrid(data.grid);
         } else {
             showError(data.error || 'Fehler beim Laden der Verfügbarkeit');
         }
     } catch (error) {
         console.error('Error loading availability:', error);
-        showError('Fehler beim Laden der Verfügbarkeit');
+        showError('Fehler beim Laden der Verfügbarkeit: ' + error.message);
     }
 }
 

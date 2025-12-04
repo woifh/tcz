@@ -21,10 +21,13 @@ window.goToToday = goToToday;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Tennis Club Reservation System loaded');
+    console.log('Tennis Club Reservation System loaded - ES6 modules version');
+    console.log('Current date:', currentDate);
     
     // Set today's date as default
     const dateSelector = document.getElementById('date-selector');
+    console.log('Date selector found:', !!dateSelector);
+    
     if (dateSelector) {
         dateSelector.value = currentDate;
         dateSelector.addEventListener('change', function() {
@@ -34,13 +37,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Load initial availability
+        console.log('Loading initial availability...');
         loadAvailability(currentDate);
+    } else {
+        console.error('Date selector not found!');
     }
     
     // Initialize booking module
+    console.log('Initializing booking module...');
     initBooking(currentDate);
     
     // Load user's upcoming reservations
+    console.log('Loading user reservations...');
     loadUserReservations();
 });
 
