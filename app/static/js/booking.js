@@ -70,6 +70,9 @@ async function handleBookingSubmit(event) {
         booked_for_id: parseInt(bookedForId)
     };
     
+    // Close modal immediately for better UX
+    closeBookingModal();
+    
     try {
         const response = await fetch('/reservations/', {
             method: 'POST',
@@ -83,11 +86,14 @@ async function handleBookingSubmit(event) {
         
         if (response.ok) {
             showSuccess('Buchung erfolgreich erstellt!');
-            closeBookingModal();
-            loadAvailability(currentDate);
-            loadUserReservations();
+            
+            // Reload both the grid and reservations list
+            await loadAvailability(currentDate);
+            await loadUserReservations();
         } else {
             showError(data.error || 'Fehler beim Erstellen der Buchung');
+            // If there's an error, we might want to reopen the modal
+            // but for now just show the error
         }
     } catch (error) {
         console.error('Error creating booking:', error);

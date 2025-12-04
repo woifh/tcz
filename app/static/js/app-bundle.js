@@ -226,6 +226,9 @@ async function handleBookingSubmit(event) {
         booked_for_id: parseInt(bookedForId)
     };
     
+    // Close modal immediately for better UX
+    closeBookingModal();
+    
     try {
         const response = await fetch('/reservations/', {
             method: 'POST',
@@ -238,12 +241,19 @@ async function handleBookingSubmit(event) {
         const data = await response.json();
         
         if (response.ok) {
+            console.log('Booking created successfully, reloading data...');
             showSuccess('Buchung erfolgreich erstellt!');
-            closeBookingModal();
-            loadAvailability(currentDate);
-            loadUserReservations();
+            
+            // Reload both the grid and reservations list
+            console.log('Reloading availability...');
+            await loadAvailability(currentDate);
+            console.log('Reloading user reservations...');
+            await loadUserReservations();
+            console.log('Data reload complete');
         } else {
             showError(data.error || 'Fehler beim Erstellen der Buchung');
+            // If there's an error, we might want to reopen the modal
+            // but for now just show the error
         }
     } catch (error) {
         console.error('Error creating booking:', error);
@@ -321,12 +331,18 @@ async function handleReservationClick(reservationId, bookedFor, time) {
  * Load user's upcoming reservations
  */
 async function loadUserReservations() {
+    console.log('loadUserReservations called');
     const container = document.getElementById('user-reservations');
-    if (!container) return;
+    if (!container) {
+        console.log('user-reservations container not found');
+        return;
+    }
     
+    console.log('Fetching reservations...');
     try {
         const response = await fetch('/reservations/?format=json');
         const data = await response.json();
+        console.log('Reservations data:', data);
         
         if (response.ok && data.reservations && data.reservations.length > 0) {
             // Sort by date and time

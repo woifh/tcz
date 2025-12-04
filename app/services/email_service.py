@@ -85,6 +85,12 @@ Ihr Tennisclub-Team'''
         Returns:
             bool: True if sent successfully, False otherwise
         """
+        # Skip email if disabled (check for disabled placeholder)
+        mail_username = current_app.config.get('MAIL_USERNAME')
+        if not mail_username or mail_username == 'disabled@example.com':
+            logger.info(f"Email sending disabled, skipping email to {recipient_email}")
+            return False
+            
         try:
             msg = Message(
                 subject=subject,

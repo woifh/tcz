@@ -2,7 +2,7 @@
 import click
 from flask.cli import with_appcontext
 from app import db
-from app.models import Member, Court
+from app.models import Member, Court, Reservation
 
 
 @click.command('create-admin')
@@ -68,8 +68,34 @@ def test_email_command(to):
         click.echo(f'✗ Failed to send email: {str(e)}')
 
 
+@click.command('delete-reservations')
+@click.option('--confirm', is_flag=True, help='Confirm deletion without prompt')
+@with_appcontext
+def delete_reservations_command(confirm):
+    """Delete all reservations from the database."""
+    count = Reservation.query.count()
+    
+    if count == 0:
+        click.echo('No reservations to delete.')
+        return
+    
+    if not confirm:
+        if not click.confirm(f'Are you sure you want to delete all {count} reservations?'):
+            click.echo('Deletion cancelled.')
+            return
+    
+    try:
+        Reservation.query.delete()
+        db.session.commit()
+        click.echo(f'✓ Deleted {count} reservations from the database.')
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f'✗ Failed to delete reservations: {str(e)}')
+
+
 def init_app(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(create_admin_command)
     app.cli.add_command(init_courts_command)
     app.cli.add_command(test_email_command)
+    app.cli.add_command(delete_reservations_command)
