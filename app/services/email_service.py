@@ -100,18 +100,21 @@ Ihr Tennisclub-Team'''
             return False
     
     @staticmethod
-    def send_booking_created(reservation):
+    def _send_reservation_email(reservation, template_key, extra_context=None):
         """
-        Send booking created notification to both parties.
+        Generic method to send reservation emails to both parties.
         
         Args:
             reservation: Reservation object
+            template_key: Key for template in TEMPLATES dict
+            extra_context: Optional dict with additional context variables
             
         Returns:
             bool: True if both emails sent successfully
         """
-        template = EmailService.TEMPLATES['booking_created']
+        template = EmailService.TEMPLATES[template_key]
         
+        # Build base context
         context = {
             'court_number': reservation.court.number,
             'date': reservation.date.strftime('%d.%m.%Y'),
@@ -120,6 +123,10 @@ Ihr Tennisclub-Team'''
             'booked_for_name': reservation.booked_for.name,
             'booked_by_name': reservation.booked_by.name
         }
+        
+        # Add extra context if provided
+        if extra_context:
+            context.update(extra_context)
         
         # Send to booked_for member
         success1 = EmailService._send_email(
@@ -140,6 +147,19 @@ Ihr Tennisclub-Team'''
         return success1 and success2
     
     @staticmethod
+    def send_booking_created(reservation):
+        """
+        Send booking created notification to both parties.
+        
+        Args:
+            reservation: Reservation object
+            
+        Returns:
+            bool: True if both emails sent successfully
+        """
+        return EmailService._send_reservation_email(reservation, 'booking_created')
+    
+    @staticmethod
     def send_booking_modified(reservation):
         """
         Send booking modified notification to both parties.
@@ -150,34 +170,7 @@ Ihr Tennisclub-Team'''
         Returns:
             bool: True if both emails sent successfully
         """
-        template = EmailService.TEMPLATES['booking_modified']
-        
-        context = {
-            'court_number': reservation.court.number,
-            'date': reservation.date.strftime('%d.%m.%Y'),
-            'start_time': reservation.start_time.strftime('%H:%M'),
-            'end_time': reservation.end_time.strftime('%H:%M'),
-            'booked_for_name': reservation.booked_for.name,
-            'booked_by_name': reservation.booked_by.name
-        }
-        
-        # Send to booked_for member
-        success1 = EmailService._send_email(
-            reservation.booked_for.email,
-            template['subject'].format(**context),
-            template['body'].format(recipient_name=reservation.booked_for.name, **context)
-        )
-        
-        # Send to booked_by member (if different)
-        success2 = True
-        if reservation.booked_for_id != reservation.booked_by_id:
-            success2 = EmailService._send_email(
-                reservation.booked_by.email,
-                template['subject'].format(**context),
-                template['body'].format(recipient_name=reservation.booked_by.name, **context)
-            )
-        
-        return success1 and success2
+        return EmailService._send_reservation_email(reservation, 'booking_modified')
     
     @staticmethod
     def send_booking_cancelled(reservation, reason=None):
@@ -191,35 +184,12 @@ Ihr Tennisclub-Team'''
         Returns:
             bool: True if both emails sent successfully
         """
-        template = EmailService.TEMPLATES['booking_cancelled']
-        
         reason_text = f"Grund: {reason}" if reason else ""
-        
-        context = {
-            'court_number': reservation.court.number,
-            'date': reservation.date.strftime('%d.%m.%Y'),
-            'start_time': reservation.start_time.strftime('%H:%M'),
-            'end_time': reservation.end_time.strftime('%H:%M'),
-            'reason_text': reason_text
-        }
-        
-        # Send to booked_for member
-        success1 = EmailService._send_email(
-            reservation.booked_for.email,
-            template['subject'].format(**context),
-            template['body'].format(recipient_name=reservation.booked_for.name, **context)
+        return EmailService._send_reservation_email(
+            reservation, 
+            'booking_cancelled',
+            {'reason_text': reason_text}
         )
-        
-        # Send to booked_by member (if different)
-        success2 = True
-        if reservation.booked_for_id != reservation.booked_by_id:
-            success2 = EmailService._send_email(
-                reservation.booked_by.email,
-                template['subject'].format(**context),
-                template['body'].format(recipient_name=reservation.booked_by.name, **context)
-            )
-        
-        return success1 and success2
     
     @staticmethod
     def send_admin_override(reservation, reason):
@@ -233,30 +203,8 @@ Ihr Tennisclub-Team'''
         Returns:
             bool: True if both emails sent successfully
         """
-        template = EmailService.TEMPLATES['admin_override']
-        
-        context = {
-            'court_number': reservation.court.number,
-            'date': reservation.date.strftime('%d.%m.%Y'),
-            'start_time': reservation.start_time.strftime('%H:%M'),
-            'end_time': reservation.end_time.strftime('%H:%M'),
-            'reason': reason
-        }
-        
-        # Send to booked_for member
-        success1 = EmailService._send_email(
-            reservation.booked_for.email,
-            template['subject'].format(**context),
-            template['body'].format(recipient_name=reservation.booked_for.name, **context)
+        return EmailService._send_reservation_email(
+            reservation,
+            'admin_override',
+            {'reason': reason}
         )
-        
-        # Send to booked_by member (if different)
-        success2 = True
-        if reservation.booked_for_id != reservation.booked_by_id:
-            success2 = EmailService._send_email(
-                reservation.booked_by.email,
-                template['subject'].format(**context),
-                template['body'].format(recipient_name=reservation.booked_by.name, **context)
-            )
-        
-        return success1 and success2

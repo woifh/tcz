@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_migrate import Migrate
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from config import config
 
@@ -12,6 +14,11 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 mail = Mail()
 migrate = Migrate()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 
 def create_app(config_name='default'):
@@ -34,6 +41,7 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
     migrate.init_app(app, db)
+    limiter.init_app(app)
     
     # Import models for Flask-Migrate
     from app import models

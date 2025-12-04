@@ -2,9 +2,15 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime, date
-from app import db
+from app import db, limiter
 from app.models import Reservation
 from app.services.reservation_service import ReservationService
+from app.utils.validators import (
+    ValidationError,
+    validate_date_format,
+    validate_time_format,
+    validate_integer
+)
 
 bp = Blueprint('reservations', __name__, url_prefix='/reservations')
 
@@ -76,19 +82,27 @@ def list_reservations():
 
 @bp.route('/', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def create_reservation():
     """Create a new reservation."""
     try:
         data = request.get_json() if request.is_json else request.form
         
-        court_id = int(data.get('court_id'))
-        date_str = data.get('date')
-        time_str = data.get('start_time')
-        booked_for_id = int(data.get('booked_for_id', current_user.id))
-        
-        # Parse date and time
-        reservation_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        start_time = datetime.strptime(time_str, '%H:%M').time()
+        # Validate input data
+        try:
+            court_id = validate_integer(data.get('court_id'), 'court_id', min_value=1, max_value=6)
+            reservation_date = validate_date_format(data.get('date'), 'date')
+            start_time = validate_time_format(data.get('start_time'), 'start_time')
+            booked_for_id = validate_integer(
+                data.get('booked_for_id', current_user.id), 
+                'booked_for_id', 
+                min_value=1
+            )
+        except ValidationError as e:
+            if request.is_json:
+                return jsonify({'error': str(e)}), 400
+            flash(str(e), 'error')
+            return redirect(url_for('dashboard.index'))
         
         # Create reservation
         reservation, error = ReservationService.create_reservation(
@@ -122,8 +136,8 @@ def create_reservation():
     
     except Exception as e:
         if request.is_json:
-            return jsonify({'error': str(e)}), 500
-        flash(f'Fehler beim Erstellen der Buchung: {str(e)}', 'error')
+            return jsonify({'error': 'Ein Fehler ist aufgetreten'}), 500
+        flash('Ein Fehler ist aufgetreten', 'error')
         return redirect(url_for('dashboard.index'))
 
 
