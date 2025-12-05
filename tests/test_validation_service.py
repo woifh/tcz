@@ -55,6 +55,7 @@ def test_property_32_time_slot_validation_rejects_late_times(app, start_time):
 from datetime import date, timedelta
 from app.models import Member, Court, Reservation
 from app import db
+import random
 
 
 @given(st.integers(min_value=0, max_value=1))
@@ -66,14 +67,15 @@ def test_property_2_two_reservation_limit_allows_under_limit(app, existing_reser
     For any member with fewer than 2 active reservations, creating a new reservation should succeed.
     """
     with app.app_context():
-        # Create test member
-        member = Member(name="Test Member", email=f"test_{existing_reservations}@example.com", role="member")
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=1).first()
+        assert court is not None, "Court 1 should exist"
+        
+        # Create test member with unique email
+        unique_id = random.randint(100000, 999999)
+        member = Member(name="Test Member", email=f"test_{unique_id}_{existing_reservations}@example.com", role="member")
         member.set_password("password123")
         db.session.add(member)
-        
-        # Create test court
-        court = Court(number=1)
-        db.session.add(court)
         db.session.commit()
         
         # Create existing reservations
@@ -97,7 +99,6 @@ def test_property_2_two_reservation_limit_allows_under_limit(app, existing_reser
         # Cleanup
         Reservation.query.filter_by(booked_for_id=member.id).delete()
         db.session.delete(member)
-        db.session.delete(court)
         db.session.commit()
 
 
@@ -110,14 +111,15 @@ def test_property_2_two_reservation_limit_blocks_at_limit(app, _):
     For any member with 2 active reservations, creating a new reservation should be rejected.
     """
     with app.app_context():
-        # Create test member
-        member = Member(name="Test Member", email="test_limit@example.com", role="member")
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=1).first()
+        assert court is not None, "Court 1 should exist"
+        
+        # Create test member with unique email
+        unique_id = random.randint(100000, 999999)
+        member = Member(name="Test Member", email=f"test_limit_{unique_id}@example.com", role="member")
         member.set_password("password123")
         db.session.add(member)
-        
-        # Create test court
-        court = Court(number=1)
-        db.session.add(court)
         db.session.commit()
         
         # Create 2 active reservations (at the limit)
@@ -141,7 +143,6 @@ def test_property_2_two_reservation_limit_blocks_at_limit(app, _):
         # Cleanup
         Reservation.query.filter_by(booked_for_id=member.id).delete()
         db.session.delete(member)
-        db.session.delete(court)
         db.session.commit()
 
 
@@ -161,12 +162,13 @@ def test_property_27_reservation_conflicts_rejected(app, court_num, booking_date
     another reservation for the same court and time should be rejected.
     """
     with app.app_context():
-        # Create test court
-        court = Court(number=court_num)
-        db.session.add(court)
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=court_num).first()
+        assert court is not None, f"Court {court_num} should exist"
         
-        # Create test member
-        member = Member(name="Test Member", email=f"test_{court_num}_{booking_date}_{start}@example.com", role="member")
+        # Create test member with unique email
+        unique_id = random.randint(100000, 999999)
+        member = Member(name="Test Member", email=f"test_{unique_id}_{court_num}_{booking_date}_{start}@example.com", role="member")
         member.set_password("password123")
         db.session.add(member)
         db.session.commit()
@@ -194,7 +196,6 @@ def test_property_27_reservation_conflicts_rejected(app, court_num, booking_date
         # Cleanup
         db.session.delete(reservation1)
         db.session.delete(member)
-        db.session.delete(court)
         db.session.commit()
 
 
@@ -207,18 +208,13 @@ def test_property_27_no_conflict_when_slot_free(app, court_num, booking_date, st
     For any court and time slot without an existing reservation, validation should pass.
     """
     with app.app_context():
-        # Create test court
-        court = Court(number=court_num)
-        db.session.add(court)
-        db.session.commit()
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=court_num).first()
+        assert court is not None, f"Court {court_num} should exist"
         
         # Validate that no conflict exists
         result = ValidationService.validate_no_conflict(court.id, booking_date, start)
         assert result is True, f"No conflict should exist for court {court_num} on {booking_date} at {start}"
-        
-        # Cleanup
-        db.session.delete(court)
-        db.session.commit()
 
 
 
@@ -238,12 +234,13 @@ def test_property_13_blocks_prevent_reservations(app, court_num, block_date, sta
     for that court during the blocked period should be rejected.
     """
     with app.app_context():
-        # Create test court
-        court = Court(number=court_num)
-        db.session.add(court)
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=court_num).first()
+        assert court is not None, f"Court {court_num} should exist"
         
-        # Create test admin
-        admin = Member(name="Admin", email=f"admin_{court_num}_{block_date}_{start}@example.com", role="administrator")
+        # Create test admin with unique email
+        unique_id = random.randint(100000, 999999)
+        admin = Member(name="Admin", email=f"admin_{unique_id}_{court_num}_{block_date}_{start}@example.com", role="administrator")
         admin.set_password("password123")
         db.session.add(admin)
         db.session.commit()
@@ -270,7 +267,6 @@ def test_property_13_blocks_prevent_reservations(app, court_num, block_date, sta
         # Cleanup
         db.session.delete(block)
         db.session.delete(admin)
-        db.session.delete(court)
         db.session.commit()
 
 
@@ -283,15 +279,10 @@ def test_property_13_no_block_allows_reservations(app, court_num, booking_date, 
     For any court and time period without a block, validation should pass.
     """
     with app.app_context():
-        # Create test court
-        court = Court(number=court_num)
-        db.session.add(court)
-        db.session.commit()
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=court_num).first()
+        assert court is not None, f"Court {court_num} should exist"
         
         # Validate that no block exists
         result = ValidationService.validate_not_blocked(court.id, booking_date, start)
         assert result is True, f"No block should exist for court {court_num} on {booking_date} at {start}"
-        
-        # Cleanup
-        db.session.delete(court)
-        db.session.commit()

@@ -23,21 +23,22 @@ def test_property_33_one_hour_duration_enforcement(app, court_num, booking_date,
     For any reservation created, the duration (end_time - start_time) should equal exactly one hour.
     """
     with app.app_context():
-        # Create test court
-        court = Court(number=court_num)
-        db.session.add(court)
-        db.session.commit()
+        # Get existing court (created by app fixture)
+        court = Court.query.filter_by(number=court_num).first()
+        assert court is not None, f"Court {court_num} should exist"
         
-        # Create test members
+        # Create test members with unique emails
+        import random
+        unique_id = random.randint(100000, 999999)
         member1 = Member(
             name="Test Member 1", 
-            email=f"test1_{court_num}_{booking_date}_{start.hour}_{start.minute}@example.com", 
+            email=f"test1_{unique_id}_{court_num}_{booking_date}_{start.hour}_{start.minute}@example.com", 
             role="member"
         )
         member1.set_password("password123")
         member2 = Member(
             name="Test Member 2", 
-            email=f"test2_{court_num}_{booking_date}_{start.hour}_{start.minute}@example.com", 
+            email=f"test2_{unique_id}_{court_num}_{booking_date}_{start.hour}_{start.minute}@example.com", 
             role="member"
         )
         member2.set_password("password123")
@@ -74,11 +75,10 @@ def test_property_33_one_hour_duration_enforcement(app, court_num, booking_date,
         assert reservation.end_time == expected_end, \
             f"End time should be {expected_end}, but was {reservation.end_time}"
         
-        # Cleanup
+        # Cleanup (don't delete court - it's shared)
         db.session.delete(reservation)
         db.session.delete(member1)
         db.session.delete(member2)
-        db.session.delete(court)
         db.session.commit()
 
 
