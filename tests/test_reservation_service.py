@@ -80,3 +80,100 @@ def test_property_33_one_hour_duration_enforcement(app, court_num, booking_date,
         db.session.delete(member2)
         db.session.delete(court)
         db.session.commit()
+
+
+def test_book_cancel_rebook_same_slot(app):
+    """Test that a cancelled reservation allows rebooking the same slot.
+    
+    This test verifies that:
+    1. A reservation can be created
+    2. The reservation can be cancelled
+    3. The same slot can be booked again after cancellation
+    
+    This ensures the unique constraint doesn't block rebooking cancelled slots.
+    """
+    with app.app_context():
+        # Setup: Get or create court
+        court = Court.query.filter_by(number=1).first()
+        if not court:
+            court = Court(number=1)
+            db.session.add(court)
+            db.session.commit()
+        
+        # Create unique member for this test
+        import random
+        unique_id = random.randint(10000, 99999)
+        member = Member(
+            name=f"Test Member {unique_id}",
+            email=f"test_rebook_{unique_id}@example.com",
+            role="member"
+        )
+        member.set_password("password123")
+        db.session.add(member)
+        db.session.commit()
+        
+        # Test data
+        test_date = date.today() + timedelta(days=1)
+        test_time = time(10, 0)
+        
+        # Step 1: Create initial reservation
+        reservation1, error1 = ReservationService.create_reservation(
+            court_id=court.id,
+            date=test_date,
+            start_time=test_time,
+            booked_for_id=member.id,
+            booked_by_id=member.id
+        )
+        
+        assert reservation1 is not None, f"First booking failed: {error1}"
+        assert error1 is None
+        assert reservation1.status == 'active'
+        reservation1_id = reservation1.id
+        
+        # Step 2: Cancel the reservation
+        success, error2 = ReservationService.cancel_reservation(
+            reservation_id=reservation1_id,
+            reason="Test cancellation"
+        )
+        
+        assert success is True, f"Cancellation failed: {error2}"
+        assert error2 is None
+        
+        # Verify cancellation
+        cancelled_res = Reservation.query.get(reservation1_id)
+        assert cancelled_res is not None
+        assert cancelled_res.status == 'cancelled'
+        assert cancelled_res.reason == "Test cancellation"
+        
+        # Step 3: Book the same slot again
+        reservation2, error3 = ReservationService.create_reservation(
+            court_id=court.id,
+            date=test_date,
+            start_time=test_time,
+            booked_for_id=member.id,
+            booked_by_id=member.id
+        )
+        
+        assert reservation2 is not None, f"Rebooking failed: {error3}"
+        assert error3 is None
+        assert reservation2.status == 'active'
+        assert reservation2.id != reservation1_id  # Should be a new reservation
+        
+        # Verify both reservations exist in database
+        all_reservations = Reservation.query.filter_by(
+            court_id=court.id,
+            date=test_date,
+            start_time=test_time
+        ).all()
+        
+        assert len(all_reservations) == 2, "Should have 2 reservations (1 cancelled, 1 active)"
+        
+        statuses = [r.status for r in all_reservations]
+        assert 'cancelled' in statuses
+        assert 'active' in statuses
+        
+        # Cleanup
+        for res in all_reservations:
+            db.session.delete(res)
+        db.session.delete(member)
+        db.session.commit()
