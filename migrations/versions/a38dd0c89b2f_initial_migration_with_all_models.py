@@ -90,8 +90,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['booked_by_id'], ['member.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['booked_for_id'], ['member.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['court_id'], ['court.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('court_id', 'date', 'start_time', name='unique_booking')
+    sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('reservation', schema=None) as batch_op:
         batch_op.create_index('idx_reservation_booked_by', ['booked_by_id'], unique=False)
