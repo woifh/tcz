@@ -66,7 +66,7 @@ def test_admin(app):
         admin = Member(
             name='Test Admin',
             email='admin@example.com',
-            role='admin'
+            role='administrator'
         )
         admin.set_password('admin123')
         db.session.add(admin)
