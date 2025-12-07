@@ -19,8 +19,12 @@
         <h3 class="text-lg font-semibold mb-4">Neues Mitglied erstellen</h3>
         <form id="create-member-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label class="block text-gray-700 font-semibold mb-2">Name</label>
-                <input type="text" id="new-member-name" class="w-full border border-gray-300 rounded px-3 py-2" required>
+                <label class="block text-gray-700 font-semibold mb-2">Vorname</label>
+                <input type="text" id="new-member-firstname" class="w-full border border-gray-300 rounded px-3 py-2" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Nachname</label>
+                <input type="text" id="new-member-lastname" class="w-full border border-gray-300 rounded px-3 py-2" required>
             </div>
             <div>
                 <label class="block text-gray-700 font-semibold mb-2">E-Mail</label>
@@ -108,7 +112,8 @@ document.getElementById('create-member-form')?.addEventListener('submit', async 
     e.preventDefault();
     
     const memberData = {
-        name: document.getElementById('new-member-name').value,
+        firstname: document.getElementById('new-member-firstname').value,
+        lastname: document.getElementById('new-member-lastname').value,
         email: document.getElementById('new-member-email').value,
         password: document.getElementById('new-member-password').value,
         role: document.getElementById('new-member-role').value
