@@ -87,9 +87,9 @@ def get_availability():
                         reservation.status == 'active'):
                         slot['status'] = 'reserved'
                         slot['details'] = {
-                            'booked_for': reservation.booked_for.name,
+                            'booked_for': f"{reservation.booked_for.firstname} {reservation.booked_for.lastname}",
                             'booked_for_id': reservation.booked_for_id,
-                            'booked_by': reservation.booked_by.name,
+                            'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
                             'booked_by_id': reservation.booked_by_id,
                             'reservation_id': reservation.id
                         }

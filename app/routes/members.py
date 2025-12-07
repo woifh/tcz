@@ -25,7 +25,7 @@ def admin_required(f):
 @admin_required
 def list_members():
     """List all members (admin only)."""
-    members = Member.query.order_by(Member.name).all()
+    members = Member.query.order_by(Member.lastname, Member.firstname).all()
     return render_template('members.html', members=members)
 
 
@@ -33,7 +33,7 @@ def list_members():
 @login_required
 def get_all_members():
     """Get all members (for favourites dropdown)."""
-    members = Member.query.order_by(Member.name).all()
+    members = Member.query.order_by(Member.lastname, Member.firstname).all()
     return jsonify({
         'members': [
             {
