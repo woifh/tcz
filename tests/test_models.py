@@ -15,7 +15,7 @@ member_roles = st.sampled_from(['member', 'administrator'])
 court_numbers = st.integers(min_value=1, max_value=6)
 court_statuses = st.sampled_from(['available', 'blocked'])
 
-booking_times = st.times(min_value=time(6, 0), max_value=time(20, 0))
+booking_times = st.times(min_value=time(6, 0), max_value=time(21, 0))
 future_dates = st.dates(min_value=date.today(), max_value=date.today() + timedelta(days=90))
 reservation_statuses = st.sampled_from(['active', 'cancelled', 'completed'])
 

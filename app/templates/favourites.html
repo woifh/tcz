@@ -2,11 +2,15 @@
 
 {% block title %}Meine Favoriten - Tennisclub{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/member-search.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="bg-white rounded-lg shadow-md p-6">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Meine Favoriten</h2>
-        <button onclick="showAddFavouriteForm()" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+        <button onclick="showSearchForm()" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
             Favorit hinzufügen
         </button>
     </div>
@@ -15,25 +19,53 @@
         Fügen Sie Mitglieder zu Ihren Favoriten hinzu, um schnell Buchungen für sie zu erstellen.
     </p>
     
-    <!-- Add Favourite Form (Hidden by default) -->
-    <div id="add-favourite-form" class="hidden bg-gray-50 p-6 rounded-lg mb-6">
-        <h3 class="text-lg font-semibold mb-4">Favorit hinzufügen</h3>
-        <form id="add-favourite-form-element" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 font-semibold mb-2">Mitglied auswählen</label>
-                <select id="favourite-member-select" class="w-full border border-gray-300 rounded px-3 py-2" required>
-                    <option value="">-- Bitte wählen --</option>
-                </select>
+    <!-- Member Search Component -->
+    <div id="member-search-container" class="hidden bg-gray-50 p-6 rounded-lg mb-6">
+        <h3 class="text-lg font-semibold mb-4">Mitglied suchen</h3>
+        
+        <!-- Search Input -->
+        <div class="relative mb-4">
+            <label for="member-search-input" class="sr-only">Mitglied suchen</label>
+            <input 
+                type="text" 
+                id="member-search-input" 
+                class="w-full border border-gray-300 rounded px-4 py-2 pr-20" 
+                placeholder="Mitglied suchen..."
+                aria-label="Mitglied suchen"
+                aria-describedby="search-results-count"
+                autocomplete="off"
+            />
+            <!-- Clear Button -->
+            <button 
+                id="search-clear-btn" 
+                class="hidden absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Suche löschen"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <!-- Loading Spinner -->
+            <div id="search-loading" class="hidden absolute right-3 top-1/2 transform -translate-y-1/2">
+                <svg class="animate-spin h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
             </div>
-            <div class="flex gap-4">
-                <button type="submit" class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700">
-                    Hinzufügen
-                </button>
-                <button type="button" onclick="hideAddFavouriteForm()" class="bg-gray-300 text-gray-700 py-2 px-6 rounded hover:bg-gray-400">
-                    Abbrechen
-                </button>
-            </div>
-        </form>
+        </div>
+        
+        <!-- Search Results Count (for screen readers) -->
+        <div id="search-results-count" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+        
+        <!-- Search Results Container -->
+        <div id="search-results" class="space-y-2 max-h-96 overflow-y-auto" role="listbox" aria-label="Suchergebnisse"></div>
+        
+        <!-- Close Button -->
+        <div class="mt-4">
+            <button type="button" onclick="hideSearchForm()" class="bg-gray-300 text-gray-700 py-2 px-6 rounded hover:bg-gray-400">
+                Schließen
+            </button>
+        </div>
     </div>
     
     <!-- Favourites List -->
@@ -48,11 +80,11 @@
 
 <script>
 const currentUserId = {{ current_user.id }};
+window.currentUserId = currentUserId; // Make available to member-search.js
 
 // Load favourites on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadFavourites();
-    loadAllMembers();
 });
 
 async function loadFavourites() {
@@ -83,87 +115,32 @@ async function loadFavourites() {
     }
 }
 
-async function loadAllMembers() {
-    try {
-        // Fetch all members
-        const membersResponse = await fetch('/members/all');
-        const membersData = await membersResponse.json();
-        
-        // Fetch current favourites
-        const favouritesResponse = await fetch(`/members/${currentUserId}/favourites`);
-        const favouritesData = await favouritesResponse.json();
-        
-        const select = document.getElementById('favourite-member-select');
-        
-        if (membersResponse.ok && membersData.members) {
-            // Create a set of favourite IDs for quick lookup
-            const favouriteIds = new Set(
-                favouritesData.favourites ? favouritesData.favourites.map(f => f.id) : []
-            );
-            
-            // Clear existing options except the first one
-            select.innerHTML = '<option value="">-- Bitte wählen --</option>';
-            
-            // Add only members who are not current user and not already favourites
-            membersData.members.forEach(member => {
-                if (member.id !== currentUserId && !favouriteIds.has(member.id)) {
-                    const option = document.createElement('option');
-                    option.value = member.id;
-                    option.textContent = `${member.name} (${member.email})`;
-                    select.appendChild(option);
-                }
-            });
-            
-            // Show message if no members available to add
-            if (select.options.length === 1) {
-                select.innerHTML = '<option value="">Alle Mitglieder sind bereits Favoriten</option>';
-            }
-        }
-    } catch (error) {
-        console.error('Error loading members:', error);
+function showSearchForm() {
+    const searchContainer = document.getElementById('member-search-container');
+    searchContainer.classList.remove('hidden');
+    
+    // Initialize search functionality
+    if (typeof window.initMemberSearch === 'function') {
+        window.initMemberSearch();
+    } else {
+        console.error('initMemberSearch is not defined');
     }
 }
 
-function showAddFavouriteForm() {
-    document.getElementById('add-favourite-form').classList.remove('hidden');
-}
-
-function hideAddFavouriteForm() {
-    document.getElementById('add-favourite-form').classList.add('hidden');
-    document.getElementById('add-favourite-form-element').reset();
-}
-
-document.getElementById('add-favourite-form-element').addEventListener('submit', async function(e) {
-    e.preventDefault();
+function hideSearchForm() {
+    const searchContainer = document.getElementById('member-search-container');
+    searchContainer.classList.add('hidden');
     
-    const favouriteId = document.getElementById('favourite-member-select').value;
-    
-    if (!favouriteId) {
-        alert('Bitte wählen Sie ein Mitglied aus');
-        return;
+    // Clear search input and results
+    const searchInput = document.getElementById('member-search-input');
+    searchInput.value = '';
+    if (typeof window.clearSearchResults === 'function') {
+        window.clearSearchResults();
     }
     
-    try {
-        const response = await fetch(`/members/${currentUserId}/favourites`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ favourite_id: favouriteId })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            alert('Favorit erfolgreich hinzugefügt!');
-            hideAddFavouriteForm();
-            loadFavourites();
-            loadAllMembers(); // Refresh the dropdown to remove the added member
-        } else {
-            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
-        }
-    } catch (error) {
-        alert('Fehler beim Hinzufügen des Favoriten');
-    }
-});
+    // Hide clear button
+    document.getElementById('search-clear-btn').classList.add('hidden');
+}
 
 async function removeFavourite(favouriteId) {
     if (!confirm('Möchten Sie diesen Favoriten wirklich entfernen?')) {
@@ -178,15 +155,32 @@ async function removeFavourite(favouriteId) {
         const data = await response.json();
         
         if (response.ok) {
-            alert('Favorit erfolgreich entfernt');
+            // Show success message as a toast notification
+            showToast('Favorit erfolgreich entfernt', 'success');
             loadFavourites();
-            loadAllMembers(); // Refresh the dropdown to add the removed member back
         } else {
-            alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+            showToast('Fehler: ' + (data.error || 'Unbekannter Fehler'), 'error');
         }
     } catch (error) {
-        alert('Fehler beim Entfernen des Favoriten');
+        showToast('Fehler beim Entfernen des Favoriten', 'error');
     }
+}
+
+function showToast(message, type = 'success') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    }`;
+    toast.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
 }
 </script>
 {% endblock %}

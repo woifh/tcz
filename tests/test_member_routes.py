@@ -189,3 +189,120 @@ class TestRemoveFavourite:
             })
             response = client.delete(f'/members/{test_member.id}/favourites/999')
             assert response.status_code == 404
+
+
+
+class TestSearchMembers:
+    """Test search members endpoint."""
+    
+    def test_search_requires_login(self, client):
+        """Test search requires authentication."""
+        response = client.get('/members/search?q=test')
+        assert response.status_code == 302
+    
+    def test_search_missing_query(self, client, test_member):
+        """Test search without query parameter."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_member.id)
+        
+        response = client.get('/members/search')
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'error' in data
+    
+    def test_search_empty_query(self, client, test_member):
+        """Test search with empty query."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_member.id)
+        
+        response = client.get('/members/search?q=')
+        assert response.status_code == 400
+    
+    def test_search_returns_results(self, client, test_member, app):
+        """Test search returns matching members."""
+        # Create test members
+        with app.app_context():
+            from app import db
+            member1 = Member(name='Alice Smith', email='alice@example.com', role='member')
+            member1.set_password('password123')
+            member2 = Member(name='Bob Johnson', email='bob@example.com', role='member')
+            member2.set_password('password123')
+            db.session.add_all([member1, member2])
+            db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_member.id)
+        
+        response = client.get('/members/search?q=alice')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert 'results' in data
+        assert 'count' in data
+        assert data['count'] >= 1
+        assert any(r['name'] == 'Alice Smith' for r in data['results'])
+    
+    def test_search_excludes_self(self, client, test_member):
+        """Test search excludes current member."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_member.id)
+        
+        response = client.get(f'/members/search?q={test_member.name}')
+        assert response.status_code == 200
+        data = response.get_json()
+        # Should not include self in results
+        assert not any(r['id'] == test_member.id for r in data['results'])
+    
+    def test_search_excludes_favourites(self, client, test_member, app):
+        """Test search excludes existing favourites."""
+        # Create member and add as favourite
+        with app.app_context():
+            from app import db
+            other_member = Member(name='Favourite Test', email='favtest@example.com', role='member')
+            other_member.set_password('password123')
+            db.session.add(other_member)
+            db.session.commit()
+            other_id = other_member.id
+            
+            member = Member.query.get(test_member.id)
+            other = Member.query.get(other_id)
+            member.favourites.append(other)
+            db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_member.id)
+        
+        response = client.get('/members/search?q=Favourite')
+        assert response.status_code == 200
+        data = response.get_json()
+        # Should not include favourite in results
+        assert not any(r['id'] == other_id for r in data['results'])
+    
+    def test_search_case_insensitive(self, client, test_member, app):
+        """Test search is case-insensitive."""
+        with app.app_context():
+            from app import db
+            member = Member(name='TestCase Member', email='testcase@example.com', role='member')
+            member.set_password('password123')
+            db.session.add(member)
+            db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_member.id)
+        
+        # Test different cases
+        response1 = client.get('/members/search?q=testcase')
+        response2 = client.get('/members/search?q=TESTCASE')
+        response3 = client.get('/members/search?q=TestCase')
+        
+        assert response1.status_code == 200
+        assert response2.status_code == 200
+        assert response3.status_code == 200
+        
+        data1 = response1.get_json()
+        data2 = response2.get_json()
+        data3 = response3.get_json()
+        
+        # All should return the same member
+        assert data1['count'] >= 1
+        assert data2['count'] >= 1
+        assert data3['count'] >= 1

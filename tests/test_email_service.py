@@ -15,7 +15,7 @@ GERMAN_KEYWORDS = ['Guten Tag', 'Platz', 'Datum', 'Uhrzeit', 'Gebucht', 'freundl
 
 court_numbers = st.integers(min_value=1, max_value=6)
 future_dates = st.dates(min_value=date.today(), max_value=date.today() + timedelta(days=90))
-booking_times = st.times(min_value=time(6, 0), max_value=time(20, 0))
+booking_times = st.times(min_value=time(6, 0), max_value=time(21, 0))
 
 
 @given(court_num=court_numbers, booking_date=future_dates, start=booking_times)
@@ -42,7 +42,7 @@ def test_property_24_german_email_language(app, mail, court_num, booking_date, s
             db.session.add(member2)
             db.session.commit()
             
-            end = time(start.hour + 1, start.minute) if start.hour < 20 else time(21, 0)
+            end = time(start.hour + 1, start.minute) if start.hour < 21 else time(22, 0)
             
             reservation = Reservation(
                 court_id=court.id,
@@ -120,7 +120,7 @@ def test_property_3_booking_notifications_both_parties(app, mail, court_num, boo
             db.session.add(member2)
             db.session.commit()
             
-            end = time(start.hour + 1, start.minute) if start.hour < 20 else time(21, 0)
+            end = time(start.hour + 1, start.minute) if start.hour < 21 else time(22, 0)
             
             reservation = Reservation(
                 court_id=court.id,
@@ -171,7 +171,7 @@ def test_property_3_booking_notifications_same_member(app, mail, court_num, book
             db.session.add(member)
             db.session.commit()
             
-            end = time(start.hour + 1, start.minute) if start.hour < 20 else time(21, 0)
+            end = time(start.hour + 1, start.minute) if start.hour < 21 else time(22, 0)
             
             reservation = Reservation(
                 court_id=court.id,

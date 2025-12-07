@@ -36,7 +36,7 @@ class Config:
     # Application settings
     COURTS_COUNT = 6
     BOOKING_START_HOUR = 6
-    BOOKING_END_HOUR = 21  # Last slot starts at 20:00, ends at 21:00
+    BOOKING_END_HOUR = 22  # Last slot starts at 21:00, ends at 22:00
     BOOKING_DURATION_HOURS = 1
     MAX_ACTIVE_RESERVATIONS = 2
 

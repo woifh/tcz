@@ -12,7 +12,7 @@ This document specifies the requirements for a responsive web application that e
 - **Court**: One of six clay tennis courts numbered 1 through 6
 - **Reservation**: A booking record linking a court, time slot, and member(s)
 - **Block**: An administrative restriction preventing court bookings for specified time periods
-- **Booking Slot**: A one-hour time period between 06:00 and 21:00
+- **Booking Slot**: A one-hour time period between 06:00 and 22:00
 - **Active Reservation**: A future reservation that has not been cancelled or completed
 - **Favourites List**: A member's curated list of preferred playing partners
 - **Booked For**: The member who will use the court
@@ -182,4 +182,4 @@ This document specifies the requirements for a responsive web application that e
 1. THE System SHALL allow reservations only for time slots between 06:00 and 21:00
 2. THE System SHALL enforce one-hour duration for all reservations
 3. WHEN a member attempts to book outside operating hours, THE System SHALL reject the booking
-4. THE System SHALL define booking slots at hourly intervals: 06:00-07:00, 07:00-08:00, through 20:00-21:00
+4. THE System SHALL define booking slots at hourly intervals: 06:00-07:00, 07:00-08:00, through 21:00-22:00

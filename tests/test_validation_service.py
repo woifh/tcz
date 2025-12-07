@@ -6,9 +6,9 @@ from app.services.validation_service import ValidationService
 
 
 # Hypothesis strategies
-valid_booking_times = st.times(min_value=time(6, 0), max_value=time(20, 0))
+valid_booking_times = st.times(min_value=time(6, 0), max_value=time(21, 0))
 invalid_early_times = st.times(min_value=time(0, 0), max_value=time(5, 59))
-invalid_late_times = st.times(min_value=time(21, 0), max_value=time(23, 59))
+invalid_late_times = st.times(min_value=time(22, 0), max_value=time(23, 59))
 
 
 @given(start_time=valid_booking_times)
@@ -149,7 +149,7 @@ def test_property_2_two_reservation_limit_blocks_at_limit(app, _):
 
 court_numbers = st.integers(min_value=1, max_value=6)
 future_dates = st.dates(min_value=date.today(), max_value=date.today() + timedelta(days=90))
-booking_times = st.times(min_value=time(6, 0), max_value=time(20, 0))
+booking_times = st.times(min_value=time(6, 0), max_value=time(21, 0))
 
 
 @given(court_num=court_numbers, booking_date=future_dates, start=booking_times)
@@ -174,7 +174,7 @@ def test_property_27_reservation_conflicts_rejected(app, court_num, booking_date
         db.session.commit()
         
         # Calculate end time
-        end = time(start.hour + 1, start.minute) if start.hour < 20 else time(21, 0)
+        end = time(start.hour + 1, start.minute) if start.hour < 21 else time(22, 0)
         
         # Create first reservation
         reservation1 = Reservation(
@@ -246,7 +246,7 @@ def test_property_13_blocks_prevent_reservations(app, court_num, block_date, sta
         db.session.commit()
         
         # Calculate end time
-        end = time(start.hour + 1, start.minute) if start.hour < 20 else time(21, 0)
+        end = time(start.hour + 1, start.minute) if start.hour < 21 else time(22, 0)
         
         # Create block
         block = Block(

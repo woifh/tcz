@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from functools import wraps
 from app import db
 from app.models import Member
+from app.services.member_service import MemberService
 
 bp = Blueprint('members', __name__, url_prefix='/members')
 
@@ -43,6 +44,39 @@ def get_all_members():
             for m in members
         ]
     }), 200
+
+
+@bp.route('/search', methods=['GET'])
+@login_required
+def search_members():
+    """Search for members by name or email."""
+    try:
+        # Get query parameter
+        query = request.args.get('q', '').strip()
+        
+        # Validate query parameter (minimum 1 character)
+        if not query:
+            return jsonify({'error': 'Suchbegriff erforderlich'}), 400
+        
+        # Call MemberService to search members
+        results = MemberService.search_members(query, current_user.id)
+        
+        # Return JSON response with results
+        return jsonify({
+            'results': [
+                {
+                    'id': member.id,
+                    'name': member.name,
+                    'email': member.email
+                }
+                for member in results
+            ],
+            'count': len(results)
+        }), 200
+        
+    except Exception as e:
+        # Handle errors (500)
+        return jsonify({'error': 'Suchfehler. Bitte versuchen Sie es erneut.'}), 500
 
 
 @bp.route('/favourites', methods=['GET'])

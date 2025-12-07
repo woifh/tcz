@@ -47,6 +47,12 @@ def test_property_4_dual_member_access_control(
     with app.app_context():
         db.create_all()
         
+        # Create courts
+        for i in range(1, 7):
+            court = Court(number=i)
+            db.session.add(court)
+        db.session.commit()
+        
         # Create three members
         booked_for = Member(name=booked_for_name, email=booked_for_email, role="member")
         booked_for.set_password(password)
@@ -58,14 +64,9 @@ def test_property_4_dual_member_access_control(
         db.session.add_all([booked_for, booked_by, other_member])
         db.session.commit()
         
-        # Get existing court (created by app fixture)
-
-        
+        # Get court
         court = Court.query.filter_by(number=1).first()
-
-        
         assert court is not None, "Court 1 should exist"
-        db.session.commit()
         
         # Create a reservation
         reservation_date = date.today() + timedelta(days=1)

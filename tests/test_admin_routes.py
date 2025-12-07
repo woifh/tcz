@@ -53,6 +53,12 @@ def test_property_21_admin_deletion_removes_reservation(
     with app.app_context():
         db.create_all()
         
+        # Create courts
+        for i in range(1, 7):
+            court = Court(number=i)
+            db.session.add(court)
+        db.session.commit()
+        
         # Create admin and member
         admin = Member(name=admin_name, email=admin_email, role="administrator")
         admin.set_password(password)
@@ -62,14 +68,9 @@ def test_property_21_admin_deletion_removes_reservation(
         db.session.add_all([admin, member])
         db.session.commit()
         
-        # Get existing court (created by app fixture)
-
-        
+        # Get court
         court = Court.query.filter_by(number=1).first()
-
-        
         assert court is not None, "Court 1 should exist"
-        db.session.commit()
         
         # Create a reservation
         reservation_date = date.today() + timedelta(days=1)
@@ -150,6 +151,12 @@ def test_property_22_admin_deletion_sends_notifications(
     with app.app_context():
         db.create_all()
         
+        # Create courts
+        for i in range(1, 7):
+            court = Court(number=i)
+            db.session.add(court)
+        db.session.commit()
+        
         # Create admin and member
         admin = Member(name=admin_name, email=admin_email, role="administrator")
         admin.set_password(password)
@@ -159,14 +166,9 @@ def test_property_22_admin_deletion_sends_notifications(
         db.session.add_all([admin, member])
         db.session.commit()
         
-        # Get existing court (created by app fixture)
-
-        
+        # Get court
         court = Court.query.filter_by(number=1).first()
-
-        
         assert court is not None, "Court 1 should exist"
-        db.session.commit()
         
         # Create a reservation
         reservation_date = date.today() + timedelta(days=1)
@@ -241,6 +243,12 @@ def test_property_23_admin_override_includes_reason(
     with app.app_context():
         db.create_all()
         
+        # Create courts
+        for i in range(1, 7):
+            court = Court(number=i)
+            db.session.add(court)
+        db.session.commit()
+        
         # Create admin and member
         admin = Member(name=admin_name, email=admin_email, role="administrator")
         admin.set_password(password)
@@ -250,14 +258,9 @@ def test_property_23_admin_override_includes_reason(
         db.session.add_all([admin, member])
         db.session.commit()
         
-        # Get existing court (created by app fixture)
-
-        
+        # Get court
         court = Court.query.filter_by(number=1).first()
-
-        
         assert court is not None, "Court 1 should exist"
-        db.session.commit()
         
         # Create a reservation
         reservation_date = date.today() + timedelta(days=1)

@@ -10,7 +10,7 @@ from app import db
 
 # Hypothesis strategies for generating test data
 court_numbers = st.integers(min_value=1, max_value=6)
-booking_times = st.times(min_value=time(6, 0), max_value=time(20, 0))
+booking_times = st.times(min_value=time(6, 0), max_value=time(21, 0))
 future_dates = st.dates(min_value=date.today(), max_value=date.today() + timedelta(days=90))
 block_reasons = st.sampled_from(['rain', 'maintenance', 'tournament', 'championship'])
 
