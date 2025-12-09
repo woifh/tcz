@@ -123,7 +123,8 @@ def validate_email_address(email, field_name="email"):
         raise ValidationError(f"{field_name} ist erforderlich")
     
     try:
-        valid = validate_email(email)
+        # Allow test domains in development
+        valid = validate_email(email, check_deliverability=False)
         return valid.email
     except EmailNotValidError:
         raise ValidationError(f"Ungültige E-Mail-Adresse: {email}")

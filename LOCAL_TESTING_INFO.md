@@ -2,7 +2,7 @@
 
 ## ✅ Application is Running!
 
-**Server URL**: http://127.0.0.1:5000
+**Server URL**: http://localhost:5001 (or http://127.0.0.1:5001)
 
 ## Test Login Credentials
 
@@ -33,7 +33,7 @@
 ## What to Test
 
 ### 1. Login Flow
-- Go to http://127.0.0.1:5000
+- Go to http://localhost:5001
 - Should redirect to login page
 - Try logging in with admin or member credentials
 
@@ -58,9 +58,41 @@
 - View your reservations
 - Try cancelling a reservation
 
-## Stopping the Server
+## Server Management
 
-The Flask development server is running in the background (Process ID: 4).
+### Starting/Restarting the Server
+
+You have two options to start or restart the Flask development server:
+
+#### Option 1: Bash Script (Recommended)
+```bash
+./restart_server.sh
+```
+
+This script will:
+- Automatically activate the virtual environment
+- Stop any existing Flask server processes
+- Start a new Flask server on port 5001
+- Display the server URL and process ID
+
+#### Option 2: Python Script
+**IMPORTANT:** You must activate the virtual environment first!
+
+```bash
+source venv/bin/activate
+python restart_server.py
+```
+
+This script provides more control with flags:
+- `python restart_server.py` - Restart (stop + start)
+- `python restart_server.py --start` - Start only
+- `python restart_server.py --stop` - Stop only
+
+**Common Error:** If you see `ModuleNotFoundError: No module named 'dotenv'`, it means you forgot to activate the virtual environment. The `python-dotenv` package is only available inside the venv.
+
+### Stopping the Server
+
+The Flask development server is running in the background (Process ID: 42461).
 
 To stop it, you can either:
 - Ask me to stop it

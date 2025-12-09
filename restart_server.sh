@@ -44,12 +44,20 @@ stop_server() {
 start_server() {
     echo "🚀 Starting Flask server..."
     
-    # Set environment variables
+    # Activate virtual environment
+    source venv/bin/activate
+    
+    # Load environment variables from .env
+    if [ -f .env ]; then
+        export $(cat .env | grep -v '^#' | xargs)
+    fi
+    
+    # Set Flask environment variables
     export FLASK_APP=wsgi.py
     export FLASK_ENV=development
     
     # Start server in background
-    python3 -m flask run --host=0.0.0.0 --port=5001 &
+    python -m flask run --host=0.0.0.0 --port=5001 &
     
     # Get the process ID
     SERVER_PID=$!
