@@ -12,7 +12,7 @@ export function bookingModal() {
         courtName: '',
         time: '',
         bookedFor: null,
-        favourites: [],
+        favourites: [], // Initialize as empty array
         submitting: false,
         error: null,
         
@@ -111,20 +111,35 @@ export function bookingModal() {
         },
         
         async loadFavourites() {
+            console.log('Loading favourites...');
             try {
                 const bookingForSelect = document.getElementById('booking-for');
-                if (!bookingForSelect) return;
+                console.log('Booking select element:', bookingForSelect);
+                if (!bookingForSelect) {
+                    console.log('No booking-for select found');
+                    return;
+                }
                 
                 const firstOption = bookingForSelect.querySelector('option');
                 const currentUserId = firstOption ? firstOption.value : null;
+                console.log('Current user ID:', currentUserId);
                 
-                if (!currentUserId) return;
+                if (!currentUserId) {
+                    console.log('No current user ID found');
+                    return;
+                }
                 
+                console.log(`Fetching favourites from: /members/${currentUserId}/favourites`);
                 const response = await fetch(`/members/${currentUserId}/favourites`);
+                console.log('Favourites response:', response.status, response.ok);
                 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('Favourites data:', data);
                     this.favourites = data.favourites || [];
+                    console.log('Set favourites:', this.favourites);
+                } else {
+                    console.log('Favourites request failed:', response.status);
                 }
             } catch (err) {
                 console.error('Error loading favourites:', err);

@@ -11,7 +11,7 @@ class ValidationService:
     @staticmethod
     def validate_booking_time(start_time):
         """
-        Validate booking time is within allowed hours (06:00-20:00).
+        Validate booking time is within allowed hours (06:00-20:00) and on full hours.
         
         Args:
             start_time: time object representing the start time
@@ -21,6 +21,10 @@ class ValidationService:
         """
         booking_start = current_app.config.get('BOOKING_START_HOUR', 6)
         booking_end = current_app.config.get('BOOKING_END_HOUR', 21)
+        
+        # Start time must be on full hours (minutes must be 00)
+        if start_time.minute != 0 or start_time.second != 0:
+            return False
         
         # Start time must be between 06:00 and 20:00 (last slot starts at 20:00)
         min_time = time(booking_start, 0)
@@ -128,17 +132,22 @@ class ValidationService:
         booking_datetime = datetime.combine(date, start_time)
         now = datetime.now()
         
-        # Debug logging
-        print(f"DEBUG VALIDATION: booking_datetime={booking_datetime}, now={now}, is_short_notice={is_short_notice}")
-        
-        # For regular bookings, don't allow past bookings
-        print(f"DEBUG VALIDATION: Regular booking - is_past={booking_datetime < now}")
-        if booking_datetime < now:
-            return False, "Buchungen in der Vergangenheit sind nicht möglich"
+        # Validate not in the past (with special handling for short notice bookings)
+        if is_short_notice:
+            # For short notice bookings, allow if within reasonable time window (up to 5 minutes past start)
+            time_diff = now - booking_datetime
+            max_past_minutes = timedelta(minutes=5)
+            # Only check if booking is in the past (positive time_diff)
+            if time_diff > timedelta(0) and time_diff > max_past_minutes:
+                return False, "Kurzfristige Buchungen sind nur bis zu 5 Minuten nach Spielbeginn möglich"
+        else:
+            # For regular bookings, don't allow past bookings
+            if booking_datetime < now:
+                return False, "Buchungen in der Vergangenheit sind nicht möglich"
         
         # Validate booking time
         if not ValidationService.validate_booking_time(start_time):
-            return False, "Buchungen sind nur zwischen 06:00 und 21:00 Uhr möglich"
+            return False, "Buchungen sind nur zu vollen Stunden zwischen 06:00 und 21:00 Uhr möglich"
         
         # Validate member reservation limit (short notice bookings are exempt)
         if not ValidationService.validate_member_reservation_limit(member_id, is_short_notice):

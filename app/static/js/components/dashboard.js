@@ -72,7 +72,7 @@ export function dashboard() {
         
         async loadUserReservations() {
             try {
-                const response = await fetch('/reservations/user/upcoming');
+                const response = await fetch('/reservations/?format=json');
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -96,9 +96,13 @@ export function dashboard() {
         },
         
         handleSlotClick(court, time, slot) {
+            console.log('Slot clicked:', { court, time, slot });
+            
             if (slot.status === 'available') {
+                console.log('Opening booking modal for available slot');
                 this.openBookingModal(court, time);
             } else if (slot.status === 'reserved' && this.canCancelSlot(slot)) {
+                console.log('Cancelling reservation');
                 // Handle both test format (reservation) and production format (details)
                 const reservation = slot.reservation || slot.details;
                 const reservationId = reservation.reservation_id || reservation.id;
@@ -107,11 +111,16 @@ export function dashboard() {
         },
         
         openBookingModal(courtNumber, time) {
-            // Trigger Alpine.js booking modal
-            if (window.Alpine && window.Alpine.store) {
-                const bookingStore = window.Alpine.store('booking');
-                if (bookingStore && bookingStore.modalComponent) {
-                    bookingStore.modalComponent.open(courtNumber, time, this.selectedDate);
+            // Find the booking modal Alpine component and open it
+            const modalEl = document.querySelector('[x-data*="bookingModal"]');
+            if (modalEl && window.Alpine) {
+                try {
+                    const modalComponent = window.Alpine.$data(modalEl);
+                    if (modalComponent && typeof modalComponent.open === 'function') {
+                        modalComponent.open(courtNumber, time, this.selectedDate);
+                    }
+                } catch (e) {
+                    console.error('Error opening booking modal:', e);
                 }
             }
         },
@@ -212,6 +221,37 @@ export function dashboard() {
             } else {
                 alert(message);
             }
+        },
+        
+        // Template helper methods
+        getSlot(courtIndex, time) {
+            if (!this.courts || !this.courts[courtIndex] || !this.courts[courtIndex].slots) {
+                return { status: 'available' };
+            }
+            
+            const timeIndex = this.timeSlots.indexOf(time);
+            return this.courts[courtIndex].slots[timeIndex] || { status: 'available' };
+        },
+        
+        getSlotContent(slot) {
+            if (slot.status === 'available') {
+                return 'Frei';
+            } else if (slot.status === 'reserved') {
+                const reservation = slot.reservation || slot.details;
+                if (reservation) {
+                    return `Gebucht für ${reservation.booked_for}<br>von ${reservation.booked_by}`;
+                }
+                return 'Gebucht';
+            } else if (slot.status === 'blocked') {
+                return 'Gesperrt';
+            }
+            return '';
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const [year, month, day] = dateStr.split('-');
+            return `${day}.${month}.${year}`;
         }
     };
 }

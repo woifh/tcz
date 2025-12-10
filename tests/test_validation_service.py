@@ -6,7 +6,8 @@ from app.services.validation_service import ValidationService
 
 
 # Hypothesis strategies
-valid_booking_times = st.times(min_value=time(6, 0), max_value=time(21, 0))
+# Generate only full-hour times (minutes and seconds must be 0)
+valid_booking_times = st.builds(time, hour=st.integers(min_value=6, max_value=21), minute=st.just(0), second=st.just(0))
 invalid_early_times = st.times(min_value=time(0, 0), max_value=time(5, 59))
 invalid_late_times = st.times(min_value=time(22, 0), max_value=time(23, 59))
 
@@ -49,6 +50,22 @@ def test_property_32_time_slot_validation_rejects_late_times(app, start_time):
     with app.app_context():
         result = ValidationService.validate_booking_time(start_time)
         assert result is False, f"Late time {start_time} should be rejected"
+
+
+@given(start_time=st.builds(time, 
+                           hour=st.integers(min_value=6, max_value=21), 
+                           minute=st.integers(min_value=1, max_value=59), 
+                           second=st.integers(min_value=0, max_value=59)))
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_property_32_time_slot_validation_rejects_non_full_hour_times(app, start_time):
+    """Feature: tennis-club-reservation, Property 32: Time slot validation
+    Validates: Requirements 14.1, 14.3
+    
+    For any reservation attempt, the system should reject start times that are not on full hours.
+    """
+    with app.app_context():
+        result = ValidationService.validate_booking_time(start_time)
+        assert result is False, f"Non-full-hour time {start_time} should be rejected"
 
 
 

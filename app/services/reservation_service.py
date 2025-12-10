@@ -88,8 +88,8 @@ class ReservationService:
         # Determine if this is a short notice booking
         is_short_notice = ReservationService.is_short_notice_booking(date, start_time)
         
-        # Debug logging
-        print(f"DEBUG RESERVATION: Creating reservation - date={date}, start_time={start_time}, is_short_notice={is_short_notice}")
+        # Log reservation creation
+        print(f"Creating reservation - date={date}, start_time={start_time}, is_short_notice={is_short_notice}")
         
         # Validate all constraints (pass short notice flag for proper validation)
         is_valid, error_msg = ValidationService.validate_all_booking_constraints(
