@@ -105,19 +105,24 @@
                             <input type="text" id="multi-sub-reason" name="multi-sub-reason" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="z. B. Regen, Reparatur">
                         </div>
 
-                        <!-- Submit Button -->
-                        <div>
-                            <button type="submit" id="create-block-btn" disabled class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
-                                {% if edit_block_data %}
-                                    Sperrung aktualisieren
-                                {% else %}
-                                    Sperrung erstellen
-                                {% endif %}
-                            </button>
+                        <!-- Action Buttons -->
+                        <div class="form-actions flex gap-3">
                             {% if edit_block_data %}
-                                <a href="{{ url_for('admin.court_blocking') }}" class="ml-4 bg-gray-600 text-white py-2 px-6 rounded hover:bg-gray-700 inline-block">
+                                <!-- Edit Mode: 3 buttons -->
+                                <button type="submit" id="update-block-btn" disabled class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                    Sperrung aktualisieren
+                                </button>
+                                <button type="button" id="clone-block-btn" disabled class="bg-blue-600 text-white py-2 px-6 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                    Als neues Event speichern
+                                </button>
+                                <button type="button" id="cancel-btn" class="bg-gray-600 text-white py-2 px-6 rounded hover:bg-gray-700">
                                     Abbrechen
-                                </a>
+                                </button>
+                            {% else %}
+                                <!-- Create Mode: 1 button -->
+                                <button type="submit" id="create-block-btn" disabled class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                    Sperrung erstellen
+                                </button>
                             {% endif %}
                         </div>
                     </div>

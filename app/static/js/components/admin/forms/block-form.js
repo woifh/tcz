@@ -40,6 +40,24 @@ export class BlockForm {
             multiCourtForm.addEventListener('submit', (e) => this.handleSubmit(e));
         }
 
+        // Update button event listener (for edit mode)
+        const updateBtn = document.getElementById('update-block-btn');
+        if (updateBtn) {
+            updateBtn.addEventListener('click', (e) => this.handleSubmit(e));
+        }
+
+        // Save as New Event button event listener
+        const saveAsNewBtn = document.getElementById('clone-block-btn');
+        if (saveAsNewBtn) {
+            saveAsNewBtn.addEventListener('click', (e) => this.handleSaveAsNew(e));
+        }
+
+        // Cancel button event listener
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => this.handleCancel(e));
+        }
+
         // Court selection buttons
         const selectAllBtn = document.getElementById('select-all-courts');
         const clearAllBtn = document.getElementById('clear-all-courts');
@@ -133,6 +151,9 @@ export class BlockForm {
         if (window.editBlockData) {
             console.log('🔄 Found window.editBlockData, using it to populate form data');
             this.populateEditForm(window.editBlockData);
+        } else {
+            // Ensure button visibility is correct for create mode
+            this.updateButtonVisibility();
         }
         
         // Final state logging
@@ -144,10 +165,45 @@ export class BlockForm {
     }
 
     updateFormForEditMode() {
-        // Update form title and button text
-        const submitBtn = document.getElementById('create-block-btn');
-        if (submitBtn) {
-            submitBtn.textContent = 'Sperrung aktualisieren';
+        // Update form data attributes to reflect edit mode
+        const form = document.getElementById('multi-court-form');
+        if (form) {
+            form.setAttribute('data-edit-mode', 'true');
+            form.setAttribute('data-batch-id', this.editBatchId || '');
+            form.setAttribute('data-block-id', this.editBlockId || '');
+        }
+        
+        // Show/hide appropriate buttons based on mode
+        this.updateButtonVisibility();
+        
+        // Ensure validation runs to enable buttons
+        this.validateForm();
+        
+        console.log('✅ Form updated for edit mode:', {
+            isEditMode: this.isEditMode,
+            editBatchId: this.editBatchId,
+            editBlockId: this.editBlockId
+        });
+    }
+
+    updateButtonVisibility() {
+        const createBtn = document.getElementById('create-block-btn');
+        const updateBtn = document.getElementById('update-block-btn');
+        const cloneBtn = document.getElementById('clone-block-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        
+        if (this.isEditMode) {
+            // Edit mode: show update, clone, and cancel buttons; hide create button
+            if (createBtn) createBtn.style.display = 'none';
+            if (updateBtn) updateBtn.style.display = 'inline-block';
+            if (cloneBtn) cloneBtn.style.display = 'inline-block';
+            if (cancelBtn) cancelBtn.style.display = 'inline-block';
+        } else {
+            // Create mode: show create button; hide update, clone, and cancel buttons
+            if (createBtn) createBtn.style.display = 'inline-block';
+            if (updateBtn) updateBtn.style.display = 'none';
+            if (cloneBtn) cloneBtn.style.display = 'none';
+            if (cancelBtn) cancelBtn.style.display = 'none';
         }
     }
 
@@ -223,7 +279,16 @@ export class BlockForm {
         const endTime = document.getElementById('multi-end')?.value;
         const reason = document.getElementById('multi-reason')?.value;
         const date = document.getElementById('multi-date')?.value;
-        const submitBtn = document.getElementById('create-block-btn');
+        
+        // Debug logging
+        console.log('🔍 Form validation:', {
+            courts: courtCheckboxes.length,
+            startTime,
+            endTime,
+            reason,
+            date,
+            timeRangeValid: this.validateTimeRange()
+        });
         
         const isValid = courtCheckboxes.length > 0 && 
                        startTime && 
@@ -232,9 +297,21 @@ export class BlockForm {
                        date && 
                        this.validateTimeRange();
         
-        if (submitBtn) {
-            submitBtn.disabled = !isValid;
-        }
+        // Enable/disable all form buttons based on validation
+        const createBtn = document.getElementById('create-block-btn');
+        const updateBtn = document.getElementById('update-block-btn');
+        const cloneBtn = document.getElementById('clone-block-btn');
+        
+        console.log('🔍 Button states:', {
+            isValid,
+            createBtn: !!createBtn,
+            updateBtn: !!updateBtn,
+            cloneBtn: !!cloneBtn
+        });
+        
+        if (createBtn) createBtn.disabled = !isValid;
+        if (updateBtn) updateBtn.disabled = !isValid;
+        if (cloneBtn) cloneBtn.disabled = !isValid;
         
         return isValid;
     }
@@ -313,6 +390,11 @@ export class BlockForm {
                 console.log('➕ Using multi-court create (POST)');
                 // Create new multi-court blocks
                 result = await blocksAPI.createMultiCourt(blockData);
+                
+                // Debug: log the full response structure
+                console.log('🔍 Full API response:', result);
+                console.log('🔍 Response data:', result.data);
+                console.log('🔍 Looking for batch_id in result.data:', result.data);
             }
 
             if (result.success) {
@@ -321,18 +403,32 @@ export class BlockForm {
                     : 'Sperrung erfolgreich erstellt';
                 showToast(message, 'success');
                 
-                // Reset form and reload blocks
-                this.resetForm();
-                if (window.loadUpcomingBlocks) {
-                    window.loadUpcomingBlocks();
+                // For updates: keep the form data and stay in edit mode
+                // For new creations: redirect to the edit page
+                if (this.isEditMode) {
+                    // Stay in edit mode with current data - no changes needed
+                    console.log('✅ Update successful - staying in edit mode');
+                    
+                    // Reload blocks list
+                    if (window.loadUpcomingBlocks) {
+                        window.loadUpcomingBlocks();
+                    }
+                } else {
+                    // New event created - redirect to edit page
+                    if (result.data && result.data.batch_id) {
+                        console.log('✅ New event created - redirecting to edit page');
+                        window.location.href = `/admin/court-blocking/${result.data.batch_id}`;
+                    } else {
+                        console.log('⚠️ New event created but no batch_id returned');
+                        console.log('🔍 Full response:', result);
+                        // Fallback: reload blocks list
+                        if (window.loadUpcomingBlocks) {
+                            window.loadUpcomingBlocks();
+                        }
+                    }
                 }
                 
-                // Close modal if it exists
-                const modal = document.getElementById('multi-court-modal');
-                if (modal && window.bootstrap) {
-                    const bsModal = window.bootstrap.Modal.getInstance(modal);
-                    if (bsModal) bsModal.hide();
-                }
+                // Don't close modal - keep form open for further editing (only for updates)
             } else {
                 showToast(result.error || 'Fehler beim Speichern der Sperrung', 'error');
             }
@@ -340,6 +436,78 @@ export class BlockForm {
             console.error('❌ Error submitting form:', error);
             showToast('Fehler beim Speichern der Sperrung', 'error');
         }
+    }
+
+    async handleSaveAsNew(event) {
+        console.log('🚀 Save as New Event handler called');
+        event.preventDefault();
+        
+        if (!this.validateForm()) {
+            showToast('Bitte füllen Sie alle erforderlichen Felder aus', 'error');
+            return;
+        }
+
+        // Collect form data (same as regular submit)
+        const selectedCourts = Array.from(document.querySelectorAll('input[name="multi-courts"]:checked')).map(cb => cb.value);
+
+        const blockData = {
+            court_ids: selectedCourts,
+            date: document.getElementById('multi-date')?.value,
+            start_time: document.getElementById('multi-start')?.value,
+            end_time: document.getElementById('multi-end')?.value,
+            reason_id: document.getElementById('multi-reason')?.value,
+            sub_reason: document.getElementById('multi-sub-reason')?.value || ''
+        };
+
+        console.log('📤 Submitting new event data:', blockData);
+
+        // Validate that reason_id is set
+        if (!blockData.reason_id) {
+            showToast('Bitte wählen Sie einen Grund aus', 'error');
+            return;
+        }
+
+        try {
+            // Always use POST for "Save as New Event" (create new event)
+            console.log('➕ Using multi-court create (POST) for new event');
+            const result = await blocksAPI.createMultiCourt(blockData);
+            
+            // Debug: log the full response structure
+            console.log('🔍 Full API response (Save as New):', result);
+            console.log('🔍 Response data (Save as New):', result.data);
+            console.log('🔍 Looking for batch_id in result.data:', result.data);
+
+            if (result.success) {
+                showToast('Neue Sperrung erfolgreich erstellt', 'success');
+                
+                // Redirect to edit page for the newly created event
+                if (result.data && result.data.batch_id) {
+                    console.log('✅ New event created from existing - redirecting to edit page');
+                    window.location.href = `/admin/court-blocking/${result.data.batch_id}`;
+                } else {
+                    console.log('⚠️ New event created but no batch_id returned');
+                    console.log('🔍 Full response:', result);
+                }
+                
+                // Don't reload blocks list or close modal - we're redirecting
+            } else {
+                showToast(result.error || 'Fehler beim Erstellen der neuen Sperrung', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Error creating new event:', error);
+            showToast('Fehler beim Erstellen der neuen Sperrung', 'error');
+        }
+    }
+
+    handleCancel(event) {
+        console.log('🚀 Cancel handler called');
+        event.preventDefault();
+        
+        // Clear the form completely and reset to create mode
+        this.resetForm();
+        
+        // Navigate back to the main court blocking page
+        window.location.href = '/admin/court-blocking';
     }
 
     populateEditForm(blockData) {
@@ -410,12 +578,8 @@ export class BlockForm {
             form.setAttribute('data-block-id', '');
         }
         
-        // Reset form title and button text
-        const formTitle = document.querySelector('#multi-court-modal .modal-title');
-        const submitBtn = document.getElementById('create-block-btn');
-        
-        if (formTitle) formTitle.textContent = 'Neue Sperrung erstellen';
-        if (submitBtn) submitBtn.textContent = 'Sperrung erstellen';
+        // Update button visibility for create mode
+        this.updateButtonVisibility();
         
         // Set default date
         const dateInput = document.getElementById('multi-date');
@@ -430,6 +594,8 @@ export class BlockForm {
         }
         
         this.validateForm();
+        
+        console.log('✅ Form reset to create mode');
     }
 
     // Debug method to manually check data attributes

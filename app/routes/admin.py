@@ -886,9 +886,13 @@ def create_multi_court_blocks():
         if error:
             return jsonify({'error': error}), 400
         
+        # Get the batch_id from the first created block
+        batch_id = blocks[0].batch_id if blocks else None
+        
         return jsonify({
             'message': f'Mehrplatz-Sperrungen erfolgreich erstellt: {len(blocks)} Plätze',
-            'blocks_created': len(blocks)
+            'blocks_created': len(blocks),
+            'batch_id': batch_id
         }), 201
         
     except Exception as e:
