@@ -35,7 +35,7 @@
                     Favoriten
                 </a>
                 {% if current_user.is_admin() %}
-                <a href="{{ url_for('admin.admin_panel') }}" class="hover:underline flex items-center gap-1">
+                <a href="{{ url_for('admin.index') }}" class="hover:underline flex items-center gap-1">
                     <span class="material-icons text-sm">admin_panel_settings</span>
                     Admin-Panel
                 </a>
