@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Sperrungsgründe - Admin - Tennisclub{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">Sperrungsgründe verwalten</h2>
+        <a href="{{ url_for('admin.overview') }}" class="text-green-600 hover:underline">← Zurück zur Übersicht</a>
+    </div>
+    
+    <p class="text-gray-600 mb-4">Anpassbare Gründe für Sperrungen erstellen und bearbeiten.</p>
+    
+    <div class="p-8 text-center text-gray-500">
+        <p>Sperrungsgründe - Funktionalität wird implementiert...</p>
+    </div>
+</div>
+{% endblock %}

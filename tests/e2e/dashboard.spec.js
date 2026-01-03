@@ -17,8 +17,8 @@ test.describe('Dashboard', () => {
     await expect(page.getByText('Platz 6')).toBeVisible();
   });
 
-  test('should display time slots from 06:00 to 21:00', async ({ page }) => {
-    await expect(page.getByRole('cell', { name: '06:00' })).toBeVisible();
+  test('should display time slots from 08:00 to 21:00', async ({ page }) => {
+    await expect(page.getByRole('cell', { name: '08:00' })).toBeVisible();
     await expect(page.getByRole('cell', { name: '21:00' })).toBeVisible();
   });
 

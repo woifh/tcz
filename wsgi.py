@@ -14,4 +14,4 @@ config_name = os.environ.get('FLASK_ENV', 'production')
 application = create_app(config_name)
 
 if __name__ == '__main__':
-    application.run()
+    application.run(host='127.0.0.1', port=5001, debug=True)

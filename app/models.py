@@ -305,6 +305,7 @@ class Block(db.Model):
         db.Index('idx_block_court_date', 'court_id', 'date'),
         db.Index('idx_block_series', 'series_id'),
         db.Index('idx_block_reason', 'reason_id'),
+        db.Index('idx_block_batch', 'batch_id'),
     )
     
     id = db.Column(db.Integer, primary_key=True)
@@ -315,6 +316,7 @@ class Block(db.Model):
     reason_id = db.Column(db.Integer, db.ForeignKey('block_reason.id'), nullable=False)
     sub_reason = db.Column(db.String(255), nullable=True)
     series_id = db.Column(db.Integer, db.ForeignKey('block_series.id', ondelete='CASCADE'), nullable=True)
+    batch_id = db.Column(db.String(36), nullable=True, index=True)  # UUID for grouping multi-court blocks
     is_modified = db.Column(db.Boolean, nullable=False, default=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)

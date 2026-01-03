@@ -48,21 +48,39 @@ function initializeAdminPanel() {
     const today = new Date().toISOString().split('T')[0];
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    document.getElementById('block-date').value = today;
-    document.getElementById('multi-date').value = today;
-    document.getElementById('series-start-date').value = today;
-    document.getElementById('series-end-date').value = nextWeek;
-    document.getElementById('filter-date-start').value = today;
-    document.getElementById('filter-date-end').value = nextWeek;
+    // Set default date for multi-court form
+    const multiDateInput = document.getElementById('multi-date');
+    if (multiDateInput) {
+        multiDateInput.value = today;
+    }
+    
+    // Ensure end time field is enabled
+    const endTimeInput = document.getElementById('multi-end');
+    if (endTimeInput) {
+        endTimeInput.disabled = false;
+    }
+    
+    // Set default dates for other forms if they exist
+    const seriesStartDate = document.getElementById('series-start-date');
+    if (seriesStartDate) {
+        seriesStartDate.value = today;
+    }
+    
+    const seriesEndDate = document.getElementById('series-end-date');
+    if (seriesEndDate) {
+        seriesEndDate.value = nextWeek;
+    }
     
     // Initialize calendar view
     initializeCalendarView();
     
-    // Load saved filters
-    loadSavedFilters();
+    // Load upcoming blocks automatically
+    loadUpcomingBlocks();
     
-    // Setup dynamic filtering
-    setupDynamicFiltering();
+    // Handle edit mode if edit block data is available
+    if (window.editBlockData) {
+        populateEditForm(window.editBlockData);
+    }
 }
 
 // Load block templates
@@ -112,6 +130,129 @@ function setupEventListeners() {
     if (reasonForm) {
         reasonForm.addEventListener('submit', handleReasonSubmit);
     }
+    
+    // Court selection buttons
+    const selectAllBtn = document.getElementById('select-all-courts');
+    const clearAllBtn = document.getElementById('clear-all-courts');
+    
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            document.querySelectorAll('input[name="multi-courts"]').forEach(cb => cb.checked = true);
+            validateForm();
+        });
+    }
+    
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', () => {
+            document.querySelectorAll('input[name="multi-courts"]').forEach(cb => cb.checked = false);
+            validateForm();
+        });
+    }
+    
+    // Form validation
+    setupFormValidation();
+}
+
+// Setup form validation
+function setupFormValidation() {
+    const courtCheckboxes = document.querySelectorAll('input[name="multi-courts"]');
+    const startTimeInput = document.getElementById('multi-start');
+    const endTimeInput = document.getElementById('multi-end');
+    const reasonSelect = document.getElementById('multi-reason');
+    const dateInput = document.getElementById('multi-date');
+    const submitBtn = document.getElementById('create-block-btn');
+    
+    // Court selection validation
+    courtCheckboxes.forEach(cb => {
+        cb.addEventListener('change', validateForm);
+    });
+    
+    // Time validation
+    if (startTimeInput && endTimeInput) {
+        startTimeInput.addEventListener('change', () => {
+            validateTimeRange();
+            validateForm();
+        });
+        
+        endTimeInput.addEventListener('change', () => {
+            validateTimeRange();
+            validateForm();
+        });
+    }
+    
+    // Other field validation
+    if (reasonSelect) {
+        reasonSelect.addEventListener('change', validateForm);
+    }
+    
+    if (dateInput) {
+        dateInput.addEventListener('change', validateForm);
+    }
+    
+    // Initial validation
+    validateForm();
+}
+
+// Validate time range
+function validateTimeRange() {
+    const startTimeInput = document.getElementById('multi-start');
+    const endTimeInput = document.getElementById('multi-end');
+    const timeError = document.getElementById('time-error');
+    
+    if (startTimeInput && endTimeInput && startTimeInput.value && endTimeInput.value) {
+        const isValid = endTimeInput.value > startTimeInput.value;
+        
+        if (timeError) {
+            if (isValid) {
+                timeError.classList.add('hidden');
+                endTimeInput.classList.remove('border-red-300');
+                endTimeInput.classList.add('border-gray-300');
+            } else {
+                timeError.classList.remove('hidden');
+                endTimeInput.classList.add('border-red-300');
+                endTimeInput.classList.remove('border-gray-300');
+            }
+        }
+        
+        return isValid;
+    }
+    return true;
+}
+
+// Validate entire form
+function validateForm() {
+    const courtCheckboxes = document.querySelectorAll('input[name="multi-courts"]');
+    const dateInput = document.getElementById('multi-date');
+    const startTimeInput = document.getElementById('multi-start');
+    const endTimeInput = document.getElementById('multi-end');
+    const reasonSelect = document.getElementById('multi-reason');
+    const submitBtn = document.getElementById('create-block-btn');
+    const courtHint = document.getElementById('court-selection-hint');
+    
+    const hasSelectedCourts = Array.from(courtCheckboxes).some(cb => cb.checked);
+    const hasDate = dateInput && dateInput.value;
+    const hasStartTime = startTimeInput && startTimeInput.value;
+    const hasEndTime = endTimeInput && endTimeInput.value;
+    const hasReason = reasonSelect && reasonSelect.value;
+    const timeRangeValid = validateTimeRange();
+    
+    // Show/hide court selection hint
+    if (courtHint) {
+        if (hasSelectedCourts) {
+            courtHint.classList.add('hidden');
+        } else {
+            courtHint.classList.remove('hidden');
+        }
+    }
+    
+    // Enable/disable submit button
+    const isFormValid = hasSelectedCourts && hasDate && hasStartTime && hasEndTime && hasReason && timeRangeValid;
+    
+    if (submitBtn) {
+        submitBtn.disabled = !isFormValid;
+    }
+    
+    return isFormValid;
 }
 
 // Tab management
@@ -145,6 +286,48 @@ function showTab(tabName) {
     } else if (tabName === 'reasons') {
         loadReasonList();
     }
+}
+
+// Populate form with edit data
+function populateEditForm(blockData) {
+    // Wait for reasons to be loaded before populating
+    const populateWhenReady = () => {
+        if (blockReasons.length === 0) {
+            setTimeout(populateWhenReady, 100);
+            return;
+        }
+        
+        // Populate form fields
+        document.getElementById('multi-date').value = blockData.date;
+        document.getElementById('multi-start').value = blockData.start_time;
+        document.getElementById('multi-end').value = blockData.end_time;
+        document.getElementById('multi-reason').value = blockData.reason_id;
+        document.getElementById('multi-sub-reason').value = blockData.sub_reason;
+        
+        // Select all courts that are part of this block group
+        blockData.court_ids.forEach(courtId => {
+            const courtCheckbox = document.querySelector(`input[name="multi-courts"][value="${courtId}"]`);
+            if (courtCheckbox) {
+                courtCheckbox.checked = true;
+            }
+        });
+        
+        // Update the court selection hint to show edit mode info
+        const courtHint = document.getElementById('court-selection-hint');
+        if (courtHint) {
+            if (blockData.court_ids.length === 1) {
+                courtHint.innerHTML = '<p class="text-sm text-blue-600">ℹ️ Bearbeitung einer Einzelplatz-Sperrung</p>';
+            } else {
+                courtHint.innerHTML = `<p class="text-sm text-blue-600">ℹ️ Bearbeitung einer Mehrplatz-Sperrung (${blockData.court_ids.length} Plätze)</p>`;
+            }
+            courtHint.classList.remove('hidden');
+        }
+        
+        // Validate form to enable submit button
+        validateForm();
+    };
+    
+    populateWhenReady();
 }
 
 // Load block reasons
@@ -189,16 +372,28 @@ function populateReasonSelects() {
 async function handleMultiCourtSubmit(e) {
     e.preventDefault();
     
+    const submitBtn = document.getElementById('create-block-btn');
+    const originalText = submitBtn.textContent;
+    const form = document.getElementById('multi-court-form');
+    const isEditMode = form.dataset.editMode === 'true';
+    const blockId = form.dataset.blockId;
+    const relatedBlockIds = form.dataset.relatedBlockIds ? form.dataset.relatedBlockIds.split(',').map(id => parseInt(id)) : [];
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = isEditMode ? 'Wird aktualisiert...' : 'Wird erstellt...';
+    
     const selectedCourts = Array.from(document.querySelectorAll('input[name="multi-courts"]:checked'))
         .map(cb => parseInt(cb.value));
     
     if (selectedCourts.length === 0) {
         showToast('Bitte mindestens einen Platz auswählen', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
         return;
     }
     
     const blockData = {
-        court_ids: selectedCourts,
         date: document.getElementById('multi-date').value,
         start_time: document.getElementById('multi-start').value,
         end_time: document.getElementById('multi-end').value,
@@ -206,24 +401,72 @@ async function handleMultiCourtSubmit(e) {
         sub_reason: document.getElementById('multi-sub-reason').value
     };
     
+    // For create mode, add court_ids
+    if (!isEditMode) {
+        blockData.court_ids = selectedCourts;
+    } else {
+        // For edit mode, add the related block IDs and new court selection
+        blockData.court_ids = selectedCourts;
+        blockData.related_block_ids = relatedBlockIds;
+    }
+    
     try {
-        const response = await fetch('/admin/blocks/multi-court', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(blockData)
-        });
+        let response;
+        
+        if (isEditMode) {
+            // Update existing block group - use a special endpoint for multi-court updates
+            response = await fetch(`/admin/blocks/multi-court-update/${blockId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(blockData)
+            });
+        } else {
+            // Create new block
+            response = await fetch('/admin/blocks/multi-court', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(blockData)
+            });
+        }
         
         const data = await response.json();
         
         if (response.ok) {
-            showToast(data.message);
-            e.target.reset();
-            applyFilters(); // Refresh the list
+            showToast(isEditMode ? 'Sperrung erfolgreich aktualisiert!' : 'Sperrung erfolgreich erstellt!', 'success');
+            
+            if (isEditMode) {
+                // Redirect back to main court blocking page after successful edit
+                setTimeout(() => {
+                    window.location.href = '/admin/court-blocking';
+                }, 1500);
+            } else {
+                // Reset form but keep some values for convenience
+                const courtCheckboxes = document.querySelectorAll('input[name="multi-courts"]');
+                courtCheckboxes.forEach(cb => cb.checked = false);
+                document.getElementById('multi-sub-reason').value = '';
+                
+                // Refresh the list if loadUpcomingBlocks function exists
+                if (typeof loadUpcomingBlocks === 'function') {
+                    loadUpcomingBlocks();
+                }
+            }
         } else {
-            showToast(data.error || 'Unbekannter Fehler', 'error');
+            if (data.error && data.error.includes('Konflikt')) {
+                showToast('Konflikt erkannt: ' + data.error, 'warning');
+            } else {
+                showToast(data.error || `Unbekannter Fehler beim ${isEditMode ? 'Aktualisieren' : 'Erstellen'} der Sperrung`, 'error');
+            }
         }
     } catch (error) {
-        showToast('Fehler beim Erstellen der Mehrplatz-Sperrung', 'error');
+        console.error('Error with block operation:', error);
+        showToast(`Fehler beim ${isEditMode ? 'Aktualisieren' : 'Erstellen'} der Sperrung`, 'error');
+    } finally {
+        // Restore button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        
+        // Re-validate form to update button state
+        validateForm();
     }
 }
 
@@ -866,13 +1109,13 @@ function displayBlockList(blocks) {
                                 Serie
                             </button>
                         ` : ''}
-                        <button onclick="editBlock(${block.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700" title="Bearbeiten">
+                        <button onclick="editBatch('${block.batch_id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700" title="Bearbeiten">
                             ✏️
                         </button>
                         <button onclick="duplicateBlock(${block.id})" class="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700" title="Duplizieren">
                             📋
                         </button>
-                        <button onclick="deleteBlock(${block.id})" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700" title="Löschen">
+                        <button onclick="deleteBatch('${block.batch_id}')" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700" title="Löschen">
                             🗑️
                         </button>
                     </div>
@@ -1340,28 +1583,293 @@ async function handleBulkEditSubmit(e) {
     }
 }
 
-// Delete single block
-async function deleteBlock(blockId) {
-    if (!confirm('Möchten Sie diese Sperrung wirklich löschen?')) {
+// Delete batch function - deletes entire batch by batch_id
+async function deleteBatch(batchId) {
+    if (!batchId) {
+        showToast('Fehler: Keine Batch-ID gefunden', 'error');
         return;
     }
     
     try {
-        const response = await fetch(`/admin/blocks/${blockId}`, {
+        // First, get batch details to show proper confirmation message
+        const response = await fetch(`/admin/blocks?date_range_start=${new Date().toISOString().split('T')[0]}&date_range_end=${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Fehler beim Laden der Sperrungen');
+        }
+        
+        // Find all blocks with this batch_id
+        const batchBlocks = data.blocks.filter(block => block.batch_id === batchId);
+        
+        if (batchBlocks.length === 0) {
+            showToast('Keine Sperrungen mit dieser Batch-ID gefunden', 'error');
+            return;
+        }
+        
+        // Show confirmation modal
+        showBatchDeleteConfirmation(batchId, batchBlocks);
+        
+    } catch (error) {
+        console.error('Error loading batch details:', error);
+        showToast('Fehler beim Laden der Sperrungsdetails', 'error');
+    }
+}
+
+// Show batch delete confirmation modal
+function showBatchDeleteConfirmation(batchId, batchBlocks) {
+    const isMultiCourt = batchBlocks.length > 1;
+    const courtNumbers = batchBlocks.map(b => b.court_number).sort((a, b) => a - b);
+    const firstBlock = batchBlocks[0];
+    
+    const date = new Date(firstBlock.date).toLocaleDateString('de-DE');
+    const startTime = firstBlock.start_time.slice(0, 5);
+    const endTime = firstBlock.end_time.slice(0, 5);
+    
+    let courtsDisplay;
+    if (courtNumbers.length === 1) {
+        courtsDisplay = `Platz ${courtNumbers[0]}`;
+    } else if (courtNumbers.length === 2) {
+        courtsDisplay = `Plätze ${courtNumbers.join(' & ')}`;
+    } else {
+        courtsDisplay = `Plätze ${courtNumbers.join(', ')}`;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'batch-delete-modal';
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center mb-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900">Sperrung löschen</h3>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-3">
+                    Möchten Sie diese Sperrung wirklich löschen?
+                </p>
+                
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="font-medium text-gray-900">${courtsDisplay}</div>
+                    <div class="text-sm text-gray-600">${date} • ${startTime} - ${endTime}</div>
+                    <div class="text-sm text-gray-500">${firstBlock.reason_name}${firstBlock.sub_reason ? ' • ' + firstBlock.sub_reason : ''}</div>
+                    ${isMultiCourt ? `<div class="text-xs text-blue-600 mt-1">${batchBlocks.length} Plätze betroffen</div>` : ''}
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="confirmBatchDelete('${batchId}')" class="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">
+                    ${isMultiCourt ? `${batchBlocks.length} Sperrungen löschen` : 'Sperrung löschen'}
+                </button>
+                <button onclick="closeBatchDeleteConfirmation()" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400">
+                    Abbrechen
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Close batch delete confirmation modal
+function closeBatchDeleteConfirmation() {
+    const modal = document.getElementById('batch-delete-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Confirm and execute batch delete
+async function confirmBatchDelete(batchId) {
+    closeBatchDeleteConfirmation();
+    
+    try {
+        const response = await fetch(`/admin/blocks/batch/${batchId}`, {
             method: 'DELETE'
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            showToast(data.message);
-            applyFilters(); // Refresh the list
+            showToast(data.message || 'Batch-Sperrung erfolgreich gelöscht', 'success');
+            
+            // Refresh the blocks list
+            if (typeof loadUpcomingBlocks === 'function') {
+                loadUpcomingBlocks();
+            }
         } else {
-            showToast(data.error || 'Fehler beim Löschen', 'error');
+            showToast(data.error || 'Fehler beim Löschen der Batch-Sperrung', 'error');
         }
     } catch (error) {
+        console.error('Error deleting batch:', error);
+        showToast('Fehler beim Löschen der Batch-Sperrung', 'error');
+    }
+}
+
+// Delete block function - handles both single and multi-court blocks (LEGACY - kept for compatibility)
+async function deleteBlock(blockId) {
+    try {
+        // First, get block details to show proper confirmation message
+        const blockResponse = await fetch(`/admin/blocks/${blockId}`);
+        if (!blockResponse.ok) {
+            showToast('Fehler beim Laden der Sperrungsdetails', 'error');
+            return;
+        }
+        
+        const blockData = await blockResponse.json();
+        const block = blockData.block;
+        
+        // Find all related blocks to determine if this is a multi-court block
+        const relatedResponse = await fetch(`/admin/blocks?date=${block.date}&start_time=${block.start_time}&end_time=${block.end_time}&reason_id=${block.reason_id}`);
+        let relatedBlocks = [];
+        
+        if (relatedResponse.ok) {
+            const relatedData = await relatedResponse.json();
+            // Filter blocks that have the same sub_reason and were likely created together
+            relatedBlocks = relatedData.blocks.filter(b => 
+                b.date === block.date &&
+                b.start_time === block.start_time &&
+                b.end_time === block.end_time &&
+                b.reason_id === block.reason_id &&
+                b.sub_reason === block.sub_reason
+            );
+        }
+        
+        // Show confirmation modal
+        showDeleteConfirmation(blockId, block, relatedBlocks);
+        
+    } catch (error) {
+        console.error('Error preparing delete:', error);
+        showToast('Fehler beim Vorbereiten des Löschvorgangs', 'error');
+    }
+}
+
+// Show delete confirmation modal
+function showDeleteConfirmation(blockId, block, relatedBlocks) {
+    const isMultiCourt = relatedBlocks.length > 1;
+    const courtNumbers = relatedBlocks.map(b => b.court_number).sort((a, b) => a - b);
+    
+    let title, message, warningText;
+    
+    if (isMultiCourt) {
+        const courtsText = courtNumbers.join(', ');
+        title = 'Mehrplatz-Sperrung löschen';
+        message = `Plätze ${courtsText}`;
+        warningText = `Diese Aktion löscht alle ${relatedBlocks.length} zugehörigen Sperrungen und kann nicht rückgängig gemacht werden.`;
+    } else {
+        title = 'Sperrung löschen';
+        message = `Platz ${block.court_number}`;
+        warningText = 'Diese Aktion kann nicht rückgängig gemacht werden.';
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'delete-confirmation-modal';
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-red-600">${title}</h3>
+                <button onclick="closeDeleteConfirmation()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold text-red-800">Sperrung löschen</p>
+                            <p class="text-red-700">${message}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-2 text-sm text-gray-600">
+                    <p><strong>Datum:</strong> ${formatGermanDate(block.date)}</p>
+                    <p><strong>Zeit:</strong> ${block.start_time} - ${block.end_time}</p>
+                    <p><strong>Grund:</strong> ${block.reason_name}</p>
+                    ${block.sub_reason ? `<p><strong>Zusätzlicher Grund:</strong> ${block.sub_reason}</p>` : ''}
+                </div>
+                
+                <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Warnung:</strong> ${warningText}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="confirmDelete(${blockId})" class="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">
+                    ${isMultiCourt ? `${relatedBlocks.length} Sperrungen löschen` : 'Sperrung löschen'}
+                </button>
+                <button onclick="closeDeleteConfirmation()" class="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">
+                    Abbrechen
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Close delete confirmation modal
+function closeDeleteConfirmation() {
+    const modal = document.getElementById('delete-confirmation-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Confirm and execute delete
+async function confirmDelete(blockId) {
+    closeDeleteConfirmation();
+    
+    try {
+        const response = await fetch(`/admin/blocks/multi-court-delete/${blockId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast(data.message, 'success');
+            
+            // Refresh the blocks list
+            if (typeof loadUpcomingBlocks === 'function') {
+                loadUpcomingBlocks();
+            }
+            
+            // If we're on a page with filters, refresh those too
+            if (typeof applyFilters === 'function') {
+                applyFilters();
+            }
+        } else {
+            showToast(data.error || 'Fehler beim Löschen der Sperrung', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting block:', error);
         showToast('Fehler beim Löschen der Sperrung', 'error');
     }
+}
+
+// Helper function to format German date
+function formatGermanDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('de-DE');
 }
 
 // Load series list
@@ -1886,7 +2394,7 @@ function displayReasonList(reasons) {
                     </div>
                     <div class="flex flex-col gap-2 ml-4">
                         <button onclick="editReasonModal(${reason.id})" 
-                                class="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700" 
+                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700" 
                                 title="Grund bearbeiten">
                             ✏️ Bearbeiten
                         </button>
@@ -2220,7 +2728,7 @@ function editReasonModal(reasonId) {
                     </div>
                     
                     <div class="flex gap-2">
-                        <button type="submit" class="bg-orange-600 text-white py-2 px-6 rounded hover:bg-orange-700">
+                        <button type="submit" class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700">
                             Änderungen speichern
                         </button>
                         <button type="button" onclick="closeEditReasonModal()" class="bg-gray-600 text-white py-2 px-6 rounded hover:bg-gray-700">
@@ -2730,12 +3238,12 @@ function showDayDetails(dateStr) {
                                 Serie
                             </button>
                         ` : ''}
-                        <button onclick="editBlock(${block.id})" 
+                        <button onclick="editBatch('${block.batch_id}')" 
                                 class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                                 title="Bearbeiten">
                             ✏️
                         </button>
-                        <button onclick="deleteBlock(${block.id})" 
+                        <button onclick="deleteBatch('${block.batch_id}')" 
                                 class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
                                 title="Löschen">
                             🗑️
@@ -2816,7 +3324,160 @@ function formatGermanDate(dateStr) {
 
 // Edit block function
 function editBlock(blockId) {
-    // This would open an edit modal for the specific block
-    showToast(`Block ${blockId} bearbeiten - Funktion wird implementiert`, 'info');
-    closeDayDetails();
+    // Legacy function - redirect to batch-based edit
+    window.location.href = `/admin/court-blocking/${blockId}`;
 }
+
+function editBatch(batchIdentifier) {
+    // Navigate to the batch-based edit URL
+    window.location.href = `/admin/court-blocking/${batchIdentifier}`;
+}
+
+// Load upcoming blocks automatically
+async function loadUpcomingBlocks() {
+    const blocksList = document.getElementById('blocks-list');
+    if (!blocksList) return;
+    
+    // Show loading state
+    blocksList.innerHTML = `
+        <div class="p-4 text-center text-gray-600">
+            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-2"></div>
+            Lade Sperrungen...
+        </div>
+    `;
+    
+    try {
+        // Get upcoming blocks (from today onwards)
+        const today = new Date().toISOString().split('T')[0];
+        const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        const params = new URLSearchParams({
+            date_range_start: today,
+            date_range_end: nextMonth
+        });
+        
+        const response = await fetch(`/admin/blocks?${params.toString()}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayUpcomingBlocks(data.blocks);
+        } else {
+            blocksList.innerHTML = `
+                <div class="p-4 text-center text-red-600">
+                    Fehler beim Laden der Sperrungen: ${data.error || 'Unbekannter Fehler'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading upcoming blocks:', error);
+        blocksList.innerHTML = `
+            <div class="p-4 text-center text-red-600">
+                Fehler beim Laden der Sperrungen
+            </div>
+        `;
+    }
+}
+
+// Display upcoming blocks in a simple list
+function displayUpcomingBlocks(blocks) {
+    const blocksList = document.getElementById('blocks-list');
+    if (!blocksList) return;
+    
+    if (blocks.length === 0) {
+        blocksList.innerHTML = `
+            <div class="p-4 text-center text-gray-600">
+                Keine kommenden Sperrungen gefunden.
+            </div>
+        `;
+        return;
+    }
+    
+    // Group blocks by batch (same date, time, reason, sub_reason, created_at)
+    const groupedBlocks = groupBlocksByBatch(blocks);
+    
+    let html = '<div class="divide-y divide-gray-200">';
+    
+    groupedBlocks.forEach(group => {
+        const firstBlock = group.blocks[0];
+        const date = new Date(firstBlock.date).toLocaleDateString('de-DE');
+        const startTime = firstBlock.start_time.slice(0, 5); // Remove seconds
+        const endTime = firstBlock.end_time.slice(0, 5); // Remove seconds
+        
+        // Sort court numbers for consistent display
+        const courtNumbers = group.blocks.map(b => b.court_number).sort((a, b) => a - b);
+        
+        // Format court display
+        let courtsDisplay;
+        if (courtNumbers.length === 1) {
+            courtsDisplay = `Platz ${courtNumbers[0]}`;
+        } else if (courtNumbers.length === 2) {
+            courtsDisplay = `Plätze ${courtNumbers.join(' & ')}`;
+        } else {
+            courtsDisplay = `Plätze ${courtNumbers.join(', ')}`;
+        }
+        
+        // Determine the batch identifier for edit/delete operations
+        const batchIdentifier = firstBlock.batch_id ? `batch_${firstBlock.batch_id}` : `single_${firstBlock.id}`;
+        
+        html += `
+            <div class="p-4 hover:bg-gray-50 flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-4">
+                        <div class="font-medium text-gray-900">
+                            ${courtsDisplay}
+                        </div>
+                        <div class="text-gray-600">
+                            ${date} • ${startTime} - ${endTime}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            ${firstBlock.reason_name}${firstBlock.sub_reason ? ' • ' + firstBlock.sub_reason : ''}
+                        </div>
+                        ${group.blocks.length > 1 ? `
+                            <div class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                ${group.blocks.length} Plätze
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editBatch('${batchIdentifier}')" class="text-blue-600 hover:text-blue-800 text-sm">
+                        Bearbeiten
+                    </button>
+                    <button onclick="deleteBatch('${firstBlock.batch_id}')" class="text-red-600 hover:text-red-800 text-sm">
+                        Löschen
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    blocksList.innerHTML = html;
+}
+
+// Group blocks by batch booking using batch_id
+function groupBlocksByBatch(blocks) {
+    const groups = new Map();
+    
+    blocks.forEach(block => {
+        // Every block now has a batch_id
+        const key = `batch_${block.batch_id}`;
+        
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key: key,
+                blocks: []
+            });
+        }
+        
+        groups.get(key).blocks.push(block);
+    });
+    
+    // Convert to array and sort by date/time
+    return Array.from(groups.values()).sort((a, b) => {
+        const dateA = new Date(`${a.blocks[0].date}T${a.blocks[0].start_time}`);
+        const dateB = new Date(`${b.blocks[0].date}T${b.blocks[0].start_time}`);
+        return dateA - dateB;
+    });
+}
+

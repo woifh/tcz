@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anmelden - Tennisclub</title>
+    <link href="/static/css/output.css" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        .material-icons { vertical-align: middle; }
+        /* Hide elements until Alpine.js loads */
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-green-700 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span class="material-icons">sports_tennis</span>
+                Tennisclub
+            </h1>
+            
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-8 px-4">
+        
+            
+                
+                <div class="mb-4 p-4 rounded flex items-center gap-3 bg-blue-100 text-blue-700">
+                    <span class="material-icons">
+                        info
+                    </span>
+                    <span>Bitte melden Sie sich an, um auf diese Seite zuzugreifen.</span>
+                </div>
+                
+            
+        
+
+        
+<div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8 mt-12">
+    <h2 class="text-2xl font-bold mb-6 text-center">Anmelden</h2>
+    
+    <form method="POST" action="/auth/login">
+        <div class="mb-4">
+            <label for="email" class="block text-gray-700 font-semibold mb-2">E-Mail</label>
+            <input type="email" id="email" name="email" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        
+        <div class="mb-6">
+            <label for="password" class="block text-gray-700 font-semibold mb-2">Passwort</label>
+            <input type="password" id="password" name="password" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        
+        <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200 flex items-center justify-center gap-2">
+            <span class="material-icons">login</span>
+            Anmelden
+        </button>
+    </form>
+</div>
+
+    </div>
+    
+    <script>
+    // Global toast notification function
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
+            type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        } text-white z-50 flex items-center gap-2`;
+        
+        const icon = document.createElement('span');
+        icon.className = 'material-icons text-sm';
+        icon.textContent = type === 'success' ? 'check_circle' : 'error';
+        
+        const text = document.createElement('span');
+        text.textContent = message;
+        
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    </script>
+    
+    
+    
+    <!-- Alpine.js for reactive components -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+</body>
+</html>

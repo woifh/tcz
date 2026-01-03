@@ -3,6 +3,7 @@ from app import db
 from app.models import Block, Reservation, BlockReason, BlockSeries, BlockTemplate, BlockAuditLog
 from app.services.email_service import EmailService
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,9 @@ class BlockService:
         Returns:
             tuple: (Block object or None, error message or None)
         """
+        # Generate a unique batch ID for this block
+        batch_id = str(uuid.uuid4())
+        
         # Create the block
         block = Block(
             court_id=court_id,
@@ -35,7 +39,8 @@ class BlockService:
             end_time=end_time,
             reason_id=reason_id,
             sub_reason=sub_reason,
-            created_by_id=admin_id
+            created_by_id=admin_id,
+            batch_id=batch_id
         )
         
         try:
@@ -213,6 +218,9 @@ class BlockService:
                     should_create_block = current_date.day == start_date.day
                 
                 if should_create_block:
+                    # Generate a unique batch ID for this date's blocks
+                    batch_id = str(uuid.uuid4())
+                    
                     # Create blocks for all specified courts
                     for court_id in court_ids:
                         block = Block(
@@ -223,7 +231,8 @@ class BlockService:
                             reason_id=reason_id,
                             sub_reason=sub_reason,
                             series_id=series.id,
-                            created_by_id=admin_id
+                            created_by_id=admin_id,
+                            batch_id=batch_id
                         )
                         
                         db.session.add(block)
@@ -587,6 +596,9 @@ class BlockService:
             if not court_ids:
                 return None, "At least one court must be specified"
             
+            # Generate a unique batch ID for ALL blocks (single or multi-court)
+            batch_id = str(uuid.uuid4())
+            
             blocks = []
             
             # Create blocks for all specified courts
@@ -598,7 +610,8 @@ class BlockService:
                     end_time=end_time,
                     reason_id=reason_id,
                     sub_reason=sub_reason,
-                    created_by_id=admin_id
+                    created_by_id=admin_id,
+                    batch_id=batch_id
                 )
                 
                 db.session.add(block)
@@ -640,6 +653,57 @@ class BlockService:
             db.session.rollback()
             logger.error(f"Failed to create multi-court blocks: {str(e)}")
             return None, f"Fehler beim Erstellen der Mehrplatz-Sperren: {str(e)}"
+    
+    @staticmethod
+    def delete_batch(batch_id, admin_id):
+        """
+        Delete all blocks in a batch.
+        
+        Args:
+            batch_id: The batch_id of blocks to delete
+            admin_id: ID of administrator performing the deletion
+            
+        Returns:
+            tuple: (success boolean, error message or None)
+        """
+        try:
+            if not batch_id:
+                return False, "Batch ID is required"
+            
+            # Get all blocks with this batch_id
+            blocks_to_delete = Block.query.filter_by(batch_id=batch_id).all()
+            
+            if not blocks_to_delete:
+                return False, "No blocks found with this batch ID"
+            
+            # Get court numbers for the response message
+            court_numbers = [block.court.number for block in blocks_to_delete]
+            
+            # Delete all blocks in the batch
+            for block in blocks_to_delete:
+                db.session.delete(block)
+            
+            db.session.commit()
+            
+            # Log the operation
+            BlockService.log_block_operation(
+                operation='delete',
+                block_data={
+                    'batch_id': batch_id,
+                    'blocks_deleted': len(blocks_to_delete),
+                    'court_numbers': court_numbers
+                },
+                admin_id=admin_id
+            )
+            
+            logger.info(f"Batch deleted: {batch_id}, {len(blocks_to_delete)} blocks by admin {admin_id}")
+            
+            return True, None
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to delete batch {batch_id}: {str(e)}")
+            return False, f"Fehler beim Löschen der Batch-Sperrung: {str(e)}"
     
     @staticmethod
     def bulk_delete_blocks(block_ids, admin_id):

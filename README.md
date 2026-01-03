@@ -2,6 +2,33 @@
 
 A comprehensive web-based court reservation system for tennis clubs, built with Flask, SQLAlchemy, and Tailwind CSS. Features include member management, court booking, administrative controls, and email notifications—all in German.
 
+## 🚀 Quick Start
+
+### Python 3.13 Compatible Setup
+```bash
+# One-time setup (handles Python 3.13 compatibility)
+./setup_env.sh
+
+# Start development server
+./run_dev.sh
+```
+
+The application will be available at http://127.0.0.1:5000
+
+### Manual Setup
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies (Python 3.13 compatible versions)
+pip install -r requirements.txt
+
+# Start development server
+export FLASK_ENV=development
+python wsgi.py
+```
+
 ## 🎾 Features
 
 ### For Members

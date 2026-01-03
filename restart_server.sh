@@ -57,7 +57,7 @@ start_server() {
     export FLASK_ENV=development
     
     # Start server in background
-    python -m flask run --host=0.0.0.0 --port=5001 &
+    python3 -m flask run --host=0.0.0.0 --port=5001 &
     
     # Get the process ID
     SERVER_PID=$!

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch ID Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Batch ID Debug Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Scenario</h3>
+        <p>This page simulates the court blocking form with different batch_id scenarios to debug the POST vs PUT issue.</p>
+    </div>
+
+    <!-- Test Case 1: Edit mode with valid batch_id -->
+    <div class="test-section">
+        <h3>Test Case 1: Edit Mode with Valid Batch ID</h3>
+        <form id="test-form-1" data-edit-mode="true" data-batch-id="550e8400-e29b-41d4-a716-446655440000" data-block-id="123">
+            <button type="submit">Test Submit (Should use PUT)</button>
+        </form>
+        <div id="result-1"></div>
+    </div>
+
+    <!-- Test Case 2: Edit mode with empty batch_id -->
+    <div class="test-section">
+        <h3>Test Case 2: Edit Mode with Empty Batch ID</h3>
+        <form id="test-form-2" data-edit-mode="true" data-batch-id="" data-block-id="124">
+            <button type="submit">Test Submit (Should use POST)</button>
+        </form>
+        <div id="result-2"></div>
+    </div>
+
+    <!-- Test Case 3: Create mode -->
+    <div class="test-section">
+        <h3>Test Case 3: Create Mode</h3>
+        <form id="test-form-3" data-edit-mode="false" data-batch-id="" data-block-id="">
+            <button type="submit">Test Submit (Should use POST)</button>
+        </form>
+        <div id="result-3"></div>
+    </div>
+
+    <!-- Test Case 4: Edit mode with null batch_id -->
+    <div class="test-section">
+        <h3>Test Case 4: Edit Mode with Null Batch ID</h3>
+        <form id="test-form-4" data-edit-mode="true" data-batch-id="null" data-block-id="125">
+            <button type="submit">Test Submit (Should use POST)</button>
+        </form>
+        <div id="result-4"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Debug Console</h3>
+        <pre id="debug-console"></pre>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <script>
+        // Mock console.log to capture output
+        const originalConsoleLog = console.log;
+        const debugOutput = [];
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            debugOutput.push(args.join(' '));
+            updateDebugConsole();
+        };
+
+        function updateDebugConsole() {
+            document.getElementById('debug-console').textContent = debugOutput.slice(-20).join('\n');
+        }
+
+        function clearConsole() {
+            debugOutput.length = 0;
+            updateDebugConsole();
+        }
+
+        // Simplified BlockForm class for testing
+        class TestBlockForm {
+            constructor(formId) {
+                this.formId = formId;
+                this.isEditMode = false;
+                this.editBlockId = null;
+                this.editBatchId = null;
+                
+                console.log(`🏗️ TestBlockForm constructor called for ${formId}`);
+                
+                this.initializeFromDataAttributes();
+                this.setupEventListeners();
+                
+                console.log(`✅ TestBlockForm initialization complete for ${formId}:`, {
+                    isEditMode: this.isEditMode,
+                    editBatchId: this.editBatchId,
+                    editBlockId: this.editBlockId
+                });
+            }
+
+            initializeFromDataAttributes() {
+                const form = document.getElementById(this.formId);
+                if (!form) {
+                    console.log(`❌ Form ${this.formId} not found`);
+                    return;
+                }
+
+                // Read data attributes to determine edit mode
+                const editMode = form.getAttribute('data-edit-mode') === 'true';
+                const batchId = form.getAttribute('data-batch-id');
+                const blockId = form.getAttribute('data-block-id');
+
+                console.log(`🔍 Form ${this.formId} data attributes:`, {
+                    editMode: form.getAttribute('data-edit-mode'),
+                    batchId: form.getAttribute('data-batch-id'),
+                    blockId: form.getAttribute('data-block-id'),
+                    parsedEditMode: editMode,
+                    hasBatchId: !!batchId,
+                    batchIdLength: batchId ? batchId.length : 0,
+                    batchIdType: typeof batchId
+                });
+
+                if (editMode && batchId && batchId !== '' && batchId !== 'null') {
+                    console.log(`✅ Initializing ${this.formId} in edit mode from data attributes:`, { editMode, batchId, blockId });
+                    this.isEditMode = true;
+                    this.editBatchId = batchId;
+                    this.editBlockId = blockId;
+                } else {
+                    console.log(`ℹ️ ${this.formId} initialized in create mode:`, { editMode, batchId, hasBatchId: !!batchId });
+                }
+            }
+
+            setupEventListeners() {
+                const form = document.getElementById(this.formId);
+                if (form) {
+                    form.addEventListener('submit', (e) => this.handleSubmit(e));
+                }
+            }
+
+            handleSubmit(event) {
+                event.preventDefault();
+                
+                console.log(`🚀 ${this.formId} submit handler called`);
+                console.log(`📊 ${this.formId} state at submission:`, {
+                    isEditMode: this.isEditMode,
+                    editBatchId: this.editBatchId,
+                    editBlockId: this.editBlockId
+                });
+
+                const resultDiv = document.getElementById(`result-${this.formId.split('-')[2]}`);
+                
+                if (this.isEditMode && this.editBatchId) {
+                    console.log(`🔄 ${this.formId} would use batch update (PUT) for batch:`, this.editBatchId);
+                    resultDiv.innerHTML = `<div class="success">✅ Would use PUT /admin/blocks/batch/${this.editBatchId}</div>`;
+                } else {
+                    console.log(`➕ ${this.formId} would use multi-court create (POST)`);
+                    resultDiv.innerHTML = `<div class="info">✅ Would use POST /admin/blocks/multi-court</div>`;
+                }
+            }
+
+            // Simulate populateEditForm being called with different data
+            populateEditForm(blockData) {
+                console.log(`🔄 ${this.formId} populateEditForm called with data:`, blockData);
+                
+                this.isEditMode = true;
+                this.editBlockId = blockData.id;
+                
+                // Only update editBatchId if the incoming data has a valid batch_id AND we don't already have one
+                if (blockData.batch_id && blockData.batch_id !== 'undefined' && blockData.batch_id !== '' && blockData.batch_id !== 'null') {
+                    this.editBatchId = blockData.batch_id;
+                    console.log(`📝 ${this.formId} edit batch ID updated from blockData:`, blockData.batch_id);
+                } else if (!this.editBatchId) {
+                    console.log(`⚠️ ${this.formId} blockData.batch_id is invalid and no existing editBatchId found:`, blockData.batch_id);
+                } else {
+                    console.log(`✅ ${this.formId} keeping existing editBatchId from data attributes:`, this.editBatchId);
+                }
+                
+                console.log(`📝 ${this.formId} edit mode set via populateEditForm - Block ID:`, this.editBlockId, 'Batch ID:', this.editBatchId);
+            }
+        }
+
+        // Initialize test forms
+        const testForms = [
+            new TestBlockForm('test-form-1'),
+            new TestBlockForm('test-form-2'),
+            new TestBlockForm('test-form-3'),
+            new TestBlockForm('test-form-4')
+        ];
+
+        // Add buttons to test populateEditForm scenarios
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add test buttons for populateEditForm
+            const testSection = document.createElement('div');
+            testSection.className = 'test-section';
+            testSection.innerHTML = `
+                <h3>Test populateEditForm Scenarios</h3>
+                <button onclick="testPopulateWithValidBatch()">Test: populateEditForm with valid batch_id</button>
+                <button onclick="testPopulateWithUndefinedBatch()">Test: populateEditForm with undefined batch_id</button>
+                <button onclick="testPopulateWithNullBatch()">Test: populateEditForm with null batch_id</button>
+            `;
+            document.body.appendChild(testSection);
+        });
+
+        function testPopulateWithValidBatch() {
+            console.log('\n🧪 Testing populateEditForm with valid batch_id...');
+            testForms[0].populateEditForm({
+                id: 123,
+                batch_id: '550e8400-e29b-41d4-a716-446655440001',
+                court_ids: [1, 2, 3]
+            });
+        }
+
+        function testPopulateWithUndefinedBatch() {
+            console.log('\n🧪 Testing populateEditForm with undefined batch_id...');
+            testForms[0].populateEditForm({
+                id: 123,
+                batch_id: undefined,
+                court_ids: [1, 2, 3]
+            });
+        }
+
+        function testPopulateWithNullBatch() {
+            console.log('\n🧪 Testing populateEditForm with null batch_id...');
+            testForms[0].populateEditForm({
+                id: 123,
+                batch_id: null,
+                court_ids: [1, 2, 3]
+            });
+        }
+    </script>
+</body>
+</html>

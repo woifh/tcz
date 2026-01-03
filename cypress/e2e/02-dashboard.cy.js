@@ -15,8 +15,8 @@ describe('Dashboard', () => {
     cy.contains('Platz 6')
   })
 
-  it('should display time slots from 06:00 to 21:00', () => {
-    cy.contains('06:00')
+  it('should display time slots from 08:00 to 21:00', () => {
+    cy.contains('08:00')
     cy.contains('21:00')
   })
 

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}FIXED TEMPLATE - Admin-Panel - Tennisclub{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-2xl font-bold mb-6">Administrator-Panel (FIXED VERSION)</h2>
+    
+    <!-- Simple form with fixed time inputs -->
+    <form class="bg-gray-50 p-6 rounded-lg mb-6">
+        <div class="flex gap-4">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Datum</label>
+                <input type="date" class="border border-gray-300 rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Von (FIXED)</label>
+                <input type="time" class="border border-gray-300 rounded px-3 py-2" style="width: 150px; min-width: 150px;" value="08:00">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Bis (FIXED)</label>
+                <input type="time" class="border border-gray-300 rounded px-3 py-2" style="width: 150px; min-width: 150px;" value="22:00">
+            </div>
+        </div>
+    </form>
+    
+    <p>This is a simplified version to test the time input fix.</p>
+</div>
+{% endblock %}

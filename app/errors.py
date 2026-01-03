@@ -5,7 +5,7 @@ VALIDATION_ERRORS = {
     'BOOKING_CONFLICT': 'Dieser Platz ist bereits für diese Zeit gebucht',
     'RESERVATION_LIMIT': 'Sie haben bereits 2 aktive Buchungen',
     'BLOCKED_SLOT': 'Dieser Platz ist für diese Zeit gesperrt',
-    'INVALID_TIME': 'Buchungen sind nur zwischen 06:00 und 21:00 Uhr möglich',
+    'INVALID_TIME': 'Buchungen sind nur zwischen 08:00 und 22:00 Uhr möglich',
     'INVALID_DURATION': 'Buchungen müssen genau eine Stunde dauern',
     'PAST_DATE': 'Buchungen können nicht in der Vergangenheit erstellt werden',
     'INVALID_COURT': 'Ungültige Platznummer (1-6)',

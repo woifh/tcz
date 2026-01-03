@@ -35,7 +35,7 @@ class Config:
     
     # Application settings
     COURTS_COUNT = 6
-    BOOKING_START_HOUR = 6
+    BOOKING_START_HOUR = 8
     BOOKING_END_HOUR = 22  # Last slot starts at 21:00, ends at 22:00
     BOOKING_DURATION_HOURS = 1
     MAX_ACTIVE_RESERVATIONS = 2
@@ -45,6 +45,8 @@ class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
     SQLALCHEMY_ECHO = True
+    # Use SQLite for local development to avoid MySQL dependency
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///tennis_club_dev.db'
 
 
 class ProductionConfig(Config):

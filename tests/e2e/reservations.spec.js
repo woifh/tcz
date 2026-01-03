@@ -20,8 +20,8 @@ test.describe('Reservations', () => {
     // Wait for available slots to be present
     await page.locator('.bg-green-500').first().waitFor({ state: 'visible' });
     
-    // Call the openBookingModal function directly (simulating a click on court 1 at 06:00)
-    await page.evaluate(() => window.openBookingModal(1, '06:00'));
+    // Call the openBookingModal function directly (simulating a click on court 1 at 08:00)
+    await page.evaluate(() => window.openBookingModal(1, '08:00'));
     
     // Modal should be visible
     await expect(page.locator('#booking-modal')).toBeVisible();
@@ -43,7 +43,7 @@ test.describe('Reservations', () => {
     await page.locator('.bg-green-500').first().waitFor({ state: 'visible' });
     
     // Open modal directly
-    await page.evaluate(() => window.openBookingModal(1, '06:00'));
+    await page.evaluate(() => window.openBookingModal(1, '08:00'));
     await expect(page.locator('#booking-modal')).toBeVisible();
     
     // Click cancel
@@ -94,7 +94,7 @@ test.describe('Reservations', () => {
     await page.locator('.bg-green-500').first().waitFor({ state: 'visible' });
     
     // Open modal directly
-    await page.evaluate(() => window.openBookingModal(1, '06:00'));
+    await page.evaluate(() => window.openBookingModal(1, '08:00'));
     
     // Wait for modal and form to be visible
     await expect(page.locator('#booking-modal')).toBeVisible();

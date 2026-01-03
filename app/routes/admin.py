@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 from functools import wraps
 from datetime import datetime, date
+import uuid
 from app import db
 from app.models import Block, Reservation, BlockReason, BlockSeries, BlockTemplate, SubReasonTemplate
 from app.services.block_service import BlockService
@@ -30,8 +31,121 @@ def admin_required(f):
 @login_required
 @admin_required
 def admin_panel():
-    """Admin panel."""
-    return render_template('admin.html')
+    """Admin panel overview - redirect to overview page."""
+    return redirect(url_for('admin.overview'))
+
+
+@bp.route('/overview')
+@login_required
+@admin_required
+def overview():
+    """Admin overview page."""
+    return render_template('admin/overview.html')
+
+
+@bp.route('/court-blocking')
+@login_required
+@admin_required
+def court_blocking():
+    """Court blocking management page."""
+    return render_template('admin/court_blocking.html')
+
+
+@bp.route('/court-blocking/<batch_id>')
+@login_required
+@admin_required
+def court_blocking_edit_batch(batch_id):
+    """Court blocking edit page using batch_id."""
+    try:
+        # Remove 'batch_' prefix if present to get the actual UUID
+        actual_batch_id = batch_id.replace('batch_', '') if batch_id.startswith('batch_') else batch_id
+        
+        # Get all blocks with this batch_id
+        blocks = Block.query.filter_by(batch_id=actual_batch_id).all()
+        
+        if not blocks:
+            flash('Sperrung nicht gefunden', 'error')
+            return redirect(url_for('admin.court_blocking'))
+        
+        # Use the first block as the primary block for data
+        primary_block = blocks[0]
+        
+        # Extract court IDs from all blocks in the batch
+        court_ids = [block.court_id for block in blocks]
+        
+        # Create a combined block data structure
+        edit_block_data = {
+            'id': primary_block.id,
+            'batch_id': actual_batch_id,  # Use the batch_id from the URL, not from the database
+            'court_ids': court_ids,
+            'date': primary_block.date,
+            'start_time': primary_block.start_time,
+            'end_time': primary_block.end_time,
+            'reason_id': primary_block.reason_id,
+            'sub_reason': primary_block.sub_reason,
+            'created_by': primary_block.created_by,
+            'created_at': primary_block.created_at,
+            'related_block_ids': [block.id for block in blocks]
+        }
+        
+        print(f"DEBUG: edit_block_data = {edit_block_data}")  # Debug log
+        print(f"DEBUG: batch_id type = {type(edit_block_data['batch_id'])}")  # Debug log
+        print(f"DEBUG: batch_id value = '{edit_block_data['batch_id']}'")  # Debug log
+        print(f"DEBUG: batch_id repr = {repr(edit_block_data['batch_id'])}")  # Debug log
+        
+        return render_template('admin/court_blocking.html', edit_block_data=edit_block_data)
+    except Exception as e:
+        flash(f'Fehler beim Laden der Sperrung: {str(e)}', 'error')
+        return redirect(url_for('admin.court_blocking'))
+
+
+@bp.route('/court-blocking/<int:block_id>')
+@login_required
+@admin_required
+def court_blocking_edit(block_id):
+    """Court blocking edit page (legacy - redirects to batch-based edit)."""
+    try:
+        # Get the block and redirect to batch-based edit
+        block = Block.query.get_or_404(block_id)
+        
+        # All blocks now have batch_id, so redirect to batch edit
+        return redirect(url_for('admin.court_blocking_edit_batch', batch_id=f'batch_{block.batch_id}'))
+            
+    except Exception as e:
+        flash(f'Fehler beim Laden der Sperrung: {str(e)}', 'error')
+        return redirect(url_for('admin.court_blocking'))
+
+
+@bp.route('/calendar')
+@login_required
+@admin_required
+def calendar():
+    """Calendar view page."""
+    return render_template('admin/calendar.html')
+
+
+@bp.route('/recurring-series')
+@login_required
+@admin_required
+def recurring_series():
+    """Recurring series management page."""
+    return render_template('admin/recurring_series.html')
+
+
+@bp.route('/templates')
+@login_required
+@admin_required
+def templates():
+    """Templates management page."""
+    return render_template('admin/templates.html')
+
+
+@bp.route('/reasons')
+@login_required
+@admin_required
+def reasons():
+    """Reasons management page."""
+    return render_template('admin/reasons.html')
 
 
 @bp.route('/blocks', methods=['GET'])
@@ -78,6 +192,7 @@ def list_blocks():
                     'reason_id': block.reason_id,
                     'reason_name': block.reason_obj.name if block.reason_obj else 'Unknown',
                     'sub_reason': block.sub_reason,
+                    'batch_id': block.batch_id,
                     'series_id': block.series_id,
                     'is_modified': block.is_modified,
                     'created_by': block.created_by.name,
@@ -148,6 +263,205 @@ def create_block():
         return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/blocks/batch/<batch_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_batch(batch_id):
+    """Update entire batch of blocks (admin only)."""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        
+        # Get all blocks in the batch
+        blocks = Block.query.filter_by(batch_id=batch_id).all()
+        
+        if not blocks:
+            return jsonify({'error': 'Batch nicht gefunden'}), 404
+        
+        # Get the new data
+        new_court_ids = data.get('court_ids', [])
+        if isinstance(new_court_ids, str):
+            new_court_ids = [int(x) for x in new_court_ids.split(',')]
+        elif isinstance(new_court_ids, list):
+            new_court_ids = [int(x) for x in new_court_ids]
+        
+        new_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+        new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
+        new_reason_id = int(data['reason_id'])
+        new_sub_reason = data.get('sub_reason', '').strip() or None
+        
+        # Validate time range
+        if new_start_time >= new_end_time:
+            return jsonify({'error': 'Endzeit muss nach Startzeit liegen'}), 400
+        
+        # Get current court IDs
+        current_court_ids = [block.court_id for block in blocks]
+        
+        # Determine which blocks to delete, update, and create
+        courts_to_delete = set(current_court_ids) - set(new_court_ids)
+        courts_to_keep = set(current_court_ids) & set(new_court_ids)
+        courts_to_add = set(new_court_ids) - set(current_court_ids)
+        
+        # Delete blocks for courts that are no longer selected
+        for block in blocks:
+            if block.court_id in courts_to_delete:
+                db.session.delete(block)
+        
+        # Update existing blocks for courts that are kept
+        for block in blocks:
+            if block.court_id in courts_to_keep:
+                block.date = new_date
+                block.start_time = new_start_time
+                block.end_time = new_end_time
+                block.reason_id = new_reason_id
+                block.sub_reason = new_sub_reason
+        
+        # Create new blocks for newly selected courts (with same batch_id)
+        for court_id in courts_to_add:
+            new_block = Block(
+                court_id=court_id,
+                date=new_date,
+                start_time=new_start_time,
+                end_time=new_end_time,
+                reason_id=new_reason_id,
+                sub_reason=new_sub_reason,
+                batch_id=batch_id,  # Use the same batch_id
+                created_by_id=current_user.id
+            )
+            db.session.add(new_block)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Batch-Sperrung erfolgreich aktualisiert: {len(new_court_ids)} Plätze',
+            'courts_updated': len(courts_to_keep),
+            'courts_added': len(courts_to_add),
+            'courts_removed': len(courts_to_delete)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/blocks/batch/<batch_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_batch(batch_id):
+    """Delete entire batch of blocks (admin only)."""
+    try:
+        success, error = BlockService.delete_batch(batch_id, current_user.id)
+        
+        if error:
+            return jsonify({'error': error}), 400
+        
+        # Get the deleted blocks info for response
+        return jsonify({
+            'message': 'Batch-Sperrung erfolgreich gelöscht'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/blocks/multi-court-delete/<int:primary_block_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_multi_court_blocks(primary_block_id):
+    """Delete multi-court blocks (admin only)."""
+    try:
+        # Get the primary block to find all related blocks
+        primary_block = Block.query.get_or_404(primary_block_id)
+        
+        # Find all related blocks (same date, time, reason, created_at - indicating they were created together)
+        related_blocks = Block.query.filter(
+            Block.date == primary_block.date,
+            Block.start_time == primary_block.start_time,
+            Block.end_time == primary_block.end_time,
+            Block.reason_id == primary_block.reason_id,
+            Block.sub_reason == primary_block.sub_reason,
+            Block.created_at == primary_block.created_at
+        ).all()
+        
+        # Get court numbers for the response message
+        court_numbers = [block.court.number for block in related_blocks]
+        
+        # Delete all related blocks
+        for block in related_blocks:
+            db.session.delete(block)
+        
+        db.session.commit()
+        
+        if len(related_blocks) == 1:
+            message = f'Sperrung für Platz {court_numbers[0]} erfolgreich gelöscht'
+        else:
+            courts_text = ', '.join(map(str, sorted(court_numbers)))
+            message = f'Sperrung für Plätze {courts_text} erfolgreich gelöscht'
+        
+        return jsonify({
+            'message': message,
+            'deleted_blocks': len(related_blocks),
+            'court_numbers': court_numbers
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/blocks/<int:id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_block(id):
+    """Update block (admin only)."""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        
+        block = Block.query.get_or_404(id)
+        
+        # Update fields if provided
+        if 'date' in data:
+            block.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        
+        if 'start_time' in data:
+            block.start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+        
+        if 'end_time' in data:
+            block.end_time = datetime.strptime(data['end_time'], '%H:%M').time()
+        
+        if 'reason_id' in data:
+            block.reason_id = int(data['reason_id'])
+        
+        if 'sub_reason' in data:
+            block.sub_reason = data['sub_reason'].strip() or None
+        
+        # Validate time range
+        if block.start_time >= block.end_time:
+            return jsonify({'error': 'Endzeit muss nach Startzeit liegen'}), 400
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Sperrung erfolgreich aktualisiert',
+            'block': {
+                'id': block.id,
+                'court_id': block.court_id,
+                'court_number': block.court.number,
+                'date': block.date.isoformat(),
+                'start_time': block.start_time.strftime('%H:%M'),
+                'end_time': block.end_time.strftime('%H:%M'),
+                'reason_id': block.reason_id,
+                'reason_name': block.reason_obj.name if block.reason_obj else 'Unknown',
+                'sub_reason': block.sub_reason
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @bp.route('/blocks/<int:id>', methods=['DELETE'])
 @login_required
 @admin_required
@@ -163,6 +477,36 @@ def delete_block(id):
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/blocks/<int:id>', methods=['GET'])
+@login_required
+@admin_required
+def get_block(id):
+    """Get single block details (admin only)."""
+    try:
+        block = Block.query.get_or_404(id)
+        
+        return jsonify({
+            'block': {
+                'id': block.id,
+                'court_id': block.court_id,
+                'court_number': block.court.number,
+                'date': block.date.isoformat(),
+                'start_time': block.start_time.strftime('%H:%M'),
+                'end_time': block.end_time.strftime('%H:%M'),
+                'reason_id': block.reason_id,
+                'reason_name': block.reason_obj.name if block.reason_obj else 'Unknown',
+                'sub_reason': block.sub_reason,
+                'series_id': block.series_id,
+                'is_modified': block.is_modified,
+                'created_by': block.created_by.name,
+                'created_at': block.created_at.isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
@@ -412,6 +756,93 @@ def delete_series(series_id):
 
 # Multi-Court and Bulk Operations Routes
 
+@bp.route('/blocks/multi-court-update/<int:primary_block_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_multi_court_blocks(primary_block_id):
+    """Update multi-court blocks (admin only)."""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        
+        # Get the primary block to find all related blocks
+        primary_block = Block.query.get_or_404(primary_block_id)
+        
+        # Find all related blocks (same date, time, reason, created_at)
+        related_blocks = Block.query.filter(
+            Block.date == primary_block.date,
+            Block.start_time == primary_block.start_time,
+            Block.end_time == primary_block.end_time,
+            Block.reason_id == primary_block.reason_id,
+            Block.sub_reason == primary_block.sub_reason,
+            Block.created_at == primary_block.created_at
+        ).all()
+        
+        # Get the new data
+        new_court_ids = data.get('court_ids', [])
+        if isinstance(new_court_ids, str):
+            new_court_ids = [int(x) for x in new_court_ids.split(',')]
+        elif isinstance(new_court_ids, list):
+            new_court_ids = [int(x) for x in new_court_ids]
+        
+        new_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+        new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
+        new_reason_id = int(data['reason_id'])
+        new_sub_reason = data.get('sub_reason', '').strip() or None
+        
+        # Validate time range
+        if new_start_time >= new_end_time:
+            return jsonify({'error': 'Endzeit muss nach Startzeit liegen'}), 400
+        
+        # Get current court IDs
+        current_court_ids = [block.court_id for block in related_blocks]
+        
+        # Determine which blocks to delete, update, and create
+        courts_to_delete = set(current_court_ids) - set(new_court_ids)
+        courts_to_keep = set(current_court_ids) & set(new_court_ids)
+        courts_to_add = set(new_court_ids) - set(current_court_ids)
+        
+        # Delete blocks for courts that are no longer selected
+        for block in related_blocks:
+            if block.court_id in courts_to_delete:
+                db.session.delete(block)
+        
+        # Update existing blocks for courts that are kept
+        for block in related_blocks:
+            if block.court_id in courts_to_keep:
+                block.date = new_date
+                block.start_time = new_start_time
+                block.end_time = new_end_time
+                block.reason_id = new_reason_id
+                block.sub_reason = new_sub_reason
+        
+        # Create new blocks for newly selected courts
+        for court_id in courts_to_add:
+            new_block = Block(
+                court_id=court_id,
+                date=new_date,
+                start_time=new_start_time,
+                end_time=new_end_time,
+                reason_id=new_reason_id,
+                sub_reason=new_sub_reason,
+                created_by_id=current_user.id
+            )
+            db.session.add(new_block)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Mehrplatz-Sperrung erfolgreich aktualisiert: {len(new_court_ids)} Plätze',
+            'courts_updated': len(courts_to_keep),
+            'courts_added': len(courts_to_add),
+            'courts_removed': len(courts_to_delete)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @bp.route('/blocks/multi-court', methods=['POST'])
 @login_required
 @admin_required
@@ -493,6 +924,7 @@ def bulk_delete_blocks():
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
         return jsonify({'error': str(e)}), 500
 
 

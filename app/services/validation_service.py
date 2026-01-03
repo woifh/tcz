@@ -172,7 +172,7 @@ class ValidationService:
         
         # Validate booking time
         if not ValidationService.validate_booking_time(start_time):
-            return False, "Buchungen sind nur zu vollen Stunden zwischen 06:00 und 21:00 Uhr möglich"
+            return False, "Buchungen sind nur zu vollen Stunden zwischen 08:00 und 22:00 Uhr möglich"
         
         # Validate member reservation limit (short notice bookings are exempt)
         if not ValidationService.validate_member_reservation_limit(member_id, is_short_notice):

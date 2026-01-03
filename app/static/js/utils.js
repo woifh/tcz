@@ -51,11 +51,11 @@ export function showError(message) {
 }
 
 /**
- * Generate time slots from 06:00 to 21:00
+ * Generate time slots from 08:00 to 21:00
  */
 export function generateTimeSlots() {
     const timeSlots = [];
-    for (let hour = 6; hour <= 21; hour++) {
+    for (let hour = 8; hour <= 21; hour++) {
         timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
     }
     return timeSlots;
