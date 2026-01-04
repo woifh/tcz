@@ -63,6 +63,43 @@ def debug():
     """
 
 
+@bp.route('/debug-short-notice')
+def debug_short_notice():
+    """Debug route to test short notice booking functionality."""
+    from datetime import datetime, timedelta
+    from app.services.reservation_service import ReservationService
+    
+    # Test short notice detection
+    now = datetime.now()
+    test_cases = [
+        (now.date(), (now + timedelta(minutes=5)).time()),   # 5 minutes from now - should be short notice
+        (now.date(), (now + timedelta(minutes=20)).time()),  # 20 minutes from now - should be regular
+        (now.date(), (now - timedelta(minutes=5)).time()),   # 5 minutes ago - should be regular (past)
+    ]
+    
+    results = []
+    for test_date, test_time in test_cases:
+        is_short = ReservationService.is_short_notice_booking(test_date, test_time, now)
+        results.append(f"Date: {test_date}, Time: {test_time}, Short Notice: {is_short}")
+    
+    return f"""
+    <html>
+    <head><title>Short Notice Debug</title></head>
+    <body>
+        <h1>Short Notice Booking Debug</h1>
+        <p><strong>Current time:</strong> {now}</p>
+        <h2>Test Results:</h2>
+        <ul>
+            {''.join(f'<li>{result}</li>' for result in results)}
+        </ul>
+        <hr>
+        <p><a href="/">Go to root</a></p>
+        <p><a href="/debug">Go to debug</a></p>
+    </body>
+    </html>
+    """
+
+
 @bp.route('/version')
 def version():
     """Version endpoint for deployment verification."""
