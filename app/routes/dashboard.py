@@ -26,7 +26,41 @@ def dashboard():
 @bp.route('/overview')
 def anonymous_overview():
     """Anonymous court overview for non-authenticated users."""
-    return render_template('anonymous_overview.html')
+    try:
+        return render_template('anonymous_overview.html')
+    except Exception as e:
+        # If template fails, return simple HTML for debugging
+        return f"""
+        <html>
+        <head><title>Debug - Anonymous Overview</title></head>
+        <body>
+            <h1>Anonymous Overview Debug</h1>
+            <p>Template error: {str(e)}</p>
+            <p>This should be the anonymous overview page.</p>
+            <a href="/auth/login">Login</a>
+        </body>
+        </html>
+        """
+
+
+@bp.route('/debug')
+def debug():
+    """Debug route to test authentication status."""
+    return f"""
+    <html>
+    <head><title>Debug Info</title></head>
+    <body>
+        <h1>Debug Information</h1>
+        <p><strong>User authenticated:</strong> {current_user.is_authenticated}</p>
+        <p><strong>Current user:</strong> {current_user}</p>
+        <p><strong>Anonymous user:</strong> {current_user.is_anonymous}</p>
+        <hr>
+        <p><a href="/">Go to root</a></p>
+        <p><a href="/overview">Go to overview</a></p>
+        <p><a href="/auth/login">Go to login</a></p>
+    </body>
+    </html>
+    """
 
 
 @bp.route('/version')
