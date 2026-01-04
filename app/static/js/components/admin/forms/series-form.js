@@ -119,7 +119,7 @@ export class SeriesForm {
             start_time: formData['series-start-time'],
             end_time: formData['series-end-time'],
             reason_id: formData['series-reason'],
-            sub_reason: formData['series-sub-reason'] || '',
+            details: formData['series-details'] || '',
             description: formData['series-description'] || '',
             frequency: formData['series-frequency'],
             frequency_days: frequencyDays,

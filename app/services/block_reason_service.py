@@ -1,6 +1,6 @@
 """Block reason service for managing customizable block reasons."""
 from app import db
-from app.models import BlockReason, SubReasonTemplate, Block
+from app.models import BlockReason, DetailsTemplate, Block
 from typing import Tuple, List, Optional
 import logging
 
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class BlockReasonService:
-    """Service for managing customizable block reasons and sub-reason templates."""
+    """Service for managing customizable block reasons and details templates."""
     
     @staticmethod
     def create_block_reason(name: str, admin_id: int) -> Tuple[Optional[BlockReason], Optional[str]]:
@@ -170,22 +170,22 @@ class BlockReasonService:
         return Block.query.filter_by(reason_id=reason_id).count()
     
     @staticmethod
-    def create_sub_reason_template(reason_id: int, template_name: str, admin_id: int) -> Tuple[Optional[SubReasonTemplate], Optional[str]]:
+    def create_details_template(reason_id: int, template_name: str, admin_id: int) -> Tuple[Optional[DetailsTemplate], Optional[str]]:
         """
-        Create a sub-reason template for a block reason.
+        Create a details template for a block reason.
         
         Args:
             reason_id: ID of the block reason
-            template_name: Name of the sub-reason template
+            template_name: Name of the details template
             admin_id: ID of the administrator creating the template
             
         Returns:
-            tuple: (SubReasonTemplate object or None, error message or None)
+            tuple: (DetailsTemplate object or None, error message or None)
         """
         try:
             # Validate input
             if not template_name or not template_name.strip():
-                return None, "Untergrund-Vorlage-Name darf nicht leer sein"
+                return None, "Details-Vorlage-Name darf nicht leer sein"
             
             template_name = template_name.strip()
             
@@ -195,15 +195,15 @@ class BlockReasonService:
                 return None, "Sperrungsgrund nicht gefunden"
             
             # Check if template already exists for this reason
-            existing_template = SubReasonTemplate.query.filter_by(
+            existing_template = DetailsTemplate.query.filter_by(
                 reason_id=reason_id,
                 template_name=template_name
             ).first()
             if existing_template:
-                return None, f"Untergrund-Vorlage '{template_name}' existiert bereits für diesen Grund"
+                return None, f"Details-Vorlage '{template_name}' existiert bereits für diesen Grund"
             
             # Create new template
-            template = SubReasonTemplate(
+            template = DetailsTemplate(
                 reason_id=reason_id,
                 template_name=template_name,
                 created_by_id=admin_id
@@ -212,31 +212,31 @@ class BlockReasonService:
             db.session.add(template)
             db.session.commit()
             
-            logger.info(f"Sub-reason template created: '{template_name}' for reason {reason_id} by admin {admin_id}")
+            logger.info(f"Details template created: '{template_name}' for reason {reason_id} by admin {admin_id}")
             return template, None
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Failed to create sub-reason template '{template_name}': {str(e)}")
-            return None, f"Fehler beim Erstellen der Untergrund-Vorlage: {str(e)}"
+            logger.error(f"Failed to create details template '{template_name}': {str(e)}")
+            return None, f"Fehler beim Erstellen der Details-Vorlage: {str(e)}"
     
     @staticmethod
-    def get_sub_reason_templates(reason_id: int) -> List[SubReasonTemplate]:
+    def get_details_templates(reason_id: int) -> List[DetailsTemplate]:
         """
-        Get all sub-reason templates for a specific block reason.
+        Get all details templates for a specific block reason.
         
         Args:
             reason_id: ID of the block reason
             
         Returns:
-            list: List of SubReasonTemplate objects
+            list: List of DetailsTemplate objects
         """
-        return SubReasonTemplate.query.filter_by(reason_id=reason_id).order_by(SubReasonTemplate.template_name).all()
+        return DetailsTemplate.query.filter_by(reason_id=reason_id).order_by(DetailsTemplate.template_name).all()
     
     @staticmethod
-    def delete_sub_reason_template(template_id: int, admin_id: int) -> Tuple[bool, Optional[str]]:
+    def delete_details_template(template_id: int, admin_id: int) -> Tuple[bool, Optional[str]]:
         """
-        Delete a sub-reason template.
+        Delete a details template.
         
         Args:
             template_id: ID of the template to delete
@@ -247,21 +247,21 @@ class BlockReasonService:
         """
         try:
             # Find the template to delete
-            template = SubReasonTemplate.query.get(template_id)
+            template = DetailsTemplate.query.get(template_id)
             if not template:
-                return False, "Untergrund-Vorlage nicht gefunden"
+                return False, "Details-Vorlage nicht gefunden"
             
             template_name = template.template_name
             db.session.delete(template)
             db.session.commit()
             
-            logger.info(f"Sub-reason template '{template_name}' deleted by admin {admin_id}")
+            logger.info(f"Details template '{template_name}' deleted by admin {admin_id}")
             return True, None
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Failed to delete sub-reason template {template_id}: {str(e)}")
-            return False, f"Fehler beim Löschen der Untergrund-Vorlage: {str(e)}"
+            logger.error(f"Failed to delete details template {template_id}: {str(e)}")
+            return False, f"Fehler beim Löschen der Details-Vorlage: {str(e)}"
     
     @staticmethod
     def initialize_default_reasons() -> None:

@@ -111,7 +111,7 @@ def test_create_block_api(session, reasons):
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': reason_id,
-        'sub_reason': 'Test block creation'
+        'details': 'Test block creation'
     }
     
     print(f"Creating block: {block_data}")

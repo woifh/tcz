@@ -5,7 +5,7 @@ from functools import wraps
 from datetime import datetime, date
 import uuid
 from app import db
-from app.models import Block, Reservation, BlockReason, BlockSeries, BlockTemplate, SubReasonTemplate
+from app.models import Block, Reservation, BlockReason, BlockSeries, BlockTemplate, DetailsTemplate
 from app.services.block_service import BlockService
 from app.services.block_reason_service import BlockReasonService
 from app.services.reservation_service import ReservationService
@@ -82,7 +82,7 @@ def court_blocking_edit_batch(batch_id):
             'start_time': primary_block.start_time,
             'end_time': primary_block.end_time,
             'reason_id': primary_block.reason_id,
-            'sub_reason': primary_block.sub_reason,
+            'details': primary_block.details,
             'created_by': primary_block.created_by,
             'created_at': primary_block.created_at,
             'related_block_ids': [block.id for block in blocks]
@@ -191,7 +191,7 @@ def list_blocks():
                     'end_time': block.end_time.strftime('%H:%M'),
                     'reason_id': block.reason_id,
                     'reason_name': block.reason_obj.name if block.reason_obj else 'Unknown',
-                    'sub_reason': block.sub_reason,
+                    'details': block.details,
                     'batch_id': block.batch_id,
                     'series_id': block.series_id,
                     'is_modified': block.is_modified,
@@ -218,7 +218,7 @@ def create_block():
         start_time_str = data.get('start_time')
         end_time_str = data.get('end_time')
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         
         # Validate required fields
         if not all([court_id, date_str, start_time_str, end_time_str, reason_id]):
@@ -236,7 +236,7 @@ def create_block():
             start_time=start_time,
             end_time=end_time,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             admin_id=current_user.id
         )
         
@@ -254,7 +254,7 @@ def create_block():
                 'end_time': block.end_time.strftime('%H:%M'),
                 'reason_id': block.reason_id,
                 'reason_name': block.reason_obj.name,
-                'sub_reason': block.sub_reason
+                'details': block.details
             }
         }), 201
         
@@ -288,7 +288,7 @@ def update_batch(batch_id):
         new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
         new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
         new_reason_id = int(data['reason_id'])
-        new_sub_reason = data.get('sub_reason', '').strip() or None
+        new_details = data.get('details', '').strip() or None
         
         # Validate that the date is not in the past
         today = datetime.now().date()
@@ -319,7 +319,7 @@ def update_batch(batch_id):
                 block.start_time = new_start_time
                 block.end_time = new_end_time
                 block.reason_id = new_reason_id
-                block.sub_reason = new_sub_reason
+                block.details = new_details
         
         # Create new blocks for newly selected courts (with same batch_id)
         for court_id in courts_to_add:
@@ -329,7 +329,7 @@ def update_batch(batch_id):
                 start_time=new_start_time,
                 end_time=new_end_time,
                 reason_id=new_reason_id,
-                sub_reason=new_sub_reason,
+                details=new_details,
                 batch_id=batch_id,  # Use the same batch_id
                 created_by_id=current_user.id
             )
@@ -385,7 +385,7 @@ def delete_multi_court_blocks(primary_block_id):
             Block.start_time == primary_block.start_time,
             Block.end_time == primary_block.end_time,
             Block.reason_id == primary_block.reason_id,
-            Block.sub_reason == primary_block.sub_reason,
+            Block.details == primary_block.details,
             Block.created_at == primary_block.created_at
         ).all()
         
@@ -438,8 +438,8 @@ def update_block(id):
         if 'reason_id' in data:
             block.reason_id = int(data['reason_id'])
         
-        if 'sub_reason' in data:
-            block.sub_reason = data['sub_reason'].strip() or None
+        if 'details' in data:
+            block.details = data['details'].strip() or None
         
         # Validate time range
         if block.start_time >= block.end_time:
@@ -458,7 +458,7 @@ def update_block(id):
                 'end_time': block.end_time.strftime('%H:%M'),
                 'reason_id': block.reason_id,
                 'reason_name': block.reason_obj.name if block.reason_obj else 'Unknown',
-                'sub_reason': block.sub_reason
+                'details': block.details
             }
         }), 200
         
@@ -503,7 +503,7 @@ def get_block(id):
                 'end_time': block.end_time.strftime('%H:%M'),
                 'reason_id': block.reason_id,
                 'reason_name': block.reason_obj.name if block.reason_obj else 'Unknown',
-                'sub_reason': block.sub_reason,
+                'details': block.details,
                 'series_id': block.series_id,
                 'is_modified': block.is_modified,
                 'created_by': block.created_by.name,
@@ -575,7 +575,7 @@ def list_recurring_series():
                     'recurrence_days': serie.recurrence_days,
                     'reason_id': serie.reason_id,
                     'reason_name': serie.reason_obj.name if serie.reason_obj else 'Unknown',
-                    'sub_reason': serie.sub_reason,
+                    'details': serie.details,
                     'court_selection': [1, 2, 3, 4, 5, 6],  # This would come from blocks
                     'total_instances': len(serie.blocks),
                     'active_instances': len([b for b in serie.blocks if b.date >= date.today()]),
@@ -612,7 +612,7 @@ def create_recurring_series():
         recurrence_pattern = data.get('recurrence_pattern')
         recurrence_days = data.get('recurrence_days', [])
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         series_name = data.get('series_name', '').strip()
         
         # Validate required fields
@@ -635,7 +635,7 @@ def create_recurring_series():
             recurrence_pattern=recurrence_pattern,
             recurrence_days=recurrence_days,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             admin_id=current_user.id,
             series_name=series_name
         )
@@ -669,8 +669,8 @@ def update_entire_series(series_id):
             updates['end_time'] = datetime.strptime(data['end_time'], '%H:%M').time()
         if 'reason_id' in data:
             updates['reason_id'] = int(data['reason_id'])
-        if 'sub_reason' in data:
-            updates['sub_reason'] = data['sub_reason'].strip() or None
+        if 'details' in data:
+            updates['details'] = data['details'].strip() or None
         
         updates['admin_id'] = current_user.id
         
@@ -707,8 +707,8 @@ def update_future_series(series_id):
             updates['end_time'] = datetime.strptime(data['end_time'], '%H:%M').time()
         if 'reason_id' in data:
             updates['reason_id'] = int(data['reason_id'])
-        if 'sub_reason' in data:
-            updates['sub_reason'] = data['sub_reason'].strip() or None
+        if 'details' in data:
+            updates['details'] = data['details'].strip() or None
         
         updates['admin_id'] = current_user.id
         
@@ -778,7 +778,7 @@ def update_multi_court_blocks(primary_block_id):
             Block.start_time == primary_block.start_time,
             Block.end_time == primary_block.end_time,
             Block.reason_id == primary_block.reason_id,
-            Block.sub_reason == primary_block.sub_reason,
+            Block.details == primary_block.details,
             Block.created_at == primary_block.created_at
         ).all()
         
@@ -793,7 +793,7 @@ def update_multi_court_blocks(primary_block_id):
         new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
         new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
         new_reason_id = int(data['reason_id'])
-        new_sub_reason = data.get('sub_reason', '').strip() or None
+        new_details = data.get('details', '').strip() or None
         
         # Validate time range
         if new_start_time >= new_end_time:
@@ -819,7 +819,7 @@ def update_multi_court_blocks(primary_block_id):
                 block.start_time = new_start_time
                 block.end_time = new_end_time
                 block.reason_id = new_reason_id
-                block.sub_reason = new_sub_reason
+                block.details = new_details
         
         # Create new blocks for newly selected courts
         for court_id in courts_to_add:
@@ -829,7 +829,7 @@ def update_multi_court_blocks(primary_block_id):
                 start_time=new_start_time,
                 end_time=new_end_time,
                 reason_id=new_reason_id,
-                sub_reason=new_sub_reason,
+                details=new_details,
                 created_by_id=current_user.id
             )
             db.session.add(new_block)
@@ -866,7 +866,7 @@ def create_multi_court_blocks():
         start_time_str = data.get('start_time')
         end_time_str = data.get('end_time')
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         
         # Validate required fields
         if not all([court_ids, date_str, start_time_str, end_time_str, reason_id]):
@@ -889,7 +889,7 @@ def create_multi_court_blocks():
             start_time=start_time,
             end_time=end_time,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             admin_id=current_user.id
         )
         
@@ -1018,7 +1018,7 @@ def list_block_templates():
                     'end_time': template.end_time.strftime('%H:%M'),
                     'reason_id': template.reason_id,
                     'reason_name': template.reason_obj.name if template.reason_obj else 'Unknown',
-                    'sub_reason': template.sub_reason,
+                    'details': template.details,
                     'recurrence_pattern': template.recurrence_pattern,
                     'recurrence_days': template.recurrence_days,
                     'created_by': template.created_by.name,
@@ -1045,7 +1045,7 @@ def create_block_template():
         start_time_str = data.get('start_time')
         end_time_str = data.get('end_time')
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         recurrence_pattern = data.get('recurrence_pattern', '').strip() or None
         recurrence_days = data.get('recurrence_days', [])
         
@@ -1063,7 +1063,7 @@ def create_block_template():
             'start_time': start_time,
             'end_time': end_time,
             'reason_id': reason_id,
-            'sub_reason': sub_reason,
+            'details': details,
             'recurrence_pattern': recurrence_pattern,
             'recurrence_days': recurrence_days
         }
@@ -1084,7 +1084,7 @@ def create_block_template():
                 'start_time': template.start_time.strftime('%H:%M'),
                 'end_time': template.end_time.strftime('%H:%M'),
                 'reason_id': template.reason_id,
-                'sub_reason': template.sub_reason,
+                'details': template.details,
                 'recurrence_pattern': template.recurrence_pattern,
                 'recurrence_days': template.recurrence_days
             }
@@ -1266,15 +1266,15 @@ def get_reason_usage(reason_id):
         return jsonify({'error': str(e)}), 500
 
 
-# Sub-Reason Template Routes
+# Details Template Routes
 
-@bp.route('/block-reasons/<int:reason_id>/sub-reason-templates', methods=['GET'])
+@bp.route('/block-reasons/<int:reason_id>/details-templates', methods=['GET'])
 @login_required
 @admin_required
-def list_sub_reason_templates(reason_id):
-    """List sub-reason templates for a block reason (admin only)."""
+def list_details_templates(reason_id):
+    """List details templates for a block reason (admin only)."""
     try:
-        templates = BlockReasonService.get_sub_reason_templates(reason_id)
+        templates = BlockReasonService.get_details_templates(reason_id)
         
         return jsonify({
             'reason_id': reason_id,
@@ -1293,11 +1293,11 @@ def list_sub_reason_templates(reason_id):
         return jsonify({'error': str(e)}), 500
 
 
-@bp.route('/block-reasons/<int:reason_id>/sub-reason-templates', methods=['POST'])
+@bp.route('/block-reasons/<int:reason_id>/details-templates', methods=['POST'])
 @login_required
 @admin_required
-def create_sub_reason_template(reason_id):
-    """Create sub-reason template (admin only)."""
+def create_details_template(reason_id):
+    """Create details template (admin only)."""
     try:
         data = request.get_json() if request.is_json else request.form
         
@@ -1306,14 +1306,14 @@ def create_sub_reason_template(reason_id):
         if not template_name:
             return jsonify({'error': 'Vorlagenname ist erforderlich'}), 400
         
-        template, error = BlockReasonService.create_sub_reason_template(reason_id, template_name, current_user.id)
+        template, error = BlockReasonService.create_details_template(reason_id, template_name, current_user.id)
         
         if error:
             return jsonify({'error': error}), 400
         
         return jsonify({
             'id': template.id,
-            'message': 'Untergrund-Vorlage erfolgreich erstellt',
+            'message': 'Details-Vorlage erfolgreich erstellt',
             'template': {
                 'id': template.id,
                 'template_name': template.template_name,
@@ -1326,18 +1326,18 @@ def create_sub_reason_template(reason_id):
         return jsonify({'error': str(e)}), 500
 
 
-@bp.route('/sub-reason-templates/<int:template_id>', methods=['DELETE'])
+@bp.route('/details-templates/<int:template_id>', methods=['DELETE'])
 @login_required
 @admin_required
-def delete_sub_reason_template(template_id):
-    """Delete sub-reason template (admin only)."""
+def delete_details_template(template_id):
+    """Delete details template (admin only)."""
     try:
-        success, error = BlockReasonService.delete_sub_reason_template(template_id, current_user.id)
+        success, error = BlockReasonService.delete_details_template(template_id, current_user.id)
         
         if error:
             return jsonify({'error': error}), 400
         
-        return jsonify({'message': 'Untergrund-Vorlage erfolgreich gelöscht'}), 200
+        return jsonify({'message': 'Details-Vorlage erfolgreich gelöscht'}), 200
         
     except Exception as e:
         db.session.rollback()

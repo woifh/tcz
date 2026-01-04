@@ -51,7 +51,7 @@ def test_create_batch_for_editing(session):
         'start_time': '09:00',
         'end_time': '11:00',
         'reason_id': reason_id,
-        'sub_reason': 'Original test blocking for edit'
+        'details': 'Original test blocking for edit'
     }
     
     response = session.post(f"{BASE_URL}/admin/blocks/multi-court", json=block_data)
@@ -72,7 +72,7 @@ def test_create_batch_for_editing(session):
             blocks = response.json().get('blocks', [])
             # Find our newly created batch
             for block in blocks:
-                if (block.get('sub_reason') == 'Original test blocking for edit' and 
+                if (block.get('details') == 'Original test blocking for edit' and 
                     block.get('batch_id')):
                     return block['batch_id']
         
@@ -98,7 +98,7 @@ def test_batch_edit_via_api(session, batch_id):
         'start_time': '13:00',  # Different time
         'end_time': '15:00',
         'reason_id': reason_id,
-        'sub_reason': 'Updated via API test'
+        'details': 'Updated via API test'
     }
     
     response = session.put(f"{BASE_URL}/admin/blocks/batch/{batch_id}", json=update_data)
@@ -165,7 +165,7 @@ def verify_batch_changes(session, batch_id):
             print(f"   Courts: {court_numbers}")
             print(f"   Time: {first_block.get('start_time')} - {first_block.get('end_time')}")
             print(f"   Reason: {first_block.get('reason_name')}")
-            print(f"   Sub-reason: {first_block.get('sub_reason')}")
+            print(f"   Details: {first_block.get('details')}")
             
             # Check if changes match what we expected
             expected_courts = [2, 4, 6]
@@ -179,10 +179,10 @@ def verify_batch_changes(session, batch_id):
             else:
                 print(f"❌ Time changes incorrect")
             
-            if first_block.get('sub_reason') == 'Updated via API test':
-                print("✅ Sub-reason changes applied correctly")
+            if first_block.get('details') == 'Updated via API test':
+                print("✅ Details changes applied correctly")
             else:
-                print(f"❌ Sub-reason changes incorrect")
+                print(f"❌ Details changes incorrect")
             
             return True
         else:

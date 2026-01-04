@@ -46,7 +46,7 @@ def create_test_blocking(session):
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': 1,  # Assuming reason ID 1 exists
-        'sub_reason': 'Test blocking for form fix'
+        'details': 'Test blocking for form fix'
     }
     
     response = session.post(
@@ -74,7 +74,7 @@ def get_blocks(session):
         print(f"✅ Found {len(blocks)} blocks for 2026-01-10")
         
         # Find blocks with our test data
-        test_blocks = [b for b in blocks if b.get('sub_reason') == 'Test blocking for form fix']
+        test_blocks = [b for b in blocks if b.get('details') == 'Test blocking for form fix']
         if test_blocks:
             batch_id = test_blocks[0].get('batch_id')
             print(f"✅ Found test blocks with batch_id: {batch_id}")
@@ -94,7 +94,7 @@ def test_batch_update(session, batch_id):
         'start_time': '11:00',  # Change start time
         'end_time': '13:00',    # Change end time
         'reason_id': 1,
-        'sub_reason': 'Updated test blocking - form fix verified'
+        'details': 'Updated test blocking - form fix verified'
     }
     
     response = session.put(
@@ -130,7 +130,7 @@ def verify_update(session, batch_id):
             print(f"✅ Found {len(batch_blocks)} blocks in batch after update")
             
             # Check if update was applied
-            updated_blocks = [b for b in batch_blocks if b.get('sub_reason') == 'Updated test blocking - form fix verified']
+            updated_blocks = [b for b in batch_blocks if b.get('details') == 'Updated test blocking - form fix verified']
             
             if updated_blocks:
                 print("✅ Update verification successful - blocks were updated, not duplicated")
@@ -164,7 +164,7 @@ def cleanup_test_data(session):
         blocks = result.get('blocks', [])
         
         # Find test blocks
-        test_blocks = [b for b in blocks if 'test blocking' in (b.get('sub_reason') or '').lower()]
+        test_blocks = [b for b in blocks if 'test blocking' in (b.get('details') or '').lower()]
         
         for block in test_blocks:
             batch_id = block.get('batch_id')

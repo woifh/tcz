@@ -333,9 +333,9 @@ export function dashboard() {
                 console.log('Blocked slot details:', blockDetails); // Debug log
                 if (blockDetails && blockDetails.reason) {
                     let content = blockDetails.reason;
-                    if (blockDetails.sub_reason && blockDetails.sub_reason.trim()) {
-                        console.log('Adding sub-reason:', blockDetails.sub_reason); // Debug log
-                        content += `<br><span style="font-size: 0.7em; opacity: 0.9;">${blockDetails.sub_reason}</span>`;
+                    if (blockDetails.details && blockDetails.details.trim()) {
+                        console.log('Adding details:', blockDetails.details); // Debug log
+                        content += `<br><span style="font-size: 0.7em; opacity: 0.9;">${blockDetails.details}</span>`;
                     }
                     console.log('Final blocked content:', content); // Debug log
                     return content;

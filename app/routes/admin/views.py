@@ -66,7 +66,7 @@ def edit_court_blocking(batch_id):
             'start_time': first_block.start_time,
             'end_time': first_block.end_time,
             'reason_id': first_block.reason_id,
-            'sub_reason': first_block.sub_reason,
+            'details': first_block.details,
             'related_block_ids': [block.id for block in blocks]
         }
         

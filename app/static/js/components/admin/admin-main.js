@@ -238,9 +238,9 @@ export class AdminPanel {
                         <p class="text-sm text-gray-500 mb-1">
                             Plätze: ${courtNumbers || 'Unbekannt'}
                         </p>
-                        ${firstBlock.sub_reason ? `
+                        ${firstBlock.details ? `
                             <p class="text-sm text-gray-500 mb-1">
-                                Zusätzlicher Grund: ${firstBlock.sub_reason}
+                                Details: ${firstBlock.details}
                             </p>
                         ` : ''}
                         <p class="text-xs text-gray-400">

@@ -6,7 +6,7 @@ This package contains all admin-related routes split into logical modules:
 - blocks: Block CRUD operations
 - series: Recurring block series management  
 - templates: Block template management
-- reasons: Block reason and sub-reason management
+- reasons: Block reason and details management
 - bulk: Bulk operations and multi-court operations
 - audit: Audit log functionality
 """

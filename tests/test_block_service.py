@@ -93,7 +93,7 @@ def test_property_14_blocks_cascade_cancel_existing_reservations(app, court_num,
             start_time=start,
             end_time=end_time,
             reason_id=block_reason.id,
-            sub_reason=None,
+            details=None,
             admin_id=admin.id
         )
         
@@ -213,7 +213,7 @@ def test_property_15_block_cancellations_include_reason_in_notification(app, cou
             start_time=start,
             end_time=end_time,
             reason_id=block_reason.id,
-            sub_reason=None,
+            details=None,
             admin_id=admin.id
         )
         
@@ -320,7 +320,7 @@ def test_property_48_recurring_block_series_generation(app, court_num, start_dat
             recurrence_pattern=recurrence_pattern,
             recurrence_days=recurrence_days,
             reason_id=block_reason.id,
-            sub_reason=None,
+            details=None,
             admin_id=admin.id,
             series_name=series_name
         )
@@ -460,19 +460,19 @@ def test_block_reason_service_basic_functionality(app):
         updated_reason = BlockReason.query.get(reason.id)
         assert updated_reason.name == 'Updated Reason'
         
-        # Test create_sub_reason_template
-        template, error = BlockReasonService.create_sub_reason_template(reason.id, 'Test Template', admin.id)
+        # Test create_details_template
+        template, error = BlockReasonService.create_details_template(reason.id, 'Test Template', admin.id)
         assert error is None, f"Error creating template: {error}"
         assert template is not None
         assert template.template_name == 'Test Template'
         
-        # Test get_sub_reason_templates
-        templates = BlockReasonService.get_sub_reason_templates(reason.id)
+        # Test get_details_templates
+        templates = BlockReasonService.get_details_templates(reason.id)
         assert len(templates) == 1
         assert templates[0].template_name == 'Test Template'
         
-        # Test delete_sub_reason_template
-        success, error = BlockReasonService.delete_sub_reason_template(template.id, admin.id)
+        # Test delete_details_template
+        success, error = BlockReasonService.delete_details_template(template.id, admin.id)
         assert error is None, f"Error deleting template: {error}"
         assert success is True
         

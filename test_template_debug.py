@@ -26,7 +26,7 @@ with app.app_context():
         'start_time': block.start_time,
         'end_time': block.end_time,
         'reason_id': block.reason_id,
-        'sub_reason': block.sub_reason,
+        'details': block.details,
         'related_block_ids': [block.id]
     }
     

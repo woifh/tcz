@@ -350,7 +350,7 @@ export class BlockForm {
             start_time: document.getElementById('multi-start')?.value,
             end_time: document.getElementById('multi-end')?.value,
             reason_id: document.getElementById('multi-reason')?.value,
-            sub_reason: document.getElementById('multi-sub-reason')?.value || ''
+            details: document.getElementById('multi-details')?.value || ''
         };
 
         console.log('📤 Submitting block data:', blockData);
@@ -456,7 +456,7 @@ export class BlockForm {
             start_time: document.getElementById('multi-start')?.value,
             end_time: document.getElementById('multi-end')?.value,
             reason_id: document.getElementById('multi-reason')?.value,
-            sub_reason: document.getElementById('multi-sub-reason')?.value || ''
+            details: document.getElementById('multi-details')?.value || ''
         };
 
         console.log('📤 Submitting new event data:', blockData);
@@ -530,14 +530,14 @@ export class BlockForm {
         const startTimeInput = document.getElementById('multi-start');
         const endTimeInput = document.getElementById('multi-end');
         const reasonSelect = document.getElementById('multi-reason');
-        const subReasonInput = document.getElementById('multi-sub-reason');
+        const detailsInput = document.getElementById('multi-details');
         const descriptionInput = document.getElementById('multi-description');
         
         if (dateInput) dateInput.value = blockData.date;
         if (startTimeInput) startTimeInput.value = blockData.start_time;
         if (endTimeInput) endTimeInput.value = blockData.end_time;
         if (reasonSelect) reasonSelect.value = blockData.reason_id;
-        if (subReasonInput) subReasonInput.value = blockData.sub_reason || '';
+        if (detailsInput) detailsInput.value = blockData.details || '';
         if (descriptionInput) descriptionInput.value = blockData.description || '';
         
         // Set selected courts - use court_ids from batch data

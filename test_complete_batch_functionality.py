@@ -31,7 +31,7 @@ def test_complete_batch_functionality():
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': 1,
-        'sub_reason': 'Complete Test Multi'
+        'details': 'Complete Test Multi'
     }
     
     create_response = session.post(
@@ -53,7 +53,7 @@ def test_complete_batch_functionality():
         'start_time': '14:00',
         'end_time': '16:00',
         'reason_id': 1,
-        'sub_reason': 'Complete Test Single'
+        'details': 'Complete Test Single'
     }
     
     create_response = session.post(
@@ -84,8 +84,8 @@ def test_complete_batch_functionality():
     blocks = blocks_data.get('blocks', [])
     
     # Find our test blocks
-    multi_blocks = [b for b in blocks if b.get('sub_reason') == 'Complete Test Multi']
-    single_blocks = [b for b in blocks if b.get('sub_reason') == 'Complete Test Single']
+    multi_blocks = [b for b in blocks if b.get('details') == 'Complete Test Multi']
+    single_blocks = [b for b in blocks if b.get('details') == 'Complete Test Single']
     
     if len(multi_blocks) != 3:
         print(f"✗ Expected 3 multi-court blocks, found {len(multi_blocks)}")

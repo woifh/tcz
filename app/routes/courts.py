@@ -78,11 +78,11 @@ def get_availability():
                     slot['status'] = 'blocked'
                     
                     # Debug logging
-                    print(f"DEBUG: Block found - ID: {block.id}, Reason: {block.reason_obj.name if block.reason_obj else 'None'}, Sub-reason: '{block.sub_reason}'")
+                    print(f"DEBUG: Block found - ID: {block.id}, Reason: {block.reason_obj.name if block.reason_obj else 'None'}, Details: '{block.details}'")
                     
                     slot['details'] = {
                         'reason': block.reason_obj.name if block.reason_obj else 'Unbekannt',
-                        'sub_reason': block.sub_reason if block.sub_reason else 'NO_SUB_REASON',
+                        'details': block.details if block.details else 'NO_DETAILS',
                         'block_id': block.id,
                         'debug_test': 'FIELD_ADDED'
                     }

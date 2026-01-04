@@ -75,7 +75,7 @@ def test_with_auth():
             'start_time': '14:00',
             'end_time': '16:00',
             'reason_id': 1,
-            'sub_reason': 'Test batch ID check'
+            'details': 'Test batch ID check'
         }
         
         code, stdout, stderr = run_curl_with_cookies(
@@ -109,7 +109,7 @@ def test_with_auth():
         
         try:
             blocks_data = json.loads(stdout)
-            test_blocks = [b for b in blocks_data['blocks'] if b.get('sub_reason') == 'Test batch ID check']
+            test_blocks = [b for b in blocks_data['blocks'] if b.get('details') == 'Test batch ID check']
             
             if not test_blocks:
                 print("❌ Test blocks not found")

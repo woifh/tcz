@@ -36,7 +36,7 @@ def list_recurring_series():
                     'recurrence_days': serie.recurrence_days,
                     'reason_id': serie.reason_id,
                     'reason_name': serie.reason_obj.name if serie.reason_obj else 'Unknown',
-                    'sub_reason': serie.sub_reason,
+                    'details': serie.details,
                     'court_selection': [1, 2, 3, 4, 5, 6],  # This would come from blocks
                     'total_instances': len(serie.blocks),
                     'active_instances': len([b for b in serie.blocks if b.date >= date.today()]),
@@ -73,7 +73,7 @@ def create_recurring_series():
         recurrence_pattern = data.get('recurrence_pattern')
         recurrence_days = data.get('recurrence_days', [])
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         series_name = data.get('series_name', '').strip()
         
         # Validate required fields
@@ -96,7 +96,7 @@ def create_recurring_series():
             recurrence_pattern=recurrence_pattern,
             recurrence_days=recurrence_days,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             admin_id=current_user.id,
             series_name=series_name
         )
@@ -130,8 +130,8 @@ def update_entire_series(series_id):
             updates['end_time'] = datetime.strptime(data['end_time'], '%H:%M').time()
         if 'reason_id' in data:
             updates['reason_id'] = int(data['reason_id'])
-        if 'sub_reason' in data:
-            updates['sub_reason'] = data['sub_reason'].strip() or None
+        if 'details' in data:
+            updates['details'] = data.get('details', '').strip() or None
         
         updates['admin_id'] = current_user.id
         
@@ -168,8 +168,8 @@ def update_future_series(series_id):
             updates['end_time'] = datetime.strptime(data['end_time'], '%H:%M').time()
         if 'reason_id' in data:
             updates['reason_id'] = int(data['reason_id'])
-        if 'sub_reason' in data:
-            updates['sub_reason'] = data['sub_reason'].strip() or None
+        if 'details' in data:
+            updates['details'] = data.get('details', '').strip() or None
         
         updates['admin_id'] = current_user.id
         

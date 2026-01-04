@@ -73,7 +73,7 @@ def create_test_data():
                 'start_time': time(10, 0),
                 'end_time': time(12, 0),
                 'reason_id': wartung.id,
-                'sub_reason': 'Linien neu ziehen'
+                'details': 'Linien neu ziehen'
             },
             {
                 'court_id': courts[1].id,  # Court 2
@@ -81,7 +81,7 @@ def create_test_data():
                 'start_time': time(14, 0),
                 'end_time': time(16, 0),
                 'reason_id': wetter.id,
-                'sub_reason': 'Platz zu nass nach Regen'
+                'details': 'Platz zu nass nach Regen'
             },
             {
                 'court_id': courts[2].id,  # Court 3
@@ -89,7 +89,7 @@ def create_test_data():
                 'start_time': time(9, 0),
                 'end_time': time(18, 0),
                 'reason_id': turnier.id,
-                'sub_reason': 'Vereinsmeisterschaft'
+                'details': 'Vereinsmeisterschaft'
             }
         ]
         
@@ -108,7 +108,7 @@ def create_test_data():
                     start_time=block_data['start_time'],
                     end_time=block_data['end_time'],
                     reason_id=block_data['reason_id'],
-                    sub_reason=block_data['sub_reason'],
+                    details=block_data['details'],
                     created_by_id=admin.id
                 )
                 db.session.add(block)
@@ -123,7 +123,7 @@ def create_test_data():
             reason_name = block.reason_obj.name if block.reason_obj else 'Unknown'
             print(f"  Block {block.id}: Court {block.court_id}, {block.date} {block.start_time}-{block.end_time}")
             print(f"    Reason: {reason_name}")
-            print(f"    Sub-reason: {block.sub_reason}")
+            print(f"    Details: {block.details}")
         
         print("\nTest data created successfully!")
 

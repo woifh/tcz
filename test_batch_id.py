@@ -31,7 +31,7 @@ def test_batch_id_assignment():
         'start_time': '15:00',
         'end_time': '17:00',
         'reason_id': 1,
-        'sub_reason': 'Batch ID Test'
+        'details': 'Batch ID Test'
     }
     
     create_response = session.post(
@@ -57,7 +57,7 @@ def test_batch_id_assignment():
             blocks = blocks_data.get('blocks', [])
             
             # Find our test blocks (only the most recent ones)
-            test_blocks = [b for b in blocks if b.get('sub_reason') == 'Batch ID Test']
+            test_blocks = [b for b in blocks if b.get('details') == 'Batch ID Test']
             print(f"Found {len(test_blocks)} test blocks")
             
             # Sort by ID to get the most recent ones

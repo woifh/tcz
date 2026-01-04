@@ -80,7 +80,7 @@ def get_blocks():
                 'end_time': block.end_time.strftime('%H:%M'),
                 'reason_id': block.reason_id,
                 'reason_name': reason.name if reason else 'Unbekannt',
-                'sub_reason': block.sub_reason,
+                'details': block.details,
                 'created_at': block.created_at.isoformat() if block.created_at else None,
                 'created_by_id': block.created_by_id
             }
@@ -105,7 +105,7 @@ def create_block():
         start_time_str = data['start_time']
         end_time_str = data['end_time']
         reason_id = int(data['reason_id'])
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         
         # Parse date and times
         block_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -124,7 +124,7 @@ def create_block():
             start_time=start_time,
             end_time=end_time,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             admin_id=current_user.id
         )
         
@@ -156,7 +156,7 @@ def update_block(id):
         new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
         new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
         new_reason_id = int(data['reason_id'])
-        new_sub_reason = data.get('sub_reason', '').strip() or None
+        new_details = data.get('details', '').strip() or None
         
         # Validate that the date is not in the past
         today = datetime.now().date()
@@ -174,7 +174,7 @@ def update_block(id):
             start_time=new_start_time,
             end_time=new_end_time,
             reason_id=new_reason_id,
-            sub_reason=new_sub_reason,
+            details=new_details,
             admin_id=current_user.id
         )
         
@@ -206,7 +206,7 @@ def delete_block(id):
                 'start_time': block.start_time.isoformat(),
                 'end_time': block.end_time.isoformat(),
                 'reason_id': block.reason_id,
-                'sub_reason': block.sub_reason
+                'details': block.details
             },
             admin_id=current_user.id
         )
@@ -243,7 +243,7 @@ def get_block(id):
             'end_time': block.end_time.strftime('%H:%M'),
             'reason_id': block.reason_id,
             'reason_name': reason.name if reason else 'Unbekannt',
-            'sub_reason': block.sub_reason,
+            'details': block.details,
             'created_at': block.created_at.isoformat() if block.created_at else None,
             'created_by_id': block.created_by_id
         }

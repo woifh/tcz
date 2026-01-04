@@ -31,7 +31,7 @@ def test_old_single_endpoint():
         'start_time': '17:00',
         'end_time': '19:00',
         'reason_id': 1,
-        'sub_reason': 'Old Endpoint Batch ID Test'
+        'details': 'Old Endpoint Batch ID Test'
     }
     
     create_response = session.post(
@@ -57,7 +57,7 @@ def test_old_single_endpoint():
             blocks = blocks_data.get('blocks', [])
             
             # Find our test block
-            test_blocks = [b for b in blocks if b.get('sub_reason') == 'Old Endpoint Batch ID Test']
+            test_blocks = [b for b in blocks if b.get('details') == 'Old Endpoint Batch ID Test']
             print(f"Found {len(test_blocks)} test blocks")
             
             for block in test_blocks:

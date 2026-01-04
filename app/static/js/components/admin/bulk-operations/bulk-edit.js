@@ -74,8 +74,8 @@ export class BulkEditManager {
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="bulk-edit-sub-reason" class="form-label">Untergrund ändern</label>
-                                            <input type="text" class="form-control" id="bulk-edit-sub-reason" name="sub_reason" 
+                                            <label for="bulk-edit-details" class="form-label">Details ändern</label>
+                                            <input type="text" class="form-control" id="bulk-edit-details" name="details" 
                                                    placeholder="Leer lassen für keine Änderung">
                                         </div>
                                     </div>
@@ -104,9 +104,9 @@ export class BulkEditManager {
                                 
                                 <div class="mb-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="bulk-edit-clear-sub-reason" name="clear_sub_reason">
-                                        <label class="form-check-label" for="bulk-edit-clear-sub-reason">
-                                            Untergrund bei allen ausgewählten Sperrungen löschen
+                                        <input class="form-check-input" type="checkbox" id="bulk-edit-clear-details" name="clear_details">
+                                        <label class="form-check-label" for="bulk-edit-clear-details">
+                                            Details bei allen ausgewählten Sperrungen löschen
                                         </label>
                                     </div>
                                 </div>
@@ -160,18 +160,18 @@ export class BulkEditManager {
         }
 
         // Setup clear checkboxes
-        const clearSubReasonCheckbox = document.getElementById('bulk-edit-clear-sub-reason');
+        const clearDetailsCheckbox = document.getElementById('bulk-edit-clear-details');
         const clearDescriptionCheckbox = document.getElementById('bulk-edit-clear-description');
-        const subReasonInput = document.getElementById('bulk-edit-sub-reason');
+        const detailsInput = document.getElementById('bulk-edit-details');
         const descriptionInput = document.getElementById('bulk-edit-description');
         
-        if (clearSubReasonCheckbox && subReasonInput) {
-            clearSubReasonCheckbox.addEventListener('change', (e) => {
+        if (clearDetailsCheckbox && detailsInput) {
+            clearDetailsCheckbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
-                    subReasonInput.disabled = true;
-                    subReasonInput.value = '';
+                    detailsInput.disabled = true;
+                    detailsInput.value = '';
                 } else {
-                    subReasonInput.disabled = false;
+                    detailsInput.disabled = false;
                 }
             });
         }
@@ -212,10 +212,10 @@ export class BulkEditManager {
             form.reset();
             
             // Re-enable inputs that might have been disabled
-            const subReasonInput = document.getElementById('bulk-edit-sub-reason');
+            const detailsInput = document.getElementById('bulk-edit-details');
             const descriptionInput = document.getElementById('bulk-edit-description');
             
-            if (subReasonInput) subReasonInput.disabled = false;
+            if (detailsInput) detailsInput.disabled = false;
             if (descriptionInput) descriptionInput.disabled = false;
         }
     }
@@ -266,11 +266,11 @@ export class BulkEditManager {
             editData.end_time = formData.end_time;
         }
         
-        // Handle sub_reason
-        if (formData.clear_sub_reason) {
-            editData.sub_reason = '';
-        } else if (formData.sub_reason) {
-            editData.sub_reason = formData.sub_reason;
+        // Handle details
+        if (formData.clear_details) {
+            editData.details = '';
+        } else if (formData.details) {
+            editData.details = formData.details;
         }
         
         // Handle description

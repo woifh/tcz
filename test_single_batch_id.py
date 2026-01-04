@@ -31,7 +31,7 @@ def test_single_block_batch_id():
         'start_time': '16:00',
         'end_time': '18:00',
         'reason_id': 1,
-        'sub_reason': 'Single Batch ID Test'
+        'details': 'Single Batch ID Test'
     }
     
     create_response = session.post(
@@ -57,7 +57,7 @@ def test_single_block_batch_id():
             blocks = blocks_data.get('blocks', [])
             
             # Find our test block
-            test_blocks = [b for b in blocks if b.get('sub_reason') == 'Single Batch ID Test']
+            test_blocks = [b for b in blocks if b.get('details') == 'Single Batch ID Test']
             print(f"Found {len(test_blocks)} test blocks")
             
             for block in test_blocks:

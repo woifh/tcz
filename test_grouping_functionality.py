@@ -55,7 +55,7 @@ def create_test_data():
                 start_time=time(10, 0),
                 end_time=time(12, 0),
                 reason_id=reason.id,
-                sub_reason='Wartung',
+                details='Wartung',
                 created_by_id=admin.id,
                 created_at=test_time
             )
@@ -69,7 +69,7 @@ def create_test_data():
             start_time=time(14, 0),
             end_time=time(16, 0),
             reason_id=reason.id,
-            sub_reason='Reparatur',
+            details='Reparatur',
             created_by_id=admin.id,
             created_at=test_time + timedelta(minutes=5)
         )
@@ -85,7 +85,7 @@ def create_test_data():
                 start_time=time(9, 0),
                 end_time=time(11, 0),
                 reason_id=reason.id,
-                sub_reason='Turnier',
+                details='Turnier',
                 created_by_id=admin.id,
                 created_at=test_time_2
             )
@@ -128,7 +128,7 @@ def test_api_grouping():
             # Simulate the grouping logic
             groups = {}
             for block in blocks:
-                key = f"{block['date']}_{block['start_time']}_{block['end_time']}_{block['reason_id']}_{block.get('sub_reason', '')}_{block['created_at']}"
+                key = f"{block['date']}_{block['start_time']}_{block['end_time']}_{block['reason_id']}_{block.get('details', '')}_{block['created_at']}"
                 if key not in groups:
                     groups[key] = []
                 groups[key].append(block)

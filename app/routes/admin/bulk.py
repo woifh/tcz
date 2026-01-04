@@ -40,7 +40,7 @@ def update_batch(batch_id):
         new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
         new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
         new_reason_id = int(data['reason_id'])
-        new_sub_reason = data.get('sub_reason', '').strip() or None
+        new_details = data.get('details', '').strip() or None
         
         # Validate that the date is not in the past
         today = datetime.now().date()
@@ -71,7 +71,7 @@ def update_batch(batch_id):
                 block.start_time = new_start_time
                 block.end_time = new_end_time
                 block.reason_id = new_reason_id
-                block.sub_reason = new_sub_reason
+                block.details = new_details
         
         # Create new blocks for newly selected courts (with same batch_id)
         for court_id in courts_to_add:
@@ -81,7 +81,7 @@ def update_batch(batch_id):
                 start_time=new_start_time,
                 end_time=new_end_time,
                 reason_id=new_reason_id,
-                sub_reason=new_sub_reason,
+                details=new_details,
                 batch_id=batch_id,  # Use the same batch_id
                 created_by_id=current_user.id
             )
@@ -169,7 +169,7 @@ def update_multi_court_blocks(primary_block_id):
         new_start_time = datetime.strptime(data['start_time'], '%H:%M').time()
         new_end_time = datetime.strptime(data['end_time'], '%H:%M').time()
         new_reason_id = int(data['reason_id'])
-        new_sub_reason = data.get('sub_reason', '').strip() or None
+        new_details = data.get('details', '').strip() or None
         
         # Validate that the date is not in the past
         today = datetime.now().date()
@@ -200,7 +200,7 @@ def update_multi_court_blocks(primary_block_id):
                 block.start_time = new_start_time
                 block.end_time = new_end_time
                 block.reason_id = new_reason_id
-                block.sub_reason = new_sub_reason
+                block.details = new_details
         
         # Create new blocks for newly selected courts (with same batch_id)
         for court_id in courts_to_add:
@@ -210,7 +210,7 @@ def update_multi_court_blocks(primary_block_id):
                 start_time=new_start_time,
                 end_time=new_end_time,
                 reason_id=new_reason_id,
-                sub_reason=new_sub_reason,
+                details=new_details,
                 batch_id=batch_id,  # Use the same batch_id
                 created_by_id=current_user.id
             )
@@ -246,7 +246,7 @@ def create_multi_court_blocks():
         start_time_str = data.get('start_time')
         end_time_str = data.get('end_time')
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         
         # Validate required fields
         if not all([court_ids, date_str, start_time_str, end_time_str, reason_id]):
@@ -269,7 +269,7 @@ def create_multi_court_blocks():
             start_time=start_time,
             end_time=end_time,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             admin_id=current_user.id
         )
         

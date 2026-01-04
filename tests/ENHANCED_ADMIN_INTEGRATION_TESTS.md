@@ -116,8 +116,8 @@ This document describes the comprehensive integration tests implemented for the 
   - Deletes reason
   - Verifies past blocks preserved, future blocks deleted
 
-- **`test_sub_reason_template_management`**: Tests sub-reason templates
-  - Creates multiple sub-reason templates
+- **`test_details_template_management`**: Tests details templates
+  - Creates multiple details templates
   - Tests template retrieval and deletion
   - Verifies proper reason association
 

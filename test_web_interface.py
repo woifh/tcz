@@ -51,7 +51,7 @@ def test_admin_login_and_batch_grouping():
                 'start_time': '10:00',
                 'end_time': '12:00',
                 'reason_id': 1,  # Assuming reason ID 1 exists
-                'sub_reason': 'Test Batch Grouping'
+                'details': 'Test Batch Grouping'
             }
             
             create_response = session.post(
@@ -76,7 +76,7 @@ def test_admin_login_and_batch_grouping():
                 'start_time': '14:00',
                 'end_time': '16:00',
                 'reason_id': 1,
-                'sub_reason': 'Single Block Test'
+                'details': 'Single Block Test'
             }
             
             single_response = session.post(
@@ -124,7 +124,7 @@ def test_admin_login_and_batch_grouping():
                     first_block = group_blocks[0]
                     courts_display = f"Plätze {', '.join(map(str, court_numbers))}" if len(court_numbers) > 1 else f"Platz {court_numbers[0]}"
                     batch_info = f"batch_id: {first_block.get('batch_id', 'None')}" if first_block.get('batch_id') else "single block"
-                    print(f"  Group {i} ({key}): {courts_display} - {first_block['date']} {first_block['start_time']}-{first_block['end_time']} ({first_block.get('sub_reason', 'No sub-reason')}) [{batch_info}]")
+                    print(f"  Group {i} ({key}): {courts_display} - {first_block['date']} {first_block['start_time']}-{first_block['end_time']} ({first_block.get('details', 'No details')}) [{batch_info}]")
                 
                 # Step 7: Test batch-based edit URL
                 print("7. Testing batch-based edit URLs...")

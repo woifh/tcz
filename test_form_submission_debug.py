@@ -57,7 +57,7 @@ def simulate_form_submission_via_post(session, batch_id):
         'start_time': '15:00',
         'end_time': '17:00',
         'reason_id': '1',
-        'sub_reason': 'Form POST submission test'
+        'details': 'Form POST submission test'
     }
     
     # This is what's happening incorrectly - POST to multi-court instead of PUT to batch
@@ -82,7 +82,7 @@ def test_correct_put_submission(session, batch_id):
         'start_time': '15:00',
         'end_time': '17:00',
         'reason_id': '1',
-        'sub_reason': 'Correct PUT submission test'
+        'details': 'Correct PUT submission test'
     }
     
     # This is what SHOULD happen - PUT to batch endpoint
@@ -124,7 +124,7 @@ def check_what_blocks_exist(session):
             if len(batch_blocks) > 0:
                 first_block = batch_blocks[0]
                 court_numbers = [b.get('court_number', b.get('court_id')) for b in batch_blocks]
-                print(f"   Batch {batch_id}: Courts {court_numbers} - {first_block.get('sub_reason', 'No sub-reason')}")
+                print(f"   Batch {batch_id}: Courts {court_numbers} - {first_block.get('details', 'No details')}")
         
         return blocks
     else:

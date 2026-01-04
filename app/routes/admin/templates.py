@@ -33,7 +33,7 @@ def list_block_templates():
                     'end_time': template.end_time.strftime('%H:%M'),
                     'reason_id': template.reason_id,
                     'reason_name': template.reason_obj.name if template.reason_obj else 'Unknown',
-                    'sub_reason': template.sub_reason,
+                    'details': template.details,
                     'recurrence_pattern': template.recurrence_pattern,
                     'recurrence_days': template.recurrence_days,
                     'created_by': template.created_by.name,
@@ -60,7 +60,7 @@ def create_block_template():
         start_time_str = data.get('start_time')
         end_time_str = data.get('end_time')
         reason_id = int(data.get('reason_id'))
-        sub_reason = data.get('sub_reason', '').strip() or None
+        details = data.get('details', '').strip() or None
         recurrence_pattern = data.get('recurrence_pattern', '').strip() or None
         recurrence_days = data.get('recurrence_days', [])
         
@@ -78,7 +78,7 @@ def create_block_template():
             'start_time': start_time,
             'end_time': end_time,
             'reason_id': reason_id,
-            'sub_reason': sub_reason,
+            'details': details,
             'recurrence_pattern': recurrence_pattern,
             'recurrence_days': recurrence_days
         }
@@ -99,7 +99,7 @@ def create_block_template():
                 'start_time': template.start_time.strftime('%H:%M'),
                 'end_time': template.end_time.strftime('%H:%M'),
                 'reason_id': template.reason_id,
-                'sub_reason': template.sub_reason,
+                'details': template.details,
                 'recurrence_pattern': template.recurrence_pattern,
                 'recurrence_days': template.recurrence_days
             }

@@ -124,24 +124,24 @@ export const blockReasonsAPI = {
         }
     },
 
-    async loadSubReasonTemplates(reasonId) {
+    async loadDetailsTemplates(reasonId) {
         try {
-            const response = await fetch(`/admin/block-reasons/${reasonId}/sub-reason-templates`);
+            const response = await fetch(`/admin/block-reasons/${reasonId}/details-templates`);
             const data = await response.json();
             
             if (response.ok) {
                 return { success: true, templates: data.templates };
             } else {
-                return { success: false, error: data.error || 'Fehler beim Laden der Untergrund-Vorlagen' };
+                return { success: false, error: data.error || 'Fehler beim Laden der Details-Vorlagen' };
             }
         } catch (error) {
-            return { success: false, error: 'Fehler beim Laden der Untergrund-Vorlagen' };
+            return { success: false, error: 'Fehler beim Laden der Details-Vorlagen' };
         }
     },
 
-    async createSubReasonTemplate(reasonId, templateData) {
+    async createDetailsTemplate(reasonId, templateData) {
         try {
-            const response = await fetch(`/admin/block-reasons/${reasonId}/sub-reason-templates`, {
+            const response = await fetch(`/admin/block-reasons/${reasonId}/details-templates`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(templateData)
@@ -150,20 +150,20 @@ export const blockReasonsAPI = {
             const data = await response.json();
             return { success: response.ok, data, error: response.ok ? null : data.error };
         } catch (error) {
-            return { success: false, error: 'Fehler beim Erstellen der Untergrund-Vorlage' };
+            return { success: false, error: 'Fehler beim Erstellen der Details-Vorlage' };
         }
     },
 
-    async deleteSubReasonTemplate(templateId) {
+    async deleteDetailsTemplate(templateId) {
         try {
-            const response = await fetch(`/admin/sub-reason-templates/${templateId}`, {
+            const response = await fetch(`/admin/details-templates/${templateId}`, {
                 method: 'DELETE'
             });
             
             const data = await response.json();
             return { success: response.ok, data, error: response.ok ? null : data.error };
         } catch (error) {
-            return { success: false, error: 'Fehler beim Löschen der Untergrund-Vorlage' };
+            return { success: false, error: 'Fehler beim Löschen der Details-Vorlage' };
         }
     }
 };

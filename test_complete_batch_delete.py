@@ -34,7 +34,7 @@ def test_complete_batch_delete():
         'start_time': '09:00',
         'end_time': '11:00',
         'reason_id': 1,
-        'sub_reason': multi_test_id
+        'details': multi_test_id
     }
     
     create_response = session.post(
@@ -58,7 +58,7 @@ def test_complete_batch_delete():
         'start_time': '14:00',
         'end_time': '16:00',
         'reason_id': 1,
-        'sub_reason': single_test_id
+        'details': single_test_id
     }
     
     create_response = session.post(
@@ -89,8 +89,8 @@ def test_complete_batch_delete():
     blocks = blocks_data.get('blocks', [])
     
     # Find test blocks
-    multi_blocks = [b for b in blocks if b.get('sub_reason') == multi_test_id]
-    single_blocks = [b for b in blocks if b.get('sub_reason') == single_test_id]
+    multi_blocks = [b for b in blocks if b.get('details') == multi_test_id]
+    single_blocks = [b for b in blocks if b.get('details') == single_test_id]
     
     if len(multi_blocks) != 4:
         print(f"✗ Expected 4 multi-court blocks, found {len(multi_blocks)}")
@@ -148,8 +148,8 @@ def test_complete_batch_delete():
     blocks = blocks_data.get('blocks', [])
     
     # Check that no test blocks remain
-    remaining_multi = [b for b in blocks if b.get('sub_reason') == multi_test_id]
-    remaining_single = [b for b in blocks if b.get('sub_reason') == single_test_id]
+    remaining_multi = [b for b in blocks if b.get('details') == multi_test_id]
+    remaining_single = [b for b in blocks if b.get('details') == single_test_id]
     
     if len(remaining_multi) > 0:
         print(f"✗ {len(remaining_multi)} multi-court blocks still exist")

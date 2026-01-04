@@ -99,10 +99,10 @@
                             </select>
                         </div>
                         
-                        <!-- Sub-reason Field -->
+                        <!-- Details Field -->
                         <div style="margin-bottom: 1rem;">
-                            <label class="block text-gray-700 font-semibold mb-2">Zusätzlicher Grund (optional)</label>
-                            <input type="text" id="multi-sub-reason" name="multi-sub-reason" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="z. B. Regen, Reparatur">
+                            <label class="block text-gray-700 font-semibold mb-2">Details (optional)</label>
+                            <input type="text" id="multi-details" name="multi-details" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="z. B. Regen, Reparatur">
                         </div>
 
                         <!-- Action Buttons -->
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         start_time: '{{ edit_block_data.start_time.strftime('%H:%M') }}',
         end_time: '{{ edit_block_data.end_time.strftime('%H:%M') }}',
         reason_id: {{ edit_block_data.reason_id }},
-        sub_reason: '{{ edit_block_data.sub_reason or '' }}',
+        details: '{{ edit_block_data.details or '' }}',
         description: '{{ edit_block_data.description or '' }}',
         related_block_ids: {{ edit_block_data.related_block_ids|tojson }}
     };

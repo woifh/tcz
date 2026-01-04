@@ -63,7 +63,7 @@ def test_create_block(session, reasons):
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': reason_id,
-        'sub_reason': 'Test blocking'
+        'details': 'Test blocking'
     }
     
     response = session.post(f"{BASE_URL}/admin/blocks/multi-court", json=block_data)
@@ -137,7 +137,7 @@ def test_update_batch(session, blocks):
         'start_time': '14:00',  # Different time
         'end_time': '16:00',
         'reason_id': blocks[0].get('reason_id'),  # Keep same reason
-        'sub_reason': 'Updated test blocking'
+        'details': 'Updated test blocking'
     }
     
     response = session.put(f"{BASE_URL}/admin/blocks/batch/{batch_id}", json=update_data)

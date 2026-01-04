@@ -28,7 +28,7 @@ def test_specific_batch_fix():
             'start_time': '10:00',
             'end_time': '12:00',
             'reason_id': 1,
-            'sub_reason': 'Test blocking',
+            'details': 'Test blocking',
             'description': '',
             'related_block_ids': [1, 2]
         }

@@ -81,7 +81,7 @@ export class TemplateForm {
             start_time: formData['template-start-time'],
             end_time: formData['template-end-time'],
             reason_id: formData['template-reason'],
-            sub_reason: formData['template-sub-reason'] || '',
+            details: formData['template-details'] || '',
             description: formData['template-description'] || ''
         };
 
@@ -154,7 +154,7 @@ export class TemplateForm {
                             ${dateUtils.formatTime(template.start_time)} - ${dateUtils.formatTime(template.end_time)}<br>
                             Plätze: ${template.courts.join(', ')}<br>
                             Grund: ${template.reason_name}
-                            ${template.sub_reason ? `<br>Untergrund: ${template.sub_reason}` : ''}
+                            ${template.details ? `<br>Details: ${template.details}` : ''}
                             ${template.description ? `<br>Beschreibung: ${template.description}` : ''}
                         </small>
                     </p>
@@ -263,8 +263,8 @@ export class TemplateApplicationModal {
                                     <div id="apply-time-display" class="form-text"></div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="apply-sub-reason" class="form-label">Untergrund (optional)</label>
-                                    <input type="text" class="form-control" id="apply-sub-reason" name="sub_reason">
+                                    <label for="apply-details" class="form-label">Details (optional)</label>
+                                    <input type="text" class="form-control" id="apply-details" name="details">
                                 </div>
                                 <div class="mb-3">
                                     <label for="apply-description" class="form-label">Beschreibung (optional)</label>
@@ -305,12 +305,12 @@ export class TemplateApplicationModal {
             timeDisplay.textContent = `${dateUtils.formatTime(this.currentTemplate.start_time)} - ${dateUtils.formatTime(this.currentTemplate.end_time)}`;
         }
 
-        // Pre-fill sub reason and description if available
-        const subReasonInput = document.getElementById('apply-sub-reason');
+        // Pre-fill details and description if available
+        const detailsInput = document.getElementById('apply-details');
         const descriptionInput = document.getElementById('apply-description');
         
-        if (subReasonInput) {
-            subReasonInput.value = this.currentTemplate.sub_reason || '';
+        if (detailsInput) {
+            detailsInput.value = this.currentTemplate.details || '';
         }
         
         if (descriptionInput) {
@@ -326,7 +326,7 @@ export class TemplateApplicationModal {
         
         const applyData = {
             date: formData.date,
-            sub_reason: formData.sub_reason || '',
+            details: formData.details || '',
             description: formData.description || ''
         };
 

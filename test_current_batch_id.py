@@ -29,7 +29,7 @@ def test_batch_id_in_edit_page():
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': 1,
-        'sub_reason': 'Test batch ID fix'
+        'details': 'Test batch ID fix'
     }
     
     create_response = session.post('http://localhost:5001/admin/blocks/multi-court', json=block_data)
@@ -47,7 +47,7 @@ def test_batch_id_in_edit_page():
         return False
     
     blocks_data = blocks_response.json()
-    test_blocks = [b for b in blocks_data['blocks'] if b['sub_reason'] == 'Test batch ID fix']
+    test_blocks = [b for b in blocks_data['blocks'] if b['details'] == 'Test batch ID fix']
     
     if not test_blocks:
         print("❌ No test blocks found")

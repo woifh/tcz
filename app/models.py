@@ -163,7 +163,7 @@ class BlockReason(db.Model):
     created_by = db.relationship('Member', backref='block_reasons_created')
     blocks = db.relationship('Block', backref='reason_obj', lazy='dynamic')
     templates = db.relationship('BlockTemplate', backref='reason_obj', lazy='dynamic')
-    sub_reason_templates = db.relationship('SubReasonTemplate', backref='reason_obj', lazy='dynamic')
+    details_templates = db.relationship('DetailsTemplate', backref='reason_obj', lazy='dynamic')
     
     def __repr__(self):
         return f'<BlockReason {self.name}>'
@@ -187,7 +187,7 @@ class BlockSeries(db.Model):
     recurrence_pattern = db.Column(db.String(20), nullable=False)  # 'daily', 'weekly', 'monthly'
     recurrence_days = db.Column(db.JSON, nullable=True)  # JSON array for weekly pattern
     reason_id = db.Column(db.Integer, db.ForeignKey('block_reason.id'), nullable=False)
-    sub_reason = db.Column(db.String(255), nullable=True)
+    details = db.Column(db.String(255), nullable=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
@@ -207,12 +207,12 @@ class BlockSeries(db.Model):
         return f'<BlockSeries {self.name} ({self.recurrence_pattern})>'
 
 
-class SubReasonTemplate(db.Model):
-    """SubReasonTemplate model for predefined sub-reason options."""
+class DetailsTemplate(db.Model):
+    """DetailsTemplate model for predefined details options."""
     
-    __tablename__ = 'sub_reason_template'
+    __tablename__ = 'details_template'
     __table_args__ = (
-        db.Index('idx_sub_reason_template_reason', 'reason_id'),
+        db.Index('idx_details_template_reason', 'reason_id'),
     )
     
     id = db.Column(db.Integer, primary_key=True)
@@ -222,10 +222,10 @@ class SubReasonTemplate(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    created_by = db.relationship('Member', backref='sub_reason_templates_created')
+    created_by = db.relationship('Member', backref='details_templates_created')
     
     def __repr__(self):
-        return f'<SubReasonTemplate {self.template_name}>'
+        return f'<DetailsTemplate {self.template_name}>'
 
 
 class BlockTemplate(db.Model):
@@ -243,7 +243,7 @@ class BlockTemplate(db.Model):
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
     reason_id = db.Column(db.Integer, db.ForeignKey('block_reason.id'), nullable=False)
-    sub_reason = db.Column(db.String(255), nullable=True)
+    details = db.Column(db.String(255), nullable=True)
     recurrence_pattern = db.Column(db.String(20), nullable=True)  # 'daily', 'weekly', 'monthly', or null
     recurrence_days = db.Column(db.JSON, nullable=True)  # JSON array for weekly pattern
     created_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
@@ -314,7 +314,7 @@ class Block(db.Model):
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
     reason_id = db.Column(db.Integer, db.ForeignKey('block_reason.id'), nullable=False)
-    sub_reason = db.Column(db.String(255), nullable=True)
+    details = db.Column(db.String(255), nullable=True)
     series_id = db.Column(db.Integer, db.ForeignKey('block_series.id', ondelete='CASCADE'), nullable=True)
     batch_id = db.Column(db.String(36), nullable=True, index=True)  # UUID for grouping multi-court blocks
     is_modified = db.Column(db.Boolean, nullable=False, default=False)

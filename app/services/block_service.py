@@ -12,7 +12,7 @@ class BlockService:
     """Service for managing court blocks."""
     
     @staticmethod
-    def create_block(court_id, date, start_time, end_time, reason_id, sub_reason, admin_id):
+    def create_block(court_id, date, start_time, end_time, reason_id, details, admin_id):
         """
         Create a court block and cancel conflicting reservations.
         
@@ -22,7 +22,7 @@ class BlockService:
             start_time: Start time of block
             end_time: End time of block
             reason_id: ID of the BlockReason
-            sub_reason: Optional additional reason detail
+            details: Optional additional reason detail
             admin_id: ID of administrator creating the block
             
         Returns:
@@ -38,7 +38,7 @@ class BlockService:
             start_time=start_time,
             end_time=end_time,
             reason_id=reason_id,
-            sub_reason=sub_reason,
+            details=details,
             created_by_id=admin_id,
             batch_id=batch_id
         )
@@ -63,7 +63,7 @@ class BlockService:
                     'start_time': start_time.isoformat(),
                     'end_time': end_time.isoformat(),
                     'reason_id': reason_id,
-                    'sub_reason': sub_reason,
+                    'details': details,
                     'cancelled_reservations': len(cancelled_reservations)
                 },
                 admin_id=admin_id
@@ -125,9 +125,9 @@ class BlockService:
         
         reason_text = reason_map.get(reason_name, reason_name)
         
-        # Include sub-reason if provided
-        if block.sub_reason:
-            cancellation_reason = f"Platzsperre wegen {reason_text} - {block.sub_reason}"
+        # Include details if provided
+        if block.details:
+            cancellation_reason = f"Platzsperre wegen {reason_text} - {block.details}"
         else:
             cancellation_reason = f"Platzsperre wegen {reason_text}"
         
@@ -146,7 +146,7 @@ class BlockService:
     
     @staticmethod
     def create_recurring_block_series(court_ids, start_date, end_date, start_time, end_time, 
-                                    recurrence_pattern, recurrence_days, reason_id, sub_reason, 
+                                    recurrence_pattern, recurrence_days, reason_id, details, 
                                     admin_id, series_name):
         """
         Create a recurring block series with individual block instances.
@@ -160,7 +160,7 @@ class BlockService:
             recurrence_pattern: 'daily', 'weekly', or 'monthly'
             recurrence_days: List of weekday numbers for weekly pattern (0=Monday, 6=Sunday)
             reason_id: ID of the BlockReason
-            sub_reason: Optional additional reason detail
+            details: Optional additional reason detail
             admin_id: ID of administrator creating the series
             series_name: Name for the series
             
@@ -195,7 +195,7 @@ class BlockService:
                 recurrence_pattern=recurrence_pattern,
                 recurrence_days=recurrence_days,
                 reason_id=reason_id,
-                sub_reason=sub_reason,
+                details=details,
                 created_by_id=admin_id
             )
             
@@ -229,7 +229,7 @@ class BlockService:
                             start_time=start_time,
                             end_time=end_time,
                             reason_id=reason_id,
-                            sub_reason=sub_reason,
+                            details=details,
                             series_id=series.id,
                             created_by_id=admin_id,
                             batch_id=batch_id
@@ -282,7 +282,7 @@ class BlockService:
                     'recurrence_pattern': recurrence_pattern,
                     'recurrence_days': recurrence_days,
                     'reason_id': reason_id,
-                    'sub_reason': sub_reason,
+                    'details': details,
                     'blocks_created': len(blocks)
                 },
                 admin_id=admin_id
@@ -317,7 +317,7 @@ class BlockService:
         
         Args:
             series_id: ID of the BlockSeries to update
-            **updates: Dictionary of fields to update (start_time, end_time, reason_id, sub_reason)
+            **updates: Dictionary of fields to update (start_time, end_time, reason_id, details)
             
         Returns:
             tuple: (success boolean, error message or None)
@@ -394,7 +394,7 @@ class BlockService:
             ).all()
             
             # Update the series record if updating series-level fields
-            series_fields = ['start_time', 'end_time', 'reason_id', 'sub_reason']
+            series_fields = ['start_time', 'end_time', 'reason_id', 'details']
             for field in series_fields:
                 if field in updates:
                     setattr(series, field, updates[field])
@@ -576,7 +576,7 @@ class BlockService:
             return False, f"Fehler beim Löschen der Serie: {str(e)}"
     
     @staticmethod
-    def create_multi_court_blocks(court_ids, date, start_time, end_time, reason_id, sub_reason, admin_id):
+    def create_multi_court_blocks(court_ids, date, start_time, end_time, reason_id, details, admin_id):
         """
         Create blocks for multiple courts simultaneously.
         
@@ -586,7 +586,7 @@ class BlockService:
             start_time: Start time of blocks
             end_time: End time of blocks
             reason_id: ID of the BlockReason
-            sub_reason: Optional additional reason detail
+            details: Optional additional reason detail
             admin_id: ID of administrator creating the blocks
             
         Returns:
@@ -609,7 +609,7 @@ class BlockService:
                     start_time=start_time,
                     end_time=end_time,
                     reason_id=reason_id,
-                    sub_reason=sub_reason,
+                    details=details,
                     created_by_id=admin_id,
                     batch_id=batch_id
                 )
@@ -637,7 +637,7 @@ class BlockService:
                     'start_time': start_time.isoformat(),
                     'end_time': end_time.isoformat(),
                     'reason_id': reason_id,
-                    'sub_reason': sub_reason,
+                    'details': details,
                     'blocks_created': len(blocks),
                     'reservations_cancelled': len(all_cancelled_reservations)
                 },
@@ -781,7 +781,7 @@ class BlockService:
                 start_time=template_data['start_time'],
                 end_time=template_data['end_time'],
                 reason_id=template_data['reason_id'],
-                sub_reason=template_data.get('sub_reason'),
+                details=template_data.get('details'),
                 recurrence_pattern=template_data.get('recurrence_pattern'),
                 recurrence_days=template_data.get('recurrence_days'),
                 created_by_id=admin_id
@@ -834,7 +834,7 @@ class BlockService:
             'start_time': template.start_time,
             'end_time': template.end_time,
             'reason_id': template.reason_id,
-            'sub_reason': template.sub_reason,
+            'details': template.details,
             'recurrence_pattern': template.recurrence_pattern,
             'recurrence_days': template.recurrence_days
         }

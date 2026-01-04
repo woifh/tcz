@@ -19,7 +19,7 @@ const GERMAN_TEXT = {
     
     // Reason management
     MANAGE_BLOCK_REASON: 'Sperrungsgrund verwalten',
-    SUB_REASON: 'Untergrund',
+    DETAILS: 'Details',
     REASON_IN_USE: 'Grund wird verwendet',
     HISTORICAL_DATA_PRESERVED: 'Historische Daten bleiben erhalten',
     
@@ -302,7 +302,7 @@ function populateEditForm(blockData) {
         document.getElementById('multi-start').value = blockData.start_time;
         document.getElementById('multi-end').value = blockData.end_time;
         document.getElementById('multi-reason').value = blockData.reason_id;
-        document.getElementById('multi-sub-reason').value = blockData.sub_reason;
+        document.getElementById('multi-details').value = blockData.details;
         
         // Select all courts that are part of this block group
         blockData.court_ids.forEach(courtId => {
@@ -398,7 +398,7 @@ async function handleMultiCourtSubmit(e) {
         start_time: document.getElementById('multi-start').value,
         end_time: document.getElementById('multi-end').value,
         reason_id: parseInt(document.getElementById('multi-reason').value),
-        sub_reason: document.getElementById('multi-sub-reason').value
+        details: document.getElementById('multi-details').value
     };
     
     // For create mode, add court_ids
@@ -443,7 +443,7 @@ async function handleMultiCourtSubmit(e) {
                 // Reset form but keep some values for convenience
                 const courtCheckboxes = document.querySelectorAll('input[name="multi-courts"]');
                 courtCheckboxes.forEach(cb => cb.checked = false);
-                document.getElementById('multi-sub-reason').value = '';
+                document.getElementById('multi-details').value = '';
                 
                 // Refresh the list if loadUpcomingBlocks function exists
                 if (typeof loadUpcomingBlocks === 'function') {
@@ -519,7 +519,7 @@ async function handleSeriesSubmit(e) {
         recurrence_pattern: recurrencePattern,
         recurrence_days: recurrenceDays,
         reason_id: parseInt(document.getElementById('series-reason').value),
-        sub_reason: document.getElementById('series-sub-reason').value
+        details: document.getElementById('series-details').value
     };
     
     // Show loading state
@@ -1098,7 +1098,7 @@ function displayBlockList(blocks) {
                             <div class="w-4 h-4 rounded" style="background-color: ${reasonColor};" title="${block.reason_name}"></div>
                             <div>
                                 <p class="font-semibold">Platz ${block.court_number} - ${block.date} ${block.start_time}-${block.end_time}</p>
-                                <p class="text-gray-600">${block.reason_name}${block.sub_reason ? ' - ' + block.sub_reason : ''}${seriesInfo}</p>
+                                <p class="text-gray-600">${block.reason_name}${block.details ? ' - ' + block.details : ''}${seriesInfo}</p>
                                 <p class="text-sm text-gray-500">Erstellt von ${block.created_by} am ${new Date(block.created_at).toLocaleDateString('de-DE')}</p>
                             </div>
                         </div>
@@ -1345,14 +1345,14 @@ function bulkExportSelected() {
 
 // Create CSV from blocks
 function createCSVFromBlocks(blocks) {
-    const headers = ['Datum', 'Platz', 'Von', 'Bis', 'Grund', 'Zusätzlicher Grund', 'Serie', 'Erstellt von', 'Erstellt am'];
+    const headers = ['Datum', 'Platz', 'Von', 'Bis', 'Grund', 'Details', 'Serie', 'Erstellt von', 'Erstellt am'];
     const rows = blocks.map(block => [
         block.date,
         `Platz ${block.court_number}`,
         block.start_time,
         block.end_time,
         block.reason_name,
-        block.sub_reason || '',
+        block.details || '',
         block.series_id ? `Serie ${block.series_id}` : '',
         block.created_by,
         new Date(block.created_at).toLocaleDateString('de-DE')
@@ -1399,7 +1399,7 @@ function duplicateBlock(blockId) {
     document.getElementById('block-start').value = block.start_time;
     document.getElementById('block-end').value = block.end_time;
     document.getElementById('block-reason').value = block.reason_id;
-    document.getElementById('block-sub-reason').value = block.sub_reason || '';
+    document.getElementById('block-details').value = block.details || '';
     
     // Switch to blocks tab and scroll to form
     showTab('blocks');
@@ -1446,9 +1446,9 @@ function showBulkEditModal() {
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2">
-                                    <input type="checkbox" id="change-sub-reason" class="mr-2"> Zusätzlichen Grund ändern
+                                    <input type="checkbox" id="change-details" class="mr-2"> Details ändern
                                 </label>
-                                <input type="text" id="bulk-edit-sub-reason" class="w-full border border-gray-300 rounded px-3 py-2" disabled>
+                                <input type="text" id="bulk-edit-details" class="w-full border border-gray-300 rounded px-3 py-2" disabled>
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2">
@@ -1503,7 +1503,7 @@ function showBulkEditModal() {
 function setupBulkEditCheckboxes() {
     const checkboxes = [
         { checkbox: 'change-reason', field: 'bulk-edit-reason' },
-        { checkbox: 'change-sub-reason', field: 'bulk-edit-sub-reason' },
+        { checkbox: 'change-details', field: 'bulk-edit-details' },
         { checkbox: 'change-time', fields: ['bulk-edit-start-time', 'bulk-edit-end-time'] },
         { checkbox: 'change-date', field: 'bulk-edit-date-offset' }
     ];
@@ -1541,8 +1541,8 @@ async function handleBulkEditSubmit(e) {
         changes.reason_id = parseInt(document.getElementById('bulk-edit-reason').value);
     }
     
-    if (document.getElementById('change-sub-reason').checked) {
-        changes.sub_reason = document.getElementById('bulk-edit-sub-reason').value;
+    if (document.getElementById('change-details').checked) {
+        changes.details = document.getElementById('bulk-edit-details').value;
     }
     
     if (document.getElementById('change-time').checked) {
@@ -1660,7 +1660,7 @@ function showBatchDeleteConfirmation(batchId, batchBlocks) {
                 <div class="bg-gray-50 rounded-lg p-3">
                     <div class="font-medium text-gray-900">${courtsDisplay}</div>
                     <div class="text-sm text-gray-600">${date} • ${startTime} - ${endTime}</div>
-                    <div class="text-sm text-gray-500">${firstBlock.reason_name}${firstBlock.sub_reason ? ' • ' + firstBlock.sub_reason : ''}</div>
+                    <div class="text-sm text-gray-500">${firstBlock.reason_name}${firstBlock.details ? ' • ' + firstBlock.details : ''}</div>
                     ${isMultiCourt ? `<div class="text-xs text-blue-600 mt-1">${batchBlocks.length} Plätze betroffen</div>` : ''}
                 </div>
             </div>
@@ -1733,13 +1733,13 @@ async function deleteBlock(blockId) {
         
         if (relatedResponse.ok) {
             const relatedData = await relatedResponse.json();
-            // Filter blocks that have the same sub_reason and were likely created together
+            // Filter blocks that have the same details and were likely created together
             relatedBlocks = relatedData.blocks.filter(b => 
                 b.date === block.date &&
                 b.start_time === block.start_time &&
                 b.end_time === block.end_time &&
                 b.reason_id === block.reason_id &&
-                b.sub_reason === block.sub_reason
+                b.details === block.details
             );
         }
         
@@ -1802,7 +1802,7 @@ function showDeleteConfirmation(blockId, block, relatedBlocks) {
                     <p><strong>Datum:</strong> ${formatGermanDate(block.date)}</p>
                     <p><strong>Zeit:</strong> ${block.start_time} - ${block.end_time}</p>
                     <p><strong>Grund:</strong> ${block.reason_name}</p>
-                    ${block.sub_reason ? `<p><strong>Zusätzlicher Grund:</strong> ${block.sub_reason}</p>` : ''}
+                    ${block.details ? `<p><strong>Details:</strong> ${block.details}</p>` : ''}
                 </div>
                 
                 <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
@@ -1921,7 +1921,7 @@ function displaySeriesList(series) {
                             </div>
                             <div>
                                 <p><strong>Plätze:</strong> ${serie.court_selection.join(', ')}</p>
-                                <p><strong>Grund:</strong> ${serie.reason_name}${serie.sub_reason ? ' - ' + serie.sub_reason : ''}</p>
+                                <p><strong>Grund:</strong> ${serie.reason_name}${serie.details ? ' - ' + serie.details : ''}</p>
                                 <p><strong>Instanzen:</strong> ${serie.total_instances} (${serie.active_instances} aktiv)</p>
                             </div>
                         </div>
@@ -2021,8 +2021,8 @@ function editSeriesModal(seriesId) {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-gray-700 font-semibold mb-2">Zusätzlicher Grund</label>
-                                <input type="text" id="edit-series-sub-reason" class="w-full border border-gray-300 rounded px-3 py-2">
+                                <label class="block text-gray-700 font-semibold mb-2">Details</label>
+                                <input type="text" id="edit-series-details" class="w-full border border-gray-300 rounded px-3 py-2">
                             </div>
                         </div>
                         
@@ -2087,7 +2087,7 @@ async function handleEditSeriesSubmit(seriesId) {
         start_time: document.getElementById('edit-series-start-time').value,
         end_time: document.getElementById('edit-series-end-time').value,
         reason_id: parseInt(document.getElementById('edit-series-reason').value),
-        sub_reason: document.getElementById('edit-series-sub-reason').value
+        details: document.getElementById('edit-series-details').value
     };
     
     let url = `/admin/blocks/series/${seriesId}`;
@@ -2277,7 +2277,7 @@ function displayTemplateList(templates) {
                                 <p><strong>Uhrzeit:</strong> ${template.start_time}-${template.end_time}${recurrenceText}</p>
                             </div>
                             <div>
-                                <p><strong>Grund:</strong> ${template.reason_name}${template.sub_reason ? ' - ' + template.sub_reason : ''}</p>
+                                <p><strong>Grund:</strong> ${template.reason_name}${template.details ? ' - ' + template.details : ''}</p>
                                 <p class="text-xs text-gray-500">Erstellt von ${template.created_by}</p>
                             </div>
                         </div>
@@ -2323,7 +2323,7 @@ function duplicateTemplate(templateId) {
     document.getElementById('template-start-time').value = template.start_time;
     document.getElementById('template-end-time').value = template.end_time;
     document.getElementById('template-reason').value = template.reason_id;
-    document.getElementById('template-sub-reason').value = template.sub_reason || '';
+    document.getElementById('template-details').value = template.details || '';
     
     // Select courts
     document.querySelectorAll('input[name="template-courts"]').forEach(cb => {
@@ -2386,9 +2386,9 @@ function displayReasonList(reasons) {
                                 ${usageWarning}
                             </div>
                             <p>Erstellt von ${reason.created_by} am ${new Date(reason.created_at).toLocaleDateString('de-DE')}</p>
-                            ${reason.sub_reason_templates && reason.sub_reason_templates.length > 0 ? 
-                                `<p class="text-blue-600">📋 ${reason.sub_reason_templates.length} Untergrund-Vorlage(n)</p>` : 
-                                '<p class="text-gray-500">Keine Untergrund-Vorlagen</p>'
+                            ${reason.details_templates && reason.details_templates.length > 0 ? 
+                                `<p class="text-blue-600">📋 ${reason.details_templates.length} Details-Vorlage(n)</p>` : 
+                                '<p class="text-gray-500">Keine Details-Vorlagen</p>'
                             }
                         </div>
                     </div>
@@ -2398,9 +2398,9 @@ function displayReasonList(reasons) {
                                 title="Grund bearbeiten">
                             ✏️ Bearbeiten
                         </button>
-                        <button onclick="manageSubReasonTemplates(${reason.id}, '${reason.name}')" 
+                        <button onclick="manageDetailsTemplates(${reason.id}, '${reason.name}')" 
                                 class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700" 
-                                title="Untergrund-Vorlagen verwalten">
+                                title="Details-Vorlagen verwalten">
                             📋 Vorlagen
                         </button>
                         <button onclick="deleteReasonWithWarning(${reason.id}, ${reason.usage_count})" 
@@ -2466,8 +2466,8 @@ function applyTemplateToForm(formData) {
         document.getElementById('block-reason').value = formData.reason_id;
     }
     
-    if (formData.sub_reason) {
-        document.getElementById('block-sub-reason').value = formData.sub_reason;
+    if (formData.details) {
+        document.getElementById('block-details').value = formData.details;
     }
     
     // Fill multi-court form if multiple courts
@@ -2494,8 +2494,8 @@ function applyTemplateToForm(formData) {
             document.getElementById('multi-reason').value = formData.reason_id;
         }
         
-        if (formData.sub_reason) {
-            document.getElementById('multi-sub-reason').value = formData.sub_reason;
+        if (formData.details) {
+            document.getElementById('multi-details').value = formData.details;
         }
     }
 }
@@ -2522,7 +2522,7 @@ function createTemplateWithPreview() {
         start_time: document.getElementById('template-start-time').value,
         end_time: document.getElementById('template-end-time').value,
         reason_id: parseInt(document.getElementById('template-reason').value),
-        sub_reason: document.getElementById('template-sub-reason').value
+        details: document.getElementById('template-details').value
     };
     
     // Show preview modal
@@ -2555,7 +2555,7 @@ function showTemplatePreview(templateData) {
                             </div>
                             <div>
                                 <p><strong>Grund:</strong> ${reasonName}</p>
-                                ${templateData.sub_reason ? `<p><strong>Zusätzlicher Grund:</strong> ${templateData.sub_reason}</p>` : ''}
+                                ${templateData.details ? `<p><strong>Details:</strong> ${templateData.details}</p>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2630,7 +2630,7 @@ function editTemplate(templateId) {
     document.getElementById('template-start-time').value = template.start_time;
     document.getElementById('template-end-time').value = template.end_time;
     document.getElementById('template-reason').value = template.reason_id;
-    document.getElementById('template-sub-reason').value = template.sub_reason || '';
+    document.getElementById('template-details').value = template.details || '';
     
     // Select courts
     document.querySelectorAll('input[name="template-courts"]').forEach(cb => {
@@ -2836,14 +2836,14 @@ async function deleteReasonEnhanced(reasonId) {
     }
 }
 
-// Sub-reason template management
-function manageSubReasonTemplates(reasonId, reasonName) {
+// Details template management
+function manageDetailsTemplates(reasonId, reasonName) {
     let html = `
-        <div id="sub-reason-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div id="details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Untergrund-Vorlagen für "${reasonName}"</h3>
-                    <button onclick="closeSubReasonModal()" class="text-gray-500 hover:text-gray-700">
+                    <h3 class="text-lg font-semibold">Details-Vorlagen für "${reasonName}"</h3>
+                    <button onclick="closeDetailsModal()" class="text-gray-500 hover:text-gray-700">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -2854,10 +2854,10 @@ function manageSubReasonTemplates(reasonId, reasonName) {
                     <!-- Create new template -->
                     <div class="space-y-4">
                         <h4 class="font-semibold text-blue-600">Neue Vorlage erstellen</h4>
-                        <form id="sub-reason-template-form" class="space-y-3">
+                        <form id="details-template-form" class="space-y-3">
                             <div>
                                 <label class="block text-gray-700 font-medium mb-1">Vorlagenname</label>
-                                <input type="text" id="sub-reason-template-name" 
+                                <input type="text" id="details-template-name" 
                                        class="w-full border border-gray-300 rounded px-3 py-2" 
                                        placeholder="z.B. Platzpflege, Turniervorbereitung" required>
                             </div>
@@ -2867,14 +2867,14 @@ function manageSubReasonTemplates(reasonId, reasonName) {
                         </form>
                         
                         <div class="bg-blue-50 p-3 rounded text-sm text-blue-700">
-                            <p><strong>Hinweis:</strong> Untergrund-Vorlagen helfen bei der schnellen Auswahl häufig verwendeter Zusatzgründe.</p>
+                            <p><strong>Hinweis:</strong> Details-Vorlagen helfen bei der schnellen Auswahl häufig verwendeter Zusatzinformationen.</p>
                         </div>
                     </div>
                     
                     <!-- Existing templates -->
                     <div class="space-y-4">
                         <h4 class="font-semibold text-green-600">Vorhandene Vorlagen</h4>
-                        <div id="sub-reason-templates-list">
+                        <div id="details-templates-list">
                             <div class="text-center py-4">
                                 <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
                                 <p class="mt-2 text-gray-600">Lade Vorlagen...</p>
@@ -2889,44 +2889,44 @@ function manageSubReasonTemplates(reasonId, reasonName) {
     document.body.insertAdjacentHTML('beforeend', html);
     
     // Load existing templates
-    loadSubReasonTemplates(reasonId);
+    loadDetailsTemplates(reasonId);
     
     // Setup form submission
-    document.getElementById('sub-reason-template-form').addEventListener('submit', function(e) {
+    document.getElementById('details-template-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        createSubReasonTemplate(reasonId);
+        createDetailsTemplate(reasonId);
     });
 }
 
-// Close sub-reason modal
-function closeSubReasonModal() {
-    const modal = document.getElementById('sub-reason-modal');
+// Close details modal
+function closeDetailsModal() {
+    const modal = document.getElementById('details-modal');
     if (modal) {
         modal.remove();
     }
 }
 
-// Load sub-reason templates
-async function loadSubReasonTemplates(reasonId) {
+// Load details templates
+async function loadDetailsTemplates(reasonId) {
     try {
-        const response = await fetch(`/admin/block-reasons/${reasonId}/sub-reason-templates`);
+        const response = await fetch(`/admin/block-reasons/${reasonId}/details-templates`);
         const data = await response.json();
         
         if (response.ok) {
-            displaySubReasonTemplates(data.templates);
+            displayDetailsTemplates(data.templates);
         } else {
-            document.getElementById('sub-reason-templates-list').innerHTML = 
+            document.getElementById('details-templates-list').innerHTML = 
                 '<p class="text-red-600">Fehler beim Laden der Vorlagen</p>';
         }
     } catch (error) {
-        document.getElementById('sub-reason-templates-list').innerHTML = 
+        document.getElementById('details-templates-list').innerHTML = 
             '<p class="text-red-600">Fehler beim Laden der Vorlagen</p>';
     }
 }
 
-// Display sub-reason templates
-function displaySubReasonTemplates(templates) {
-    const container = document.getElementById('sub-reason-templates-list');
+// Display details templates
+function displayDetailsTemplates(templates) {
+    const container = document.getElementById('details-templates-list');
     
     if (templates.length === 0) {
         container.innerHTML = '<p class="text-gray-600">Keine Vorlagen vorhanden.</p>';
@@ -2942,7 +2942,7 @@ function displaySubReasonTemplates(templates) {
                     <p class="font-medium">${template.template_name}</p>
                     <p class="text-sm text-gray-500">Erstellt am ${new Date(template.created_at).toLocaleDateString('de-DE')}</p>
                 </div>
-                <button onclick="deleteSubReasonTemplate(${template.id})" 
+                <button onclick="deleteDetailsTemplate(${template.id})" 
                         class="bg-red-600 text-white px-2 py-1 rounded text-sm hover:bg-red-700" 
                         title="Vorlage löschen">
                     🗑️
@@ -2955,9 +2955,9 @@ function displaySubReasonTemplates(templates) {
     container.innerHTML = html;
 }
 
-// Create sub-reason template
-async function createSubReasonTemplate(reasonId) {
-    const templateName = document.getElementById('sub-reason-template-name').value.trim();
+// Create details template
+async function createDetailsTemplate(reasonId) {
+    const templateName = document.getElementById('details-template-name').value.trim();
     
     if (!templateName) {
         showToast('Bitte einen Vorlagennamen eingeben', 'error');
@@ -2965,7 +2965,7 @@ async function createSubReasonTemplate(reasonId) {
     }
     
     try {
-        const response = await fetch(`/admin/block-reasons/${reasonId}/sub-reason-templates`, {
+        const response = await fetch(`/admin/block-reasons/${reasonId}/details-templates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ template_name: templateName })
@@ -2975,8 +2975,8 @@ async function createSubReasonTemplate(reasonId) {
         
         if (response.ok) {
             showToast(data.message);
-            document.getElementById('sub-reason-template-name').value = '';
-            loadSubReasonTemplates(reasonId); // Refresh the list
+            document.getElementById('details-template-name').value = '';
+            loadDetailsTemplates(reasonId); // Refresh the list
         } else {
             showToast(data.error || 'Fehler beim Erstellen der Vorlage', 'error');
         }
@@ -2985,14 +2985,14 @@ async function createSubReasonTemplate(reasonId) {
     }
 }
 
-// Delete sub-reason template
-async function deleteSubReasonTemplate(templateId) {
-    if (!confirm('Möchten Sie diese Untergrund-Vorlage wirklich löschen?')) {
+// Delete details template
+async function deleteDetailsTemplate(templateId) {
+    if (!confirm('Möchten Sie diese Details-Vorlage wirklich löschen?')) {
         return;
     }
     
     try {
-        const response = await fetch(`/admin/sub-reason-templates/${templateId}`, {
+        const response = await fetch(`/admin/details-templates/${templateId}`, {
             method: 'DELETE'
         });
         
@@ -3001,7 +3001,7 @@ async function deleteSubReasonTemplate(templateId) {
         if (response.ok) {
             showToast(data.message);
             // Find the reason ID to reload templates
-            const modal = document.getElementById('sub-reason-modal');
+            const modal = document.getElementById('details-modal');
             if (modal) {
                 // Extract reason ID from the modal context or reload all templates
                 location.reload(); // Simple approach - reload page
@@ -3227,7 +3227,7 @@ function showDayDetails(dateStr) {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="font-semibold">Platz ${block.court_number} - ${block.start_time}-${block.end_time}</p>
-                        <p class="text-gray-600">${block.reason_name}${block.sub_reason ? ' - ' + block.sub_reason : ''}${seriesInfo}</p>
+                        <p class="text-gray-600">${block.reason_name}${block.details ? ' - ' + block.details : ''}${seriesInfo}</p>
                         <p class="text-sm text-gray-500">Erstellt von ${block.created_by}</p>
                     </div>
                     <div class="flex gap-2">
@@ -3392,7 +3392,7 @@ function displayUpcomingBlocks(blocks) {
         return;
     }
     
-    // Group blocks by batch (same date, time, reason, sub_reason, created_at)
+    // Group blocks by batch (same date, time, reason, details, created_at)
     const groupedBlocks = groupBlocksByBatch(blocks);
     
     let html = '<div class="divide-y divide-gray-200">';
@@ -3430,7 +3430,7 @@ function displayUpcomingBlocks(blocks) {
                             ${date} • ${startTime} - ${endTime}
                         </div>
                         <div class="text-sm text-gray-500">
-                            ${firstBlock.reason_name}${firstBlock.sub_reason ? ' • ' + firstBlock.sub_reason : ''}
+                            ${firstBlock.reason_name}${firstBlock.details ? ' • ' + firstBlock.details : ''}
                         </div>
                         ${group.blocks.length > 1 ? `
                             <div class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">

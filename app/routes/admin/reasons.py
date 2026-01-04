@@ -1,7 +1,7 @@
 """
 Admin Reasons Module
 
-Contains block reason and sub-reason management routes.
+Contains block reason and details management routes.
 """
 
 from flask import request, jsonify
@@ -9,7 +9,7 @@ from flask_login import login_required, current_user
 
 from app import db
 from app.decorators import admin_required
-from app.models import BlockReason, SubReasonTemplate
+from app.models import BlockReason, DetailsTemplate
 from app.services.block_reason_service import BlockReasonService
 from . import bp
 
@@ -153,13 +153,13 @@ def get_reason_usage(reason_id):
         return jsonify({'error': str(e)}), 500
 
 
-@bp.route('/block-reasons/<int:reason_id>/sub-reason-templates', methods=['GET'])
+@bp.route('/block-reasons/<int:reason_id>/details-templates', methods=['GET'])
 @login_required
 @admin_required
-def list_sub_reason_templates(reason_id):
-    """List sub-reason templates for a block reason (admin only)."""
+def list_details_templates(reason_id):
+    """List details templates for a block reason (admin only)."""
     try:
-        templates = BlockReasonService.get_sub_reason_templates(reason_id)
+        templates = BlockReasonService.get_details_templates(reason_id)
         
         return jsonify({
             'reason_id': reason_id,
@@ -178,11 +178,11 @@ def list_sub_reason_templates(reason_id):
         return jsonify({'error': str(e)}), 500
 
 
-@bp.route('/block-reasons/<int:reason_id>/sub-reason-templates', methods=['POST'])
+@bp.route('/block-reasons/<int:reason_id>/details-templates', methods=['POST'])
 @login_required
 @admin_required
-def create_sub_reason_template(reason_id):
-    """Create sub-reason template (admin only)."""
+def create_details_template(reason_id):
+    """Create details template (admin only)."""
     try:
         data = request.get_json() if request.is_json else request.form
         
@@ -191,14 +191,14 @@ def create_sub_reason_template(reason_id):
         if not template_name:
             return jsonify({'error': 'Vorlagenname ist erforderlich'}), 400
         
-        template, error = BlockReasonService.create_sub_reason_template(reason_id, template_name, current_user.id)
+        template, error = BlockReasonService.create_details_template(reason_id, template_name, current_user.id)
         
         if error:
             return jsonify({'error': error}), 400
         
         return jsonify({
             'id': template.id,
-            'message': 'Untergrund-Vorlage erfolgreich erstellt',
+            'message': 'Details-Vorlage erfolgreich erstellt',
             'template': {
                 'id': template.id,
                 'template_name': template.template_name,
@@ -211,18 +211,18 @@ def create_sub_reason_template(reason_id):
         return jsonify({'error': str(e)}), 500
 
 
-@bp.route('/sub-reason-templates/<int:template_id>', methods=['DELETE'])
+@bp.route('/details-templates/<int:template_id>', methods=['DELETE'])
 @login_required
 @admin_required
-def delete_sub_reason_template(template_id):
-    """Delete sub-reason template (admin only)."""
+def delete_details_template(template_id):
+    """Delete details template (admin only)."""
     try:
-        success, error = BlockReasonService.delete_sub_reason_template(template_id, current_user.id)
+        success, error = BlockReasonService.delete_details_template(template_id, current_user.id)
         
         if error:
             return jsonify({'error': error}), 400
         
-        return jsonify({'message': 'Untergrund-Vorlage erfolgreich gelöscht'}), 200
+        return jsonify({'message': 'Details-Vorlage erfolgreich gelöscht'}), 200
         
     except Exception as e:
         db.session.rollback()

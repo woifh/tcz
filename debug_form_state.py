@@ -29,8 +29,8 @@ def debug_form_state():
         for block in blocks:
             block_id, court_id, batch_id, date, start_time, end_time, sub_reason = block
             print(f"   Block {block_id}: Court {court_id}, Batch {batch_id}, {date} {start_time}-{end_time}")
-            if sub_reason:
-                print(f"      Sub-reason: {sub_reason}")
+            if details:
+                print(f"      Details: {details}")
         
         # Use the first batch for testing
         test_batch_id = blocks[0][2]  # batch_id

@@ -4,7 +4,7 @@ from datetime import date, time, timedelta
 from app import db
 from app.models import (
     Member, Court, Block, BlockReason, BlockSeries, BlockTemplate, 
-    SubReasonTemplate, BlockAuditLog, Reservation
+    DetailsTemplate, BlockAuditLog, Reservation
 )
 from app.services.block_service import BlockService
 from app.services.block_reason_service import BlockReasonService
@@ -36,7 +36,7 @@ class TestRecurringBlockSeriesWorkflows:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason.id,
-                sub_reason='Daily maintenance',
+                details='Daily maintenance',
                 admin_id=test_admin.id,
                 series_name='Daily Maintenance Series'
             )
@@ -55,7 +55,7 @@ class TestRecurringBlockSeriesWorkflows:
                 assert block.start_time == start_time
                 assert block.end_time == end_time
                 assert block.reason_id == reason.id
-                assert block.sub_reason == 'Daily maintenance'
+                assert block.details == 'Daily maintenance'
             
             # Verify BlockSeries record
             series = BlockSeries.query.get(series_id)
@@ -94,7 +94,7 @@ class TestRecurringBlockSeriesWorkflows:
                 recurrence_pattern='weekly',
                 recurrence_days=recurrence_days,
                 reason_id=reason.id,
-                sub_reason='Weekly tournament',
+                details='Weekly tournament',
                 admin_id=test_admin.id,
                 series_name='Weekly Tournament Series'
             )
@@ -136,7 +136,7 @@ class TestRecurringBlockSeriesWorkflows:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason1.id,
-                sub_reason='Original reason',
+                details='Original reason',
                 admin_id=test_admin.id,
                 series_name='Test Series'
             )
@@ -150,7 +150,7 @@ class TestRecurringBlockSeriesWorkflows:
                 start_time=time(11, 0),
                 end_time=time(12, 0),
                 reason_id=reason2.id,
-                sub_reason='Updated reason',
+                details='Updated reason',
                 admin_id=test_admin.id
             )
             
@@ -163,7 +163,7 @@ class TestRecurringBlockSeriesWorkflows:
                 assert block.start_time == time(11, 0)
                 assert block.end_time == time(12, 0)
                 assert block.reason_id == reason2.id
-                assert block.sub_reason == 'Updated reason'
+                assert block.details == 'Updated reason'
     
     def test_series_editing_future_instances(self, app, test_admin):
         """Test editing future instances from a specific date."""
@@ -185,7 +185,7 @@ class TestRecurringBlockSeriesWorkflows:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason1.id,
-                sub_reason='Original',
+                details='Original',
                 admin_id=test_admin.id,
                 series_name='Future Update Test'
             )
@@ -199,7 +199,7 @@ class TestRecurringBlockSeriesWorkflows:
                 series_id,
                 from_date,
                 reason_id=reason2.id,
-                sub_reason='Future updated',
+                details='Future updated',
                 admin_id=test_admin.id
             )
             
@@ -211,10 +211,10 @@ class TestRecurringBlockSeriesWorkflows:
             for block in all_blocks:
                 if block.date >= from_date:
                     assert block.reason_id == reason2.id
-                    assert block.sub_reason == 'Future updated'
+                    assert block.details == 'Future updated'
                 else:
                     assert block.reason_id == reason1.id
-                    assert block.sub_reason == 'Original'
+                    assert block.details == 'Original'
     
     def test_single_instance_editing(self, app, test_admin):
         """Test editing single instance doesn't affect other instances."""
@@ -236,7 +236,7 @@ class TestRecurringBlockSeriesWorkflows:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason1.id,
-                sub_reason='Original',
+                details='Original',
                 admin_id=test_admin.id,
                 series_name='Single Instance Test'
             )
@@ -248,7 +248,7 @@ class TestRecurringBlockSeriesWorkflows:
             success, error = BlockService.update_single_instance(
                 middle_block.id,
                 reason_id=reason2.id,
-                sub_reason='Single updated',
+                details='Single updated',
                 admin_id=test_admin.id
             )
             
@@ -258,7 +258,7 @@ class TestRecurringBlockSeriesWorkflows:
             # Verify only the single block was updated and marked as modified
             updated_block = Block.query.get(middle_block.id)
             assert updated_block.reason_id == reason2.id
-            assert updated_block.sub_reason == 'Single updated'
+            assert updated_block.details == 'Single updated'
             assert updated_block.is_modified is True
             
             # Verify other blocks remain unchanged
@@ -266,7 +266,7 @@ class TestRecurringBlockSeriesWorkflows:
             for block in all_blocks:
                 if block.id != middle_block.id:
                     assert block.reason_id == reason1.id
-                    assert block.sub_reason == 'Original'
+                    assert block.details == 'Original'
                     assert block.is_modified is False
     
     def test_series_deletion_options(self, app, test_admin):
@@ -288,7 +288,7 @@ class TestRecurringBlockSeriesWorkflows:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason.id,
-                sub_reason='To be deleted',
+                details='To be deleted',
                 admin_id=test_admin.id,
                 series_name='Deletion Test Series'
             )
@@ -359,7 +359,7 @@ class TestMultiCourtAndBulkOperations:
                 start_time=start_time,
                 end_time=end_time,
                 reason_id=reason.id,
-                sub_reason='Multi-court tournament',
+                details='Multi-court tournament',
                 admin_id=test_admin.id
             )
             
@@ -374,7 +374,7 @@ class TestMultiCourtAndBulkOperations:
                 assert block.start_time == start_time
                 assert block.end_time == end_time
                 assert block.reason_id == reason.id
-                assert block.sub_reason == 'Multi-court tournament'
+                assert block.details == 'Multi-court tournament'
                 assert block.created_by_id == test_admin.id
             
             # Verify each court has exactly one block
@@ -397,7 +397,7 @@ class TestMultiCourtAndBulkOperations:
                     start_time=time(14, 0),
                     end_time=time(15, 0),
                     reason_id=reason.id,
-                    sub_reason=f'Block {i+1}',
+                    details=f'Block {i+1}',
                     admin_id=test_admin.id
                 )
                 assert error is None
@@ -487,7 +487,7 @@ class TestMultiCourtAndBulkOperations:
                 start_time=time(16, 0),
                 end_time=time(17, 0),
                 reason_id=reason.id,
-                sub_reason='Transaction test',
+                details='Transaction test',
                 admin_id=test_admin.id
             )
             
@@ -522,7 +522,7 @@ class TestTemplateManagement:
                 'start_time': time(9, 0),
                 'end_time': time(10, 0),
                 'reason_id': reason.id,
-                'sub_reason': 'Morning maintenance',
+                'details': 'Morning maintenance',
                 'recurrence_pattern': 'weekly',
                 'recurrence_days': [1, 3, 5]  # Tue, Thu, Sat
             }
@@ -541,7 +541,7 @@ class TestTemplateManagement:
             assert template.start_time == time(9, 0)
             assert template.end_time == time(10, 0)
             assert template.reason_id == reason.id
-            assert template.sub_reason == 'Morning maintenance'
+            assert template.details == 'Morning maintenance'
             assert template.recurrence_pattern == 'weekly'
             assert template.recurrence_days == [1, 3, 5]
             assert template.created_by_id == test_admin.id
@@ -557,7 +557,7 @@ class TestTemplateManagement:
                 'start_time': time(14, 0),
                 'end_time': time(16, 0),
                 'reason_id': reason.id,
-                'sub_reason': 'Weekend tournament',
+                'details': 'Weekend tournament',
                 'recurrence_pattern': 'daily',
                 'recurrence_days': None
             }
@@ -585,7 +585,7 @@ class TestTemplateManagement:
             assert form_data['start_time'] == time(14, 0)
             assert form_data['end_time'] == time(16, 0)
             assert form_data['reason_id'] == reason.id
-            assert form_data['sub_reason'] == 'Weekend tournament'
+            assert form_data['details'] == 'Weekend tournament'
             assert form_data['recurrence_pattern'] == 'daily'
             assert form_data['start_date'] == '2025-02-01'
             assert form_data['end_date'] == '2025-02-03'
@@ -601,7 +601,7 @@ class TestTemplateManagement:
                 'start_time': time(12, 0),
                 'end_time': time(13, 0),
                 'reason_id': reason.id,
-                'sub_reason': 'Rain protection',
+                'details': 'Rain protection',
                 'recurrence_pattern': None,
                 'recurrence_days': None
             }
@@ -641,7 +641,7 @@ class TestTemplateManagement:
                     'start_time': time(10, 0),
                     'end_time': time(11, 0),
                     'reason_id': reason.id,
-                    'sub_reason': f'Sub-reason for {name}',
+                    'details': f'Details for {name}',
                     'recurrence_pattern': None,
                     'recurrence_days': None
                 }
@@ -711,7 +711,7 @@ class TestReasonManagement:
                 start_time=time(10, 0),
                 end_time=time(11, 0),
                 reason_id=reason.id,
-                sub_reason='Test usage',
+                details='Test usage',
                 admin_id=test_admin.id
             )
             assert block_error is None
@@ -753,7 +753,7 @@ class TestReasonManagement:
                 start_time=time(9, 0),
                 end_time=time(10, 0),
                 reason_id=reason.id,
-                sub_reason='Historical block',
+                details='Historical block',
                 admin_id=test_admin.id
             )
             assert block_error is None
@@ -765,7 +765,7 @@ class TestReasonManagement:
                 start_time=time(9, 0),
                 end_time=time(10, 0),
                 reason_id=reason.id,
-                sub_reason='Future block',
+                details='Future block',
                 admin_id=test_admin.id
             )
             assert future_error is None
@@ -786,8 +786,8 @@ class TestReasonManagement:
             deleted_future_block = Block.query.get(future_block.id)
             assert deleted_future_block is None
     
-    def test_sub_reason_template_management(self, app, test_admin):
-        """Test sub-reason template creation and management."""
+    def test_details_template_management(self, app, test_admin):
+        """Test details template creation and management."""
         with app.app_context():
             # Create reason
             reason, error = BlockReasonService.create_block_reason(
@@ -795,12 +795,12 @@ class TestReasonManagement:
             )
             assert error is None
             
-            # Create sub-reason templates
+            # Create details templates
             template_names = ['Team A vs Team B', 'Junior Championship', 'Senior Finals']
             created_templates = []
             
             for template_name in template_names:
-                template, template_error = BlockReasonService.create_sub_reason_template(
+                template, template_error = BlockReasonService.create_details_template(
                     reason.id, template_name, test_admin.id
                 )
                 assert template_error is None
@@ -809,7 +809,7 @@ class TestReasonManagement:
                 created_templates.append(template)
             
             # Get all templates for the reason
-            templates = BlockReasonService.get_sub_reason_templates(reason.id)
+            templates = BlockReasonService.get_details_templates(reason.id)
             assert len(templates) == len(template_names)
             
             template_names_found = [t.template_name for t in templates]
@@ -817,14 +817,14 @@ class TestReasonManagement:
                 assert name in template_names_found
             
             # Delete a template
-            success, error = BlockReasonService.delete_sub_reason_template(
+            success, error = BlockReasonService.delete_details_template(
                 created_templates[0].id, test_admin.id
             )
             assert error is None
             assert success is True
             
             # Verify template is deleted
-            remaining_templates = BlockReasonService.get_sub_reason_templates(reason.id)
+            remaining_templates = BlockReasonService.get_details_templates(reason.id)
             assert len(remaining_templates) == len(template_names) - 1
     
     def test_reason_usage_count_tracking(self, app, test_admin):
@@ -850,7 +850,7 @@ class TestReasonManagement:
                     start_time=time(10, 0),
                     end_time=time(11, 0),
                     reason_id=reason.id,
-                    sub_reason=f'Usage test {i+1}',
+                    details=f'Usage test {i+1}',
                     admin_id=test_admin.id
                 )
                 assert block_error is None
@@ -881,7 +881,7 @@ class TestFilteringAndSearch:
                     start_time=time(10, 0),
                     end_time=time(11, 0),
                     reason_id=reason1.id if i == 0 else reason2.id,
-                    sub_reason=f'Single block {i+1}',
+                    details=f'Single block {i+1}',
                     admin_id=test_admin.id
                 )
                 assert error is None
@@ -897,7 +897,7 @@ class TestFilteringAndSearch:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason2.id,
-                sub_reason='Series block',
+                details='Series block',
                 admin_id=test_admin.id,
                 series_name='Test Series'
             )
@@ -951,7 +951,7 @@ class TestFilteringAndSearch:
                 assert block.series_id is None
     
     def test_search_functionality(self, app, test_admin):
-        """Test search functionality in block reasons and sub-reasons."""
+        """Test search functionality in block reasons and details."""
         with app.app_context():
             court = Court.query.filter_by(number=1).first()
             
@@ -966,17 +966,17 @@ class TestFilteringAndSearch:
                 assert error is None
                 created_reasons.append(reason)
             
-            # Create blocks with searchable sub-reasons
-            sub_reasons = ['Team Alpha vs Beta', 'Court Resurfacing', 'Finals Tournament']
+            # Create blocks with searchable details
+            details_list = ['Team Alpha vs Beta', 'Court Resurfacing', 'Finals Tournament']
             
-            for i, (reason, sub_reason) in enumerate(zip(created_reasons, sub_reasons)):
+            for i, (reason, details) in enumerate(zip(created_reasons, details_list)):
                 block, error = BlockService.create_block(
                     court_id=court.id,
                     date=date.today() + timedelta(days=i+1),
                     start_time=time(10, 0),
                     end_time=time(11, 0),
                     reason_id=reason.id,
-                    sub_reason=sub_reason,
+                    details=details,
                     admin_id=test_admin.id
                 )
                 assert error is None
@@ -986,7 +986,7 @@ class TestFilteringAndSearch:
             maintenance_blocks = BlockService.filter_blocks(reason_ids=[maintenance_reason.id])
             
             assert len(maintenance_blocks) == 1
-            assert 'Resurfacing' in maintenance_blocks[0].sub_reason
+            assert 'Resurfacing' in maintenance_blocks[0].details
     
     def test_filter_persistence(self, app, test_admin):
         """Test that filters work consistently across multiple queries."""
@@ -1005,7 +1005,7 @@ class TestFilteringAndSearch:
                         start_time=time(12, 0),
                         end_time=time(13, 0),
                         reason_id=reason.id,
-                        sub_reason='Consistent test',
+                        details='Consistent test',
                         admin_id=test_admin.id
                     )
                     assert error is None
@@ -1046,7 +1046,7 @@ class TestAuditLogging:
                 start_time=time(10, 0),
                 end_time=time(11, 0),
                 reason_id=reason.id,
-                sub_reason='Audit test',
+                details='Audit test',
                 admin_id=test_admin.id
             )
             assert error is None
@@ -1064,7 +1064,7 @@ class TestAuditLogging:
             # Update block (should log)
             success, update_error = BlockService.update_single_instance(
                 block.id,
-                sub_reason='Updated audit test',
+                details='Updated audit test',
                 admin_id=test_admin.id
             )
             assert update_error is None
@@ -1110,7 +1110,7 @@ class TestAuditLogging:
                     start_time=time(11, 0),
                     end_time=time(12, 0),
                     reason_id=reason.id,
-                    sub_reason=f'Audit filter test {i+1}',
+                    details=f'Audit filter test {i+1}',
                     admin_id=test_admin.id
                 )
                 assert error is None
@@ -1119,7 +1119,7 @@ class TestAuditLogging:
                 # Update each block
                 success, update_error = BlockService.update_single_instance(
                     block.id,
-                    sub_reason=f'Updated audit filter test {i+1}',
+                    details=f'Updated audit filter test {i+1}',
                     admin_id=test_admin.id
                 )
                 assert update_error is None
@@ -1170,7 +1170,7 @@ class TestAuditLogging:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason.id,
-                sub_reason='Audit data test',
+                details='Audit data test',
                 admin_id=test_admin.id,
                 series_name='Audit Test Series'
             )
@@ -1226,7 +1226,7 @@ class TestCalendarViewFunctionality:
                         start_time=time(10 + i, 0),  # Different times
                         end_time=time(11 + i, 0),
                         reason_id=reason.id,
-                        sub_reason=f'Calendar test {i+1}',
+                        details=f'Calendar test {i+1}',
                         admin_id=test_admin.id
                     )
                     assert error is None
@@ -1242,7 +1242,7 @@ class TestCalendarViewFunctionality:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reasons[2].id,
-                sub_reason='Calendar series',
+                details='Calendar series',
                 admin_id=test_admin.id,
                 series_name='Calendar Test Series'
             )
@@ -1286,7 +1286,7 @@ class TestCalendarViewFunctionality:
                 start_time=time(16, 0),
                 end_time=time(18, 0),
                 reason_id=reason.id,
-                sub_reason='Finals - Team A vs Team B',
+                details='Finals - Team A vs Team B',
                 admin_id=test_admin.id
             )
             assert error is None
@@ -1301,7 +1301,7 @@ class TestCalendarViewFunctionality:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=reason.id,
-                sub_reason='Series championship',
+                details='Series championship',
                 admin_id=test_admin.id,
                 series_name='Championship Series'
             )
@@ -1311,7 +1311,7 @@ class TestCalendarViewFunctionality:
             middle_block = series_blocks[1]
             success, update_error = BlockService.update_single_instance(
                 middle_block.id,
-                sub_reason='Modified instance',
+                details='Modified instance',
                 admin_id=test_admin.id
             )
             assert update_error is None
@@ -1324,7 +1324,7 @@ class TestCalendarViewFunctionality:
                 'start_time': single_block.start_time.strftime('%H:%M'),
                 'end_time': single_block.end_time.strftime('%H:%M'),
                 'reason_name': single_block.reason_obj.name,
-                'sub_reason': single_block.sub_reason,
+                'details': single_block.details,
                 'series_id': single_block.series_id,
                 'is_modified': single_block.is_modified,
                 'created_by': single_block.created_by.name
@@ -1333,7 +1333,7 @@ class TestCalendarViewFunctionality:
             # Verify all tooltip data is available
             assert tooltip_data_single['court_number'] == 3
             assert tooltip_data_single['reason_name'] == 'Championship'
-            assert tooltip_data_single['sub_reason'] == 'Finals - Team A vs Team B'
+            assert tooltip_data_single['details'] == 'Finals - Team A vs Team B'
             assert tooltip_data_single['series_id'] is None
             assert tooltip_data_single['is_modified'] is False
             
@@ -1343,7 +1343,7 @@ class TestCalendarViewFunctionality:
                 'id': modified_block.id,
                 'court_number': modified_block.court.number,
                 'reason_name': modified_block.reason_obj.name,
-                'sub_reason': modified_block.sub_reason,
+                'details': modified_block.details,
                 'series_id': modified_block.series_id,
                 'is_modified': modified_block.is_modified,
                 'series_name': modified_block.series.name if modified_block.series else None
@@ -1351,7 +1351,7 @@ class TestCalendarViewFunctionality:
             
             assert tooltip_data_series['series_id'] is not None
             assert tooltip_data_series['is_modified'] is True
-            assert tooltip_data_series['sub_reason'] == 'Modified instance'
+            assert tooltip_data_series['details'] == 'Modified instance'
             assert tooltip_data_series['series_name'] == 'Championship Series'
     
     def test_color_coding_and_visual_indicators(self, app, test_admin):
@@ -1377,7 +1377,7 @@ class TestCalendarViewFunctionality:
                     start_time=time(10, 0),
                     end_time=time(11, 0),
                     reason_id=reason.id,
-                    sub_reason=f'Color test {reason_name}',
+                    details=f'Color test {reason_name}',
                     admin_id=test_admin.id
                 )
                 assert error is None
@@ -1393,7 +1393,7 @@ class TestCalendarViewFunctionality:
                 recurrence_pattern='daily',
                 recurrence_days=None,
                 reason_id=BlockReason.query.filter_by(name='Tennis Course').first().id,
-                sub_reason='Visual indicator test',
+                details='Visual indicator test',
                 admin_id=test_admin.id,
                 series_name='Visual Test Series'
             )
@@ -1402,7 +1402,7 @@ class TestCalendarViewFunctionality:
             # Modify one series instance for dotted border indicator
             success, update_error = BlockService.update_single_instance(
                 series_blocks[1].id,
-                sub_reason='Modified for visual test',
+                details='Modified for visual test',
                 admin_id=test_admin.id
             )
             assert update_error is None
@@ -1434,7 +1434,7 @@ class TestCalendarViewFunctionality:
                 assert series_visual_data['series_name'] == 'Visual Test Series'
                 
                 # Check if this is the modified instance
-                if updated_block.sub_reason == 'Modified for visual test':
+                if updated_block.details == 'Modified for visual test':
                     assert series_visual_data['is_modified'] is True
                 else:
                     assert series_visual_data['is_modified'] is False

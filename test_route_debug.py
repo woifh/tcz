@@ -63,7 +63,7 @@ def test_route_directly():
                 'start_time': primary_block.start_time,
                 'end_time': primary_block.end_time,
                 'reason_id': primary_block.reason_id,
-                'sub_reason': primary_block.sub_reason,
+                'details': primary_block.details,
                 'created_by_id': primary_block.created_by_id,
                 'created_at': primary_block.created_at,
                 'related_block_ids': [block.id for block in blocks]

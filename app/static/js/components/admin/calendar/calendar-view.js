@@ -347,10 +347,10 @@ export class CalendarView {
                                 <div class="col-sm-4"><strong>Grund:</strong></div>
                                 <div class="col-sm-8">${firstBlock.reason_name}</div>
                             </div>
-                            ${firstBlock.sub_reason ? `
+                            ${firstBlock.details ? `
                             <div class="row">
-                                <div class="col-sm-4"><strong>Untergrund:</strong></div>
-                                <div class="col-sm-8">${firstBlock.sub_reason}</div>
+                                <div class="col-sm-4"><strong>Details:</strong></div>
+                                <div class="col-sm-8">${firstBlock.details}</div>
                             </div>
                             ` : ''}
                             ${firstBlock.description ? `

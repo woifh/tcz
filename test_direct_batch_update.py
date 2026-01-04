@@ -42,7 +42,7 @@ def create_test_batch(session):
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': reason_id,
-        'sub_reason': 'Original batch for update test'
+        'details': 'Original batch for update test'
     }
     
     response = session.post(f"{BASE_URL}/admin/blocks/multi-court", json=block_data)
@@ -61,7 +61,7 @@ def create_test_batch(session):
         
         blocks = response.json().get('blocks', [])
         for block in blocks:
-            if block.get('sub_reason') == 'Original batch for update test':
+            if block.get('details') == 'Original batch for update test':
                 return block['batch_id']
     
     return None
@@ -81,7 +81,7 @@ def test_batch_update_put_vs_post(session, batch_id):
         'start_time': '14:00',
         'end_time': '16:00',
         'reason_id': reason_id,
-        'sub_reason': 'Updated via PUT test'
+        'details': 'Updated via PUT test'
     }
     
     # Test PUT request (correct method)
@@ -104,7 +104,7 @@ def test_batch_update_put_vs_post(session, batch_id):
     
     # Test POST request (incorrect method - should fail or create new)
     print("📤 Testing POST request...")
-    update_data['sub_reason'] = 'Updated via POST test'
+    update_data['details'] = 'Updated via POST test'
     response = session.post(f"{BASE_URL}/admin/blocks/batch/{batch_id}", json=update_data)
     
     print(f"📊 POST response status: {response.status_code}")
@@ -142,7 +142,7 @@ def verify_update_results(session, batch_id):
             
             print(f"   Courts: {court_numbers}")
             print(f"   Time: {first_block.get('start_time')} - {first_block.get('end_time')}")
-            print(f"   Sub-reason: {first_block.get('sub_reason')}")
+            print(f"   Details: {first_block.get('details')}")
             
             return True
         else:

@@ -19,7 +19,7 @@ export const GERMAN_TEXT = {
     
     // Reason management
     MANAGE_BLOCK_REASON: 'Sperrungsgrund verwalten',
-    SUB_REASON: 'Untergrund',
+    DETAILS: 'Details',
     REASON_IN_USE: 'Grund wird verwendet',
     HISTORICAL_DATA_PRESERVED: 'Historische Daten bleiben erhalten',
     

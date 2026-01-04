@@ -49,7 +49,7 @@ def test_court_blocking_fix():
         'start_time': '10:00',
         'end_time': '12:00',
         'reason_id': 1,
-        'sub_reason': 'Test blocking event'
+        'details': 'Test blocking event'
     }
     
     create_response = session.post(f"{BASE_URL}/admin/blocks/multi-court", json=block_data)
@@ -148,7 +148,7 @@ def test_court_blocking_fix():
         'start_time': '10:00',
         'end_time': '13:00',  # Extend end time
         'reason_id': 1,
-        'sub_reason': 'Updated test blocking event'
+        'details': 'Updated test blocking event'
     }
     
     update_response = session.put(f"{BASE_URL}/admin/blocks/batch/{test_batch_id}", json=update_data)

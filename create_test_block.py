@@ -72,7 +72,7 @@ def create_test_block():
                 start_time=time(8, 0),   # 08:00
                 end_time=time(22, 0),    # 22:00
                 reason_id=reason.id,
-                sub_reason="Geplant",
+                details="Geplant",
                 batch_id=batch_id,
                 created_by_id=user.id
             )

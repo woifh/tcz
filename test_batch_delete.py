@@ -32,7 +32,7 @@ def test_batch_delete():
         'start_time': '13:00',
         'end_time': '15:00',
         'reason_id': 1,
-        'sub_reason': test_identifier
+        'details': test_identifier
     }
     
     create_response = session.post(
@@ -63,7 +63,7 @@ def test_batch_delete():
     blocks = blocks_data.get('blocks', [])
     
     # Find our test blocks
-    test_blocks = [b for b in blocks if b.get('sub_reason') == test_identifier]
+    test_blocks = [b for b in blocks if b.get('details') == test_identifier]
     
     if len(test_blocks) != 3:
         print(f"✗ Expected 3 test blocks, found {len(test_blocks)}")
@@ -107,7 +107,7 @@ def test_batch_delete():
     blocks = blocks_data.get('blocks', [])
     
     # Check that no test blocks remain
-    remaining_test_blocks = [b for b in blocks if b.get('sub_reason') == test_identifier]
+    remaining_test_blocks = [b for b in blocks if b.get('details') == test_identifier]
     
     if len(remaining_test_blocks) > 0:
         print(f"✗ {len(remaining_test_blocks)} test blocks still exist after batch delete")
