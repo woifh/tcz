@@ -41,7 +41,6 @@ def get_audit_log():
                     'id': log.id,
                     'operation': log.operation,
                     'block_id': log.block_id,
-                    'series_id': log.series_id,
                     'operation_data': log.operation_data,
                     'admin_name': log.admin.name,
                     'timestamp': log.timestamp.isoformat()

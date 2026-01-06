@@ -147,12 +147,12 @@ class BlockService:
     @staticmethod
     def update_single_instance(block_id, **updates):
         """
-        Update a single block instance, marking it as modified from the series pattern.
-        
+        Update a single block instance.
+
         Args:
             block_id: ID of the Block to update
             **updates: Dictionary of fields to update
-            
+
         Returns:
             tuple: (success boolean, error message or None)
         """
@@ -376,34 +376,28 @@ class BlockService:
             date_range: Tuple of (start_date, end_date) or None
             court_ids: List of court IDs or None
             reason_ids: List of reason IDs or None
-            block_types: List of block types ('single', 'series') or None
-            
+            block_types: List of block types (deprecated, ignored) or None
+
         Returns:
             list: List of Block objects matching the criteria
         """
         query = Block.query
-        
+
         # Filter by date range
         if date_range:
             start_date, end_date = date_range
             query = query.filter(Block.date >= start_date, Block.date <= end_date)
-        
+
         # Filter by courts
         if court_ids:
             query = query.filter(Block.court_id.in_(court_ids))
-        
+
         # Filter by reasons
         if reason_ids:
             query = query.filter(Block.reason_id.in_(reason_ids))
-        
-        # Filter by block types
-        if block_types:
-            if 'single' in block_types and 'series' not in block_types:
-                query = query.filter(Block.series_id.is_(None))
-            elif 'series' in block_types and 'single' not in block_types:
-                query = query.filter(Block.series_id.isnot(None))
-            # If both are specified or neither, no additional filter needed
-        
+
+        # Note: block_types parameter is deprecated and ignored
+
         return query.order_by(Block.date, Block.start_time).all()
     
     @staticmethod
@@ -455,7 +449,6 @@ class BlockService:
             audit_log = BlockAuditLog(
                 operation=operation,
                 block_id=block_data.get('block_id'),
-                series_id=block_data.get('series_id'),
                 operation_data=block_data,
                 admin_id=admin_id
             )
