@@ -197,7 +197,7 @@ export function dashboard() {
             
             if (slot.status === 'available') {
                 if (isPast) {
-                    classes += ' bg-gray-200 text-gray-500 cursor-not-allowed';
+                    classes += ' bg-gray-200 text-gray-500';
                 } else {
                     classes += ' bg-green-500 text-white';
                     // Only add interactive styles for authenticated users
@@ -209,12 +209,12 @@ export function dashboard() {
                 // Short notice bookings get orange background
                 classes += ' bg-orange-500 text-white text-xs short-notice-booking';
                 console.log('Short-notice slot detected, applying classes:', classes);
-                
+
                 // Add pointer cursor if user can cancel and not in past (authenticated users only)
                 if (!isPast && this.isAuthenticated && this.canCancelSlot(slot)) {
                     classes += ' cursor-pointer hover:opacity-80';
                 } else if (isPast) {
-                    classes += ' cursor-not-allowed opacity-75';
+                    classes += ' opacity-75';
                 }
             } else if (slot.status === 'reserved') {
                 // Handle both test format (reservation) and production format (details)
@@ -227,17 +227,17 @@ export function dashboard() {
                 } else {
                     classes += ' bg-red-500 text-white text-xs';
                 }
-                
+
                 // Add pointer cursor if user can cancel and not in past (authenticated users only)
                 if (!isPast && this.isAuthenticated && this.canCancelSlot(slot)) {
                     classes += ' cursor-pointer hover:opacity-80';
                 } else if (isPast) {
-                    classes += ' cursor-not-allowed opacity-75';
+                    classes += ' opacity-75';
                 }
             } else if (slot.status === 'blocked') {
                 classes += ' bg-gray-400 text-white text-xs min-h-16';
                 if (isPast) {
-                    classes += ' cursor-not-allowed opacity-75';
+                    classes += ' opacity-75';
                 }
             }
             

@@ -17,7 +17,7 @@
 }
 
 .court-grid-cell.blocked {
-    @apply bg-court-blocked text-white cursor-not-allowed;
+    @apply bg-court-blocked text-white;
 }
 
 /* Short notice booking styles - ensure orange background takes precedence */
