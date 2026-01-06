@@ -9,7 +9,7 @@ from flask import request, jsonify
 from flask_login import login_required, current_user
 
 from app import db
-from app.decorators import admin_required
+from app.decorators import admin_required, teamster_or_admin_required, block_owner_or_admin_required
 from app.models import Block, Court, BlockReason, Reservation
 from app.services.block_service import BlockService
 from app.services.reservation_service import ReservationService
@@ -18,7 +18,7 @@ from . import bp
 
 @bp.route('/blocks', methods=['GET'])
 @login_required
-@admin_required
+@teamster_or_admin_required
 def get_blocks():
     """Get blocks with optional filtering."""
     try:
@@ -94,7 +94,7 @@ def get_blocks():
 
 @bp.route('/blocks', methods=['POST'])
 @login_required
-@admin_required
+@teamster_or_admin_required
 def create_block():
     """Create a single block."""
     try:
@@ -145,7 +145,7 @@ def create_block():
 
 @bp.route('/blocks/multi-court', methods=['POST'])
 @login_required
-@admin_required
+@teamster_or_admin_required
 def create_multi_court_blocks():
     """Create blocks for multiple courts simultaneously."""
     try:
@@ -201,7 +201,7 @@ def create_multi_court_blocks():
 
 @bp.route('/blocks/<int:id>', methods=['PUT'])
 @login_required
-@admin_required
+@block_owner_or_admin_required
 def update_block(id):
     """Update a single block."""
     try:
@@ -248,7 +248,7 @@ def update_block(id):
 
 @bp.route('/blocks/<int:id>', methods=['DELETE'])
 @login_required
-@admin_required
+@block_owner_or_admin_required
 def delete_block(id):
     """Delete a single block."""
     try:
@@ -281,10 +281,21 @@ def delete_block(id):
 
 @bp.route('/blocks/batch/<batch_id>', methods=['DELETE'])
 @login_required
-@admin_required
+@teamster_or_admin_required
 def delete_batch(batch_id):
     """Delete all blocks in a batch."""
     try:
+        # Get all blocks in the batch
+        blocks = Block.query.filter_by(batch_id=batch_id).all()
+
+        if not blocks:
+            return jsonify({'success': False, 'error': 'Batch nicht gefunden'}), 404
+
+        # Teamsters can only delete their own batches
+        if current_user.is_teamster():
+            if not all(block.created_by_id == current_user.id for block in blocks):
+                return jsonify({'error': 'Sie können nur Ihre eigenen Sperrungen löschen'}), 403
+
         success, error = BlockService.delete_batch(batch_id, current_user.id)
 
         if success:
@@ -298,7 +309,7 @@ def delete_batch(batch_id):
 
 @bp.route('/blocks/batch/<batch_id>', methods=['PUT'])
 @login_required
-@admin_required
+@teamster_or_admin_required
 def update_batch(batch_id):
     """Update all blocks in a batch, including court changes."""
     try:
@@ -333,6 +344,11 @@ def update_batch(batch_id):
 
         if not existing_blocks:
             return jsonify({'error': 'Batch nicht gefunden'}), 404
+
+        # Teamsters can only update their own batches
+        if current_user.is_teamster():
+            if not all(block.created_by_id == current_user.id for block in existing_blocks):
+                return jsonify({'error': 'Sie können nur Ihre eigenen Sperrungen bearbeiten'}), 403
 
         # Get existing court IDs
         existing_court_ids = [block.court_id for block in existing_blocks]

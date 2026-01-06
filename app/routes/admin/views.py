@@ -7,7 +7,7 @@ Contains main admin pages and navigation routes.
 from flask import render_template, request, jsonify, redirect, url_for
 from flask_login import login_required, current_user
 
-from app.decorators import admin_required
+from app.decorators import admin_required, teamster_or_admin_required
 from app.models import Block, BlockReason, Member
 from app.services.block_service import BlockService
 from app.services.block_reason_service import BlockReasonService
@@ -32,7 +32,7 @@ def overview():
 
 @bp.route('/court-blocking')
 @login_required
-@admin_required
+@teamster_or_admin_required
 def court_blocking():
     """Court blocking management page."""
     return render_template('admin/court_blocking.html')
@@ -40,23 +40,29 @@ def court_blocking():
 
 @bp.route('/court-blocking/<batch_id>')
 @login_required
-@admin_required
+@teamster_or_admin_required
 def edit_court_blocking(batch_id):
     """Edit court blocking page."""
     try:
         # Get all blocks in the batch
         blocks = Block.query.filter_by(batch_id=batch_id).all()
-        
+
         if not blocks:
-            return render_template('admin/court_blocking.html', 
+            return render_template('admin/court_blocking.html',
                                  error="Sperrung nicht gefunden")
-        
+
+        # Check ownership for teamsters
+        if current_user.is_teamster():
+            if not all(block.created_by_id == current_user.id for block in blocks):
+                return render_template('admin/court_blocking.html',
+                                     error="Sie können nur Ihre eigenen Sperrungen bearbeiten")
+
         # Use the first block as the representative for the batch
         first_block = blocks[0]
-        
+
         # Collect all court IDs for this batch
         court_ids = [block.court_id for block in blocks]
-        
+
         # Create edit data structure
         edit_block_data = {
             'id': first_block.id,
@@ -69,12 +75,12 @@ def edit_court_blocking(batch_id):
             'details': first_block.details,
             'related_block_ids': [block.id for block in blocks]
         }
-        
-        return render_template('admin/court_blocking.html', 
+
+        return render_template('admin/court_blocking.html',
                              edit_block_data=edit_block_data)
-        
+
     except Exception as e:
-        return render_template('admin/court_blocking.html', 
+        return render_template('admin/court_blocking.html',
                              error=f"Fehler beim Laden der Sperrung: {str(e)}")
 
 

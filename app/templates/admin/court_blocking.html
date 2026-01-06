@@ -148,6 +148,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-components.css') }}">
 <script type="module" src="{{ url_for('static', filename='js/components/admin/admin-main.js') }}"></script>
 <script>
+// User context for ownership checks in block management
+window.currentUserId = {{ current_user.id }};
+window.currentUserIsAdmin = {{ 'true' if current_user.is_admin() else 'false' }};
+window.currentUserIsTeamster = {{ 'true' if current_user.is_teamster() else 'false' }};
+
 document.addEventListener('DOMContentLoaded', function() {
     {% if edit_block_data %}
     window.editBlockData = {

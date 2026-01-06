@@ -67,7 +67,35 @@ class Member(db.Model, UserMixin):
     def is_admin(self):
         """Check if the member has administrator role."""
         return self.role == 'administrator'
-    
+
+    def is_teamster(self):
+        """Check if the member has teamster role."""
+        from app.constants import UserRole
+        return self.role == UserRole.TEAMSTER
+
+    def is_teamster_or_admin(self):
+        """Check if the member has teamster or administrator role."""
+        from app.constants import UserRole
+        return self.role in [UserRole.TEAMSTER, UserRole.ADMINISTRATOR]
+
+    def can_manage_blocks(self):
+        """Check if the member can manage court blocks (teamster or admin)."""
+        return self.is_teamster_or_admin()
+
+    def can_edit_block(self, block):
+        """
+        Check if the member can edit a specific block.
+
+        Admins can edit any block.
+        Teamsters can only edit blocks they created.
+        Regular members cannot edit blocks.
+        """
+        if self.is_admin():
+            return True
+        if self.is_teamster():
+            return block.created_by_id == self.id
+        return False
+
     def __repr__(self):
         return f'<Member {self.name} ({self.email})>'
 

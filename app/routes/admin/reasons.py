@@ -8,7 +8,7 @@ from flask import request, jsonify
 from flask_login import login_required, current_user
 
 from app import db
-from app.decorators import admin_required
+from app.decorators import admin_required, teamster_or_admin_required
 from app.models import BlockReason
 from app.services.block_reason_service import BlockReasonService
 from . import bp
@@ -16,9 +16,9 @@ from . import bp
 
 @bp.route('/block-reasons', methods=['GET'])
 @login_required
-@admin_required
+@teamster_or_admin_required
 def list_block_reasons():
-    """List all block reasons (admin only)."""
+    """List all block reasons (teamsters can read, only admins can manage)."""
     try:
         reasons = BlockReasonService.get_all_block_reasons()
         

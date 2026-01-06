@@ -141,7 +141,7 @@ export class AdminPanel {
 
     groupBlocksByBatch(blocks) {
         const batches = {};
-        
+
         blocks.forEach(block => {
             const batchId = block.batch_id;
             if (!batches[batchId]) {
@@ -149,8 +149,30 @@ export class AdminPanel {
             }
             batches[batchId].push(block);
         });
-        
+
         return batches;
+    }
+
+    renderEditDeleteButtons(block, batchId) {
+        // Check if current user can edit this block
+        // Admin can edit all blocks, teamster can only edit blocks they created
+        const canEdit = window.currentUserIsAdmin ||
+                       (window.currentUserIsTeamster && block.created_by_id === window.currentUserId);
+
+        if (!canEdit) {
+            // Return empty string - no buttons for blocks user cannot edit
+            return '';
+        }
+
+        // User can edit - show both edit and delete buttons
+        return `
+            <a href="/admin/court-blocking/${batchId}" class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                Bearbeiten
+            </a>
+            <button class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700" onclick="deleteBatch('${batchId}')">
+                Löschen
+            </button>
+        `;
     }
 
     renderBatchGroup(batchId, blocks) {
@@ -207,12 +229,7 @@ export class AdminPanel {
                         </p>
                     </div>
                     <div class="flex space-x-2">
-                        <a href="/admin/court-blocking/${batchId}" class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                            Bearbeiten
-                        </a>
-                        <button class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700" onclick="deleteBatch('${batchId}')">
-                            Löschen
-                        </button>
+                        ${this.renderEditDeleteButtons(firstBlock, batchId)}
                     </div>
                 </div>
             </div>

@@ -398,34 +398,43 @@ class BlockService:
     def log_block_operation(operation, block_data, admin_id):
         """
         Log a block operation for audit purposes.
-        
+
         Args:
             operation: Type of operation ('create', 'update', 'delete')
             block_data: Dictionary containing operation details
-            admin_id: ID of administrator performing the operation
+            admin_id: ID of administrator/teamster performing the operation
         """
-        from app.models import BlockAuditLog
-        
+        from app.models import BlockAuditLog, Member
+
         try:
             # Ensure admin_id is not None
             if admin_id is None:
                 logger.warning("admin_id is None for block operation logging, skipping audit log")
                 return
-            
+
+            # Get user to include role information
+            admin_user = Member.query.get(admin_id)
+
+            # Add role to operation data for audit trail
+            if block_data is None:
+                block_data = {}
+            if admin_user:
+                block_data['admin_role'] = admin_user.role
+
             safe_operation_data = BlockService._serialize_for_json(block_data) if block_data else None
-            
+
             audit_log = BlockAuditLog(
                 operation=operation,
-                block_id=block_data.get('block_id'),
+                block_id=block_data.get('block_id') if block_data else None,
                 operation_data=safe_operation_data,
                 admin_id=admin_id
             )
-            
+
             db.session.add(audit_log)
             db.session.commit()
-            
-            logger.info(f"Block operation logged: {operation} by admin {admin_id}")
-            
+
+            logger.info(f"Block operation logged: {operation} by {admin_user.role if admin_user else 'unknown'} {admin_id}")
+
         except Exception as e:
             logger.error(f"Failed to log block operation: {str(e)}")
             # Don't fail the main operation if logging fails
