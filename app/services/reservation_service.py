@@ -8,12 +8,14 @@ from app.services.validation_service import ValidationService
 from app.services.email_service import EmailService
 from app.utils.timezone_utils import ensure_berlin_timezone, log_timezone_operation
 from app.utils.error_handling import (
-    safe_time_operation, 
-    log_error_with_context, 
+    safe_time_operation,
+    log_error_with_context,
     get_fallback_active_reservations_date_based,
     monitor_performance,
     ActiveBookingSessionError
 )
+from app.utils.query_helpers import build_active_reservation_time_filter
+from app.constants.messages import ErrorMessages
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -282,7 +284,7 @@ class ReservationService:
                 
                 # Check if it's a duplicate booking error
                 if 'Duplicate entry' in str(db_error) and 'unique_booking' in str(db_error):
-                    return None, "Dieser Platz ist bereits für diese Zeit gebucht"
+                    return None, ErrorMessages.RESERVATION_ALREADY_BOOKED
                 return None, f"Fehler beim Erstellen der Buchung: {str(db_error)}"
                 
         except Exception as e:
@@ -320,7 +322,7 @@ class ReservationService:
         """
         reservation = Reservation.query.get(reservation_id)
         if not reservation:
-            return None, "Buchung nicht gefunden"
+            return None, ErrorMessages.RESERVATION_NOT_FOUND
         
         # Update fields
         for key, value in updates.items():
@@ -392,19 +394,15 @@ class ReservationService:
             # Ensure consistent Europe/Berlin timezone handling
             berlin_time = ensure_berlin_timezone(current_time)
             log_timezone_operation("get_member_active_reservations", current_time, berlin_time)
-            
+
             current_date = berlin_time.date()
             current_time_only = berlin_time.time()
-            
-            # Build time-based filter: reservation is active if it hasn't ended yet
-            time_filter = or_(
-                Reservation.date > current_date,  # Future date
-                and_(
-                    Reservation.date == current_date,  # Same date
-                    Reservation.end_time > current_time_only  # But hasn't ended
-                )
+
+            # Build time-based filter using shared utility
+            time_filter = build_active_reservation_time_filter(
+                current_date, current_time_only, Reservation
             )
-            
+
             query = Reservation.query.filter(
                 (Reservation.booked_for_id == member_id) | (Reservation.booked_by_id == member_id),
                 Reservation.status == 'active',
@@ -491,19 +489,15 @@ class ReservationService:
             # Ensure consistent Europe/Berlin timezone handling
             berlin_time = ensure_berlin_timezone(current_time)
             log_timezone_operation("get_member_active_booking_sessions", current_time, berlin_time)
-            
+
             current_date = berlin_time.date()
             current_time_only = berlin_time.time()
-            
-            # Build time-based filter: reservation is active if it hasn't ended yet
-            time_filter = or_(
-                Reservation.date > current_date,  # Future date
-                and_(
-                    Reservation.date == current_date,  # Same date
-                    Reservation.end_time > current_time_only  # But hasn't ended
-                )
+
+            # Build time-based filter using shared utility
+            time_filter = build_active_reservation_time_filter(
+                current_date, current_time_only, Reservation
             )
-            
+
             query = Reservation.query.filter(
                 (Reservation.booked_for_id == member_id) | (Reservation.booked_by_id == member_id),
                 Reservation.status == 'active',
@@ -567,19 +561,15 @@ class ReservationService:
             # Ensure consistent Europe/Berlin timezone handling
             berlin_time = ensure_berlin_timezone(current_time)
             log_timezone_operation("get_member_active_short_notice_bookings", current_time, berlin_time)
-            
+
             current_date = berlin_time.date()
             current_time_only = berlin_time.time()
-            
-            # Build time-based filter: reservation is active if it hasn't ended yet
-            time_filter = or_(
-                Reservation.date > current_date,  # Future date
-                and_(
-                    Reservation.date == current_date,  # Same date
-                    Reservation.end_time > current_time_only  # But hasn't ended
-                )
+
+            # Build time-based filter using shared utility
+            time_filter = build_active_reservation_time_filter(
+                current_date, current_time_only, Reservation
             )
-            
+
             return Reservation.query.filter(
                 (Reservation.booked_for_id == member_id) | (Reservation.booked_by_id == member_id),
                 Reservation.status == 'active',

@@ -1,6 +1,7 @@
 """Block reason service for managing customizable block reasons."""
 from app import db
 from app.models import BlockReason, DetailsTemplate, Block
+from app.constants.messages import ErrorMessages
 from typing import Tuple, List, Optional
 import logging
 
@@ -25,7 +26,7 @@ class BlockReasonService:
         try:
             # Validate input
             if not name or not name.strip():
-                return None, "Sperrungsgrund-Name darf nicht leer sein"
+                return None, ErrorMessages.BLOCK_REASON_NAME_EMPTY
             
             name = name.strip()
             
@@ -185,14 +186,14 @@ class BlockReasonService:
         try:
             # Validate input
             if not template_name or not template_name.strip():
-                return None, "Details-Vorlage-Name darf nicht leer sein"
+                return None, ErrorMessages.DETAILS_TEMPLATE_NAME_EMPTY
             
             template_name = template_name.strip()
             
             # Check if reason exists
             reason = BlockReason.query.get(reason_id)
             if not reason:
-                return None, "Sperrungsgrund nicht gefunden"
+                return None, ErrorMessages.BLOCK_REASON_NOT_FOUND
             
             # Check if template already exists for this reason
             existing_template = DetailsTemplate.query.filter_by(

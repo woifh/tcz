@@ -2,6 +2,7 @@
 from app import db
 from app.models import Block, Reservation, BlockReason, BlockAuditLog
 from app.services.email_service import EmailService
+from app.constants.messages import ErrorMessages
 import logging
 import uuid
 
@@ -209,7 +210,7 @@ class BlockService:
         """
         try:
             if not court_ids:
-                return None, "At least one court must be specified"
+                return None, ErrorMessages.BLOCK_NO_COURTS_SPECIFIED
             
             # Generate a unique batch ID for ALL blocks (single or multi-court)
             batch_id = str(uuid.uuid4())

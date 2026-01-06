@@ -214,39 +214,47 @@ def create_error_response(error: Exception, operation: str, user_friendly: bool 
         
         if user_friendly:
             # Return user-friendly message
+            from app.constants.messages import ErrorMessages
+
             if isinstance(error, TimezoneHandlingError):
-                return False, "Zeitzonenfehler aufgetreten. Bitte versuchen Sie es erneut."
+                return False, ErrorMessages.TIMEZONE_ERROR
             elif isinstance(error, ValidationError):
-                return False, "Validierungsfehler aufgetreten. Bitte überprüfen Sie Ihre Eingaben."
+                return False, ErrorMessages.VALIDATION_ERROR
             else:
-                return False, "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+                return False, ErrorMessages.UNEXPECTED_ERROR
         else:
             # Return technical error message
             return False, f"Error in {operation}: {str(error)}"
             
     except Exception as response_error:
+        from app.constants.messages import ErrorMessages
         logger.error(f"Error creating error response: {response_error}")
-        return False, "Ein Systemfehler ist aufgetreten."
+        return False, ErrorMessages.SYSTEM_ERROR
 
 
 def get_time_based_error_messages() -> dict:
     """
     Get updated error messages that reflect time-based logic.
-    
+
     Returns:
         Dictionary of error messages with time-based descriptions
+
+    Note:
+        This function is deprecated. Use app.constants.messages instead.
     """
+    from app.constants.messages import ErrorMessages, InfoMessages
+
     return {
-        'RESERVATION_LIMIT_REGULAR': "Sie haben bereits 2 aktive Buchungen (zukünftige oder laufende Reservierungen). Aktive Buchungen sind solche, die noch nicht beendet sind.",
-        'RESERVATION_LIMIT_SHORT_NOTICE': "Sie haben bereits eine aktive kurzfristige Buchung (zukünftige oder laufende Reservierung). Nur eine kurzfristige Buchung pro Mitglied ist erlaubt.",
-        'AVAILABILITY_INFO': "Verfügbare Buchungsplätze: {available_slots} von 2 (basierend auf aktueller Zeit)",
-        'CANCELLATION_STARTED': "Diese Buchung kann nicht mehr storniert werden (Spielzeit bereits begonnen)",
-        'CANCELLATION_TOO_LATE': "Diese Buchung kann nicht mehr storniert werden (weniger als 15 Minuten bis Spielbeginn)",
-        'SHORT_NOTICE_NO_CANCEL': "Kurzfristige Buchungen können nicht storniert werden",
-        'BOOKING_PAST_ENDED': "Kurzfristige Buchungen sind nur möglich, solange die Spielzeit noch nicht beendet ist",
-        'BOOKING_PAST_REGULAR': "Buchungen in der Vergangenheit sind nicht möglich",
-        'TIME_CALCULATION_ERROR': "Fehler bei der Zeitberechnung. Bitte versuchen Sie es erneut.",
-        'FALLBACK_ACTIVE': "System verwendet vereinfachte Zeitlogik aufgrund technischer Probleme"
+        'RESERVATION_LIMIT_REGULAR': ErrorMessages.RESERVATION_LIMIT_REGULAR,
+        'RESERVATION_LIMIT_SHORT_NOTICE': ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE,
+        'AVAILABILITY_INFO': InfoMessages.AVAILABILITY_INFO,
+        'CANCELLATION_STARTED': ErrorMessages.CANCELLATION_STARTED,
+        'CANCELLATION_TOO_LATE': ErrorMessages.CANCELLATION_TOO_LATE,
+        'SHORT_NOTICE_NO_CANCEL': ErrorMessages.SHORT_NOTICE_NO_CANCEL,
+        'BOOKING_PAST_ENDED': ErrorMessages.BOOKING_PAST_ENDED,
+        'BOOKING_PAST_REGULAR': ErrorMessages.BOOKING_PAST_REGULAR,
+        'TIME_CALCULATION_ERROR': ErrorMessages.TIME_CALCULATION_ERROR,
+        'FALLBACK_ACTIVE': ErrorMessages.FALLBACK_ACTIVE
     }
 
 
