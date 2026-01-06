@@ -47,13 +47,20 @@
                     <span class="sm:hidden">TC Zellerndorf</span>
                 </h1>
 
-                <!-- Desktop Menu (hidden on mobile) -->
-                <div class="hidden lg:flex gap-4 items-center">
+                <!-- Club Logo (top right) -->
+                <div class="flex items-center gap-4">
+                    <img src="{{ url_for('static', filename='images/logo.jpg') }}" 
+                         alt="Tennisclub Zellerndorf Logo" 
+                         class="h-8 w-auto object-contain hidden sm:block">
+                    
+                    <!-- Desktop Menu (hidden on mobile) -->
+                    <!-- Desktop Menu (hidden on mobile) -->
+                    <div class="hidden lg:flex gap-4 items-center">
                     {% if current_user.is_authenticated %}
                         <!-- Dashboard Link -->
                         <a href="{{ url_for('dashboard.dashboard') }}" class="hover:bg-green-600 px-3 py-2 rounded transition-colors flex items-center gap-1">
-                            <span class="material-icons text-sm">home</span>
-                            <span>Dashboard</span>
+                            <span class="material-icons text-sm">dashboard</span>
+                            <span>Platzübersicht</span>
                         </a>
 
                         <!-- My Account Dropdown -->
@@ -93,7 +100,7 @@
                             <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-50">
                                 <div class="py-1">
                                     <a href="{{ url_for('admin.overview') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                        <span class="material-icons text-sm">dashboard</span>
+                                        <span class="material-icons text-sm">home</span>
                                         <span>Übersicht</span>
                                     </a>
                                     <a href="{{ url_for('admin.court_blocking') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
@@ -121,22 +128,25 @@
                         </div>
                         {% endif %}
                     {% else %}
-                        <a href="{{ url_for('dashboard.anonymous_overview') }}" class="hover:bg-green-600 px-3 py-2 rounded transition-colors flex items-center gap-1">
-                            <span class="material-icons text-sm">visibility</span>
-                            <span>Platzübersicht</span>
-                        </a>
                         <a href="{{ url_for('auth.login') }}" class="hover:bg-green-600 px-3 py-2 rounded transition-colors flex items-center gap-1">
                             <span class="material-icons text-sm">login</span>
                             <span>Anmelden</span>
                         </a>
                     {% endif %}
-                </div>
+                    </div>
 
-                <!-- Mobile Menu Button -->
-                <button class="lg:hidden text-white" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Menü öffnen">
-                    <span class="material-icons">menu</span>
-                </button>
-            </div>
+                    <!-- Mobile Menu Button -->
+                    <div class="flex items-center gap-2">
+                        <!-- Mobile Logo -->
+                        <img src="{{ url_for('static', filename='images/logo.jpg') }}" 
+                             alt="Tennisclub Zellerndorf Logo" 
+                             class="h-6 w-auto object-contain sm:hidden">
+                        
+                        <button class="lg:hidden text-white" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Menü öffnen">
+                            <span class="material-icons">menu</span>
+                        </button>
+                    </div>
+                </div>
 
             <!-- Mobile Menu (shown when hamburger is clicked) -->
             <div x-show="mobileMenuOpen" x-cloak @click.away="mobileMenuOpen = false" class="lg:hidden mt-4 pb-4">
