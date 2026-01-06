@@ -130,7 +130,7 @@ def get_availability():
                     
                     slot['details'] = {
                         'reason': block.reason_obj.name if block.reason_obj else 'Unbekannt',
-                        'details': block.details if block.details else 'NO_DETAILS',
+                        'details': block.details if block.details else '',
                         'block_id': block.id,
                         'debug_test': 'FIELD_ADDED'
                     }
