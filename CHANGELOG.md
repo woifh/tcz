@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.0.0] - 2026-01-07
+
+### Hinzugefügt
+- Versionshistorie (Changelog) mit dedizierter Admin-Seite
+- Klickbare Versionsanzeige im Admin-Panel
+
+### Behoben
+- Versionsberechnung zeigt nun korrekt die Tag-Version an
+
 ## [1.0.0] - 2026-01-07
 
 ### Hinzugefügt
