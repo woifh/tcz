@@ -25,6 +25,9 @@ class Member(db.Model, UserMixin):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='member')
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    deactivated_at = db.Column(db.DateTime, nullable=True)
+    deactivated_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True)
     
     @property
     def name(self):
@@ -223,6 +226,38 @@ class BlockAuditLog(db.Model):
     
     def __repr__(self):
         return f'<BlockAuditLog {self.operation} by {self.admin_id}>'
+
+
+class MemberAuditLog(db.Model):
+    """MemberAuditLog model for tracking member operations."""
+
+    __tablename__ = 'member_audit_log'
+    __table_args__ = (
+        db.Index('idx_member_audit_timestamp', 'timestamp'),
+        db.Index('idx_member_audit_admin', 'performed_by_id'),
+        db.Index('idx_member_audit_operation', 'operation'),
+        db.Index('idx_member_audit_member', 'member_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, nullable=False)  # Not FK because member might be deleted
+    operation = db.Column(db.String(20), nullable=False)  # 'create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate'
+    operation_data = db.Column(db.JSON, nullable=True)  # JSON data about the operation
+    performed_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    performed_by = db.relationship('Member', backref='member_audit_logs')
+
+    def __init__(self, **kwargs):
+        """Initialize audit log with validation."""
+        super(MemberAuditLog, self).__init__(**kwargs)
+        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate']
+        if self.operation and self.operation not in valid_operations:
+            raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
+
+    def __repr__(self):
+        return f'<MemberAuditLog {self.operation} on member {self.member_id} by {self.performed_by_id}>'
 
 
 class Block(db.Model):

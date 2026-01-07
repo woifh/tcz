@@ -25,8 +25,13 @@ def login():
             return render_template('login.html')
         
         member = Member.query.filter_by(email=email).first()
-        
+
         if member and member.check_password(password):
+            # Check if account is deactivated
+            if not member.is_active:
+                flash('Ihr Konto wurde deaktiviert. Bitte kontaktieren Sie den Administrator.', 'error')
+                return render_template('login.html')
+
             login_user(member)
             flash('Erfolgreich angemeldet!', 'success')
             next_page = request.args.get('next')

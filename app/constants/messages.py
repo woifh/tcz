@@ -40,6 +40,22 @@ class ErrorMessages:
     BLOCK_REASON_NAME_EMPTY = "Sperrungsgrund-Name darf nicht leer sein"
     BLOCK_REASON_NOT_FOUND = "Sperrungsgrund nicht gefunden"
 
+    # Member errors
+    MEMBER_NOT_FOUND = "Mitglied nicht gefunden"
+    MEMBER_EMAIL_ALREADY_EXISTS = "E-Mail-Adresse wird bereits verwendet"
+    MEMBER_INVALID_EMAIL = "Ungültige E-Mail-Adresse"
+    MEMBER_PASSWORD_TOO_SHORT = "Passwort muss mindestens 8 Zeichen lang sein"
+    MEMBER_PASSWORD_REQUIRED = "Passwort ist erforderlich"
+    MEMBER_FIRSTNAME_REQUIRED = "Vorname ist erforderlich"
+    MEMBER_LASTNAME_REQUIRED = "Nachname ist erforderlich"
+    MEMBER_EMAIL_REQUIRED = "E-Mail ist erforderlich"
+    MEMBER_INVALID_ROLE = "Ungültige Rolle"
+    MEMBER_CANNOT_DELETE_SELF = "Sie können sich nicht selbst löschen"
+    MEMBER_CANNOT_DEACTIVATE_SELF = "Sie können sich nicht selbst deaktivieren"
+    MEMBER_ALREADY_DEACTIVATED = "Mitglied ist bereits deaktiviert"
+    MEMBER_NOT_DEACTIVATED = "Mitglied ist nicht deaktiviert"
+    MEMBER_HAS_ACTIVE_RESERVATIONS = "Mitglied hat aktive Buchungen und kann nicht gelöscht werden"
+
 class SuccessMessages:
     """Success messages used throughout the application."""
 
@@ -57,6 +73,14 @@ class SuccessMessages:
     BLOCK_REASON_CREATED = "Sperrungsgrund erfolgreich erstellt"
     BLOCK_REASON_UPDATED = "Sperrungsgrund erfolgreich aktualisiert"
     BLOCK_REASON_DELETED = "Sperrungsgrund erfolgreich gelöscht"
+
+    # Member success
+    MEMBER_CREATED = "Mitglied erfolgreich erstellt"
+    MEMBER_UPDATED = "Mitglied erfolgreich aktualisiert"
+    MEMBER_DELETED = "Mitglied erfolgreich gelöscht"
+    MEMBER_DEACTIVATED = "Mitglied erfolgreich deaktiviert"
+    MEMBER_REACTIVATED = "Mitglied erfolgreich reaktiviert"
+    MEMBER_ROLE_CHANGED = "Mitgliederrolle erfolgreich geändert"
 
 
 class InfoMessages:

@@ -1,35 +1,561 @@
 """Member service for business logic."""
+from datetime import datetime
 from sqlalchemy import or_, func
 from app import db
-from app.models import Member, favourites
+from app.models import Member, MemberAuditLog, Reservation, favourites
+from app.constants.messages import ErrorMessages, SuccessMessages
+from app.constants.roles import UserRole
+from app.utils.validators import (
+    validate_required_fields,
+    validate_email_address,
+    validate_string_length,
+    validate_choice,
+    ValidationError
+)
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MemberService:
-    """Service for managing members."""
-    
+    """Service for managing members with comprehensive CRUD operations."""
+
+    @staticmethod
+    def _serialize_for_json(value):
+        """Convert date/time objects (including nested structures) to JSON-safe strings."""
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {k: MemberService._serialize_for_json(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [MemberService._serialize_for_json(v) for v in value]
+        return value
+
+    @staticmethod
+    def create_member(firstname, lastname, email, password, role='member', admin_id=None):
+        """
+        Create a new member with validation.
+
+        Args:
+            firstname: Member's first name
+            lastname: Member's last name
+            email: Member's email address
+            password: Plain text password
+            role: Member role (default: 'member')
+            admin_id: ID of administrator creating the member
+
+        Returns:
+            tuple: (Member object or None, error message or None)
+        """
+        try:
+            # Validate required fields
+            if not firstname or not firstname.strip():
+                return None, ErrorMessages.MEMBER_FIRSTNAME_REQUIRED
+            if not lastname or not lastname.strip():
+                return None, ErrorMessages.MEMBER_LASTNAME_REQUIRED
+            if not email or not email.strip():
+                return None, ErrorMessages.MEMBER_EMAIL_REQUIRED
+            if not password:
+                return None, ErrorMessages.MEMBER_PASSWORD_REQUIRED
+
+            # Validate string lengths
+            try:
+                firstname = validate_string_length(firstname, 'Vorname', min_length=1, max_length=50)
+                lastname = validate_string_length(lastname, 'Nachname', min_length=1, max_length=50)
+            except ValidationError as e:
+                return None, str(e)
+
+            # Validate email format
+            try:
+                email = validate_email_address(email, 'E-Mail')
+            except ValidationError as e:
+                return None, ErrorMessages.MEMBER_INVALID_EMAIL
+
+            # Check for duplicate email
+            existing = Member.query.filter(func.lower(Member.email) == func.lower(email)).first()
+            if existing:
+                return None, ErrorMessages.MEMBER_EMAIL_ALREADY_EXISTS
+
+            # Validate password strength
+            if len(password) < 8:
+                return None, ErrorMessages.MEMBER_PASSWORD_TOO_SHORT
+
+            # Validate role
+            if not UserRole.is_valid(role):
+                return None, ErrorMessages.MEMBER_INVALID_ROLE
+
+            # Create member
+            member = Member(
+                firstname=firstname.strip(),
+                lastname=lastname.strip(),
+                email=email.lower(),
+                role=role
+            )
+            member.set_password(password)
+
+            db.session.add(member)
+            db.session.flush()  # Get member.id before commit
+
+            # Log the operation
+            if admin_id:
+                MemberService.log_member_operation(
+                    operation='create',
+                    member_id=member.id,
+                    operation_data={
+                        'firstname': firstname,
+                        'lastname': lastname,
+                        'email': email,
+                        'role': role
+                    },
+                    performed_by_id=admin_id
+                )
+
+            db.session.commit()
+
+            logger.info(f"Member created: {member.id} ({email}) by admin {admin_id}")
+
+            return member, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to create member: {str(e)}")
+            return None, f"Fehler beim Erstellen des Mitglieds: {str(e)}"
+
+    @staticmethod
+    def get_member(member_id):
+        """
+        Get a member by ID.
+
+        Args:
+            member_id: ID of the member
+
+        Returns:
+            tuple: (Member object or None, error message or None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return None, ErrorMessages.MEMBER_NOT_FOUND
+            return member, None
+        except Exception as e:
+            logger.error(f"Failed to get member {member_id}: {str(e)}")
+            return None, f"Fehler beim Abrufen des Mitglieds: {str(e)}"
+
+    @staticmethod
+    def get_all_members(include_inactive=False):
+        """
+        Get all members, optionally including inactive ones.
+
+        Args:
+            include_inactive: Whether to include deactivated members
+
+        Returns:
+            tuple: (List of Member objects or None, error message or None)
+        """
+        try:
+            query = Member.query
+            if not include_inactive:
+                query = query.filter_by(is_active=True)
+
+            members = query.order_by(Member.lastname, Member.firstname).all()
+            return members, None
+        except Exception as e:
+            logger.error(f"Failed to get all members: {str(e)}")
+            return None, f"Fehler beim Abrufen der Mitglieder: {str(e)}"
+
+    @staticmethod
+    def update_member(member_id, updates, admin_id=None):
+        """
+        Update a member with validation.
+
+        Args:
+            member_id: ID of the member to update
+            updates: Dictionary of fields to update (firstname, lastname, email, password, role)
+            admin_id: ID of user performing the update (can be member themselves or admin)
+
+        Returns:
+            tuple: (Member object or None, error message or None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return None, ErrorMessages.MEMBER_NOT_FOUND
+
+            changes = {}
+            role_changed = False
+
+            # Update firstname
+            if 'firstname' in updates:
+                try:
+                    new_firstname = validate_string_length(
+                        updates['firstname'], 'Vorname', min_length=1, max_length=50
+                    )
+                    if member.firstname != new_firstname:
+                        changes['firstname'] = {'old': member.firstname, 'new': new_firstname}
+                        member.firstname = new_firstname
+                except ValidationError as e:
+                    return None, str(e)
+
+            # Update lastname
+            if 'lastname' in updates:
+                try:
+                    new_lastname = validate_string_length(
+                        updates['lastname'], 'Nachname', min_length=1, max_length=50
+                    )
+                    if member.lastname != new_lastname:
+                        changes['lastname'] = {'old': member.lastname, 'new': new_lastname}
+                        member.lastname = new_lastname
+                except ValidationError as e:
+                    return None, str(e)
+
+            # Update email
+            if 'email' in updates:
+                try:
+                    new_email = validate_email_address(updates['email'], 'E-Mail').lower()
+                    if member.email != new_email:
+                        # Check for duplicate
+                        existing = Member.query.filter(
+                            func.lower(Member.email) == new_email,
+                            Member.id != member_id
+                        ).first()
+                        if existing:
+                            return None, ErrorMessages.MEMBER_EMAIL_ALREADY_EXISTS
+                        changes['email'] = {'old': member.email, 'new': new_email}
+                        member.email = new_email
+                except ValidationError:
+                    return None, ErrorMessages.MEMBER_INVALID_EMAIL
+
+            # Update password
+            if 'password' in updates and updates['password']:
+                password = updates['password']
+                if len(password) < 8:
+                    return None, ErrorMessages.MEMBER_PASSWORD_TOO_SHORT
+                member.set_password(password)
+                changes['password'] = 'changed'
+
+            # Update role (admin only)
+            if 'role' in updates:
+                new_role = updates['role']
+                if not UserRole.is_valid(new_role):
+                    return None, ErrorMessages.MEMBER_INVALID_ROLE
+                if member.role != new_role:
+                    changes['role'] = {'old': member.role, 'new': new_role}
+                    member.role = new_role
+                    role_changed = True
+
+            # If no changes, return early
+            if not changes:
+                return member, None
+
+            db.session.flush()
+
+            # Log the operation
+            if admin_id:
+                operation = 'role_change' if role_changed and len(changes) == 1 else 'update'
+                MemberService.log_member_operation(
+                    operation=operation,
+                    member_id=member_id,
+                    operation_data={'changes': changes},
+                    performed_by_id=admin_id
+                )
+
+            db.session.commit()
+
+            logger.info(f"Member updated: {member_id} by {admin_id}, changes: {list(changes.keys())}")
+
+            return member, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to update member {member_id}: {str(e)}")
+            return None, f"Fehler beim Aktualisieren des Mitglieds: {str(e)}"
+
+    @staticmethod
+    def delete_member(member_id, admin_id, force=False):
+        """
+        Delete a member (hard delete or soft delete based on active reservations).
+
+        Args:
+            member_id: ID of the member to delete
+            admin_id: ID of administrator performing the deletion
+            force: If True, perform hard delete even with active reservations (cancels them)
+
+        Returns:
+            tuple: (success boolean, error message or None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return False, ErrorMessages.MEMBER_NOT_FOUND
+
+            # Prevent self-deletion
+            if member_id == admin_id:
+                return False, ErrorMessages.MEMBER_CANNOT_DELETE_SELF
+
+            # Check for active reservations
+            active_reservations_count = Reservation.query.filter(
+                or_(
+                    Reservation.booked_by_id == member_id,
+                    Reservation.booked_for_id == member_id
+                ),
+                Reservation.status == 'active',
+                Reservation.date >= datetime.now().date()
+            ).count()
+
+            if active_reservations_count > 0 and not force:
+                return False, f"{ErrorMessages.MEMBER_HAS_ACTIVE_RESERVATIONS} ({active_reservations_count} Buchungen)"
+
+            # Store member data for audit log before deletion
+            member_data = {
+                'firstname': member.firstname,
+                'lastname': member.lastname,
+                'email': member.email,
+                'role': member.role,
+                'created_at': member.created_at.isoformat() if member.created_at else None,
+                'active_reservations_cancelled': active_reservations_count if force else 0
+            }
+
+            # If force delete, cancel all active reservations
+            if force and active_reservations_count > 0:
+                Reservation.query.filter(
+                    or_(
+                        Reservation.booked_by_id == member_id,
+                        Reservation.booked_for_id == member_id
+                    ),
+                    Reservation.status == 'active'
+                ).update({
+                    'status': 'cancelled',
+                    'reason': 'Mitglied gelöscht durch Administrator'
+                }, synchronize_session=False)
+
+            # Log the operation BEFORE deletion
+            MemberService.log_member_operation(
+                operation='delete',
+                member_id=member_id,
+                operation_data=member_data,
+                performed_by_id=admin_id
+            )
+
+            # Delete member (cascade will handle favourites, notifications)
+            db.session.delete(member)
+            db.session.commit()
+
+            logger.info(f"Member deleted: {member_id} ({member_data['email']}) by admin {admin_id}")
+
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to delete member {member_id}: {str(e)}")
+            return False, f"Fehler beim Löschen des Mitglieds: {str(e)}"
+
+    @staticmethod
+    def deactivate_member(member_id, admin_id):
+        """
+        Soft delete: Deactivate a member account (prevents login).
+
+        Args:
+            member_id: ID of the member to deactivate
+            admin_id: ID of administrator performing the deactivation
+
+        Returns:
+            tuple: (success boolean, error message or None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return False, ErrorMessages.MEMBER_NOT_FOUND
+
+            # Prevent self-deactivation
+            if member_id == admin_id:
+                return False, ErrorMessages.MEMBER_CANNOT_DEACTIVATE_SELF
+
+            if not member.is_active:
+                return False, ErrorMessages.MEMBER_ALREADY_DEACTIVATED
+
+            member.is_active = False
+            member.deactivated_at = datetime.utcnow()
+            member.deactivated_by_id = admin_id
+
+            # Log the operation
+            MemberService.log_member_operation(
+                operation='deactivate',
+                member_id=member_id,
+                operation_data={
+                    'firstname': member.firstname,
+                    'lastname': member.lastname,
+                    'email': member.email,
+                    'role': member.role
+                },
+                performed_by_id=admin_id
+            )
+
+            db.session.commit()
+
+            logger.info(f"Member deactivated: {member_id} by admin {admin_id}")
+
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to deactivate member {member_id}: {str(e)}")
+            return False, f"Fehler beim Deaktivieren des Mitglieds: {str(e)}"
+
+    @staticmethod
+    def reactivate_member(member_id, admin_id):
+        """
+        Reactivate a deactivated member account.
+
+        Args:
+            member_id: ID of the member to reactivate
+            admin_id: ID of administrator performing the reactivation
+
+        Returns:
+            tuple: (success boolean, error message or None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return False, ErrorMessages.MEMBER_NOT_FOUND
+
+            if member.is_active:
+                return False, ErrorMessages.MEMBER_NOT_DEACTIVATED
+
+            member.is_active = True
+            member.deactivated_at = None
+            member.deactivated_by_id = None
+
+            # Log the operation
+            MemberService.log_member_operation(
+                operation='reactivate',
+                member_id=member_id,
+                operation_data={
+                    'firstname': member.firstname,
+                    'lastname': member.lastname,
+                    'email': member.email,
+                    'role': member.role
+                },
+                performed_by_id=admin_id
+            )
+
+            db.session.commit()
+
+            logger.info(f"Member reactivated: {member_id} by admin {admin_id}")
+
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to reactivate member {member_id}: {str(e)}")
+            return False, f"Fehler beim Reaktivieren des Mitglieds: {str(e)}"
+
+    @staticmethod
+    def log_member_operation(operation, member_id, operation_data, performed_by_id):
+        """
+        Log a member operation for audit purposes.
+
+        Args:
+            operation: Type of operation ('create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate')
+            member_id: ID of the member being operated on
+            operation_data: Dictionary containing operation details
+            performed_by_id: ID of user performing the operation
+        """
+        try:
+            # Ensure performed_by_id is not None
+            if performed_by_id is None:
+                logger.warning("performed_by_id is None for member operation logging, skipping audit log")
+                return
+
+            # Get user to include role information
+            performer = Member.query.get(performed_by_id)
+
+            # Add role to operation data for audit trail
+            if operation_data is None:
+                operation_data = {}
+            if performer:
+                operation_data['performer_role'] = performer.role
+
+            safe_operation_data = MemberService._serialize_for_json(operation_data) if operation_data else None
+
+            audit_log = MemberAuditLog(
+                operation=operation,
+                member_id=member_id,
+                operation_data=safe_operation_data,
+                performed_by_id=performed_by_id
+            )
+
+            db.session.add(audit_log)
+            db.session.commit()
+
+            logger.info(f"Member operation logged: {operation} on member {member_id} by {performer.role if performer else 'unknown'} {performed_by_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to log member operation: {str(e)}")
+            # Don't fail the main operation if logging fails
+
+    @staticmethod
+    def get_audit_log(filters=None):
+        """
+        Get audit log entries with optional filtering.
+
+        Args:
+            filters: Dictionary with optional filters (member_id, performed_by_id, operation, date_range)
+
+        Returns:
+            list: List of MemberAuditLog objects
+        """
+        try:
+            query = MemberAuditLog.query
+
+            if filters:
+                # Filter by member
+                if 'member_id' in filters:
+                    query = query.filter(MemberAuditLog.member_id == filters['member_id'])
+
+                # Filter by performer
+                if 'performed_by_id' in filters:
+                    query = query.filter(MemberAuditLog.performed_by_id == filters['performed_by_id'])
+
+                # Filter by operation type
+                if 'operation' in filters:
+                    query = query.filter(MemberAuditLog.operation == filters['operation'])
+
+                # Filter by date range
+                if 'date_range' in filters:
+                    start_date, end_date = filters['date_range']
+                    query = query.filter(
+                        MemberAuditLog.timestamp >= start_date,
+                        MemberAuditLog.timestamp <= end_date
+                    )
+
+            return query.order_by(MemberAuditLog.timestamp.desc()).all()
+        except Exception as e:
+            logger.error(f"Failed to get audit log: {str(e)}")
+            return []
+
     @staticmethod
     def search_members(query, current_member_id):
         """
         Search for members by firstname, lastname, or email, excluding current member and existing favourites.
-        
+
         Args:
             query: Search string (case-insensitive)
             current_member_id: ID of the member performing the search
-            
+
         Returns:
             list: List of Member objects matching the search criteria
         """
         if not query or not query.strip():
             return []
-        
+
         # Get IDs of current member's favourites
         favourite_ids_subquery = db.session.query(favourites.c.favourite_id).filter(
             favourites.c.member_id == current_member_id
         ).subquery()
-        
+
         # Build the search query
         search_pattern = f"%{query.strip()}%"
-        
+
         results = db.session.query(Member).filter(
             # Search in firstname, lastname, or email (case-insensitive)
             or_(
@@ -40,11 +566,13 @@ class MemberService:
             # Exclude current member
             Member.id != current_member_id,
             # Exclude existing favourites
-            ~Member.id.in_(favourite_ids_subquery)
+            ~Member.id.in_(favourite_ids_subquery),
+            # Only active members
+            Member.is_active == True
         ).order_by(
             # Order alphabetically by lastname, then firstname
             Member.lastname,
             Member.firstname
         ).limit(50).all()  # Limit to 50 members
-        
+
         return results

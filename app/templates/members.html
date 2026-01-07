@@ -52,6 +52,59 @@
             </div>
         </form>
     </div>
+
+    <!-- Edit Member Form (Hidden by default) -->
+    <div id="edit-member-form" class="hidden bg-gray-50 p-6 rounded-lg mb-6">
+        <h3 class="text-lg font-semibold mb-4">Mitglied bearbeiten</h3>
+        <form id="update-member-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="edit-member-id">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Vorname</label>
+                <input type="text" id="edit-member-firstname" class="w-full border border-gray-300 rounded px-3 py-2" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Nachname</label>
+                <input type="text" id="edit-member-lastname" class="w-full border border-gray-300 rounded px-3 py-2" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">E-Mail</label>
+                <input type="email" id="edit-member-email" class="w-full border border-gray-300 rounded px-3 py-2" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Neues Passwort (optional)</label>
+                <input type="password" id="edit-member-password" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Leer lassen, um beizubehalten">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Rolle</label>
+                <select id="edit-member-role" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="member">Mitglied</option>
+                    <option value="teamster">Teamster</option>
+                    <option value="administrator">Administrator</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Status</label>
+                <div class="flex items-center gap-4 mt-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="member-status" value="active" id="edit-member-active" class="mr-2">
+                        <span class="text-sm">Aktiv</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="member-status" value="inactive" id="edit-member-inactive" class="mr-2">
+                        <span class="text-sm">Deaktiviert</span>
+                    </label>
+                </div>
+            </div>
+            <div class="md:col-span-2 flex gap-4">
+                <button type="submit" class="bg-blue-600 text-white py-2 px-6 rounded hover:bg-blue-700">
+                    Aktualisieren
+                </button>
+                <button type="button" onclick="hideEditMemberForm()" class="bg-gray-300 text-gray-700 py-2 px-6 rounded hover:bg-gray-400">
+                    Abbrechen
+                </button>
+            </div>
+        </form>
+    </div>
     {% endif %}
     
     <div class="overflow-x-auto">
@@ -108,6 +161,7 @@
 
 <script>
 function showNewMemberForm() {
+    hideEditMemberForm(); // Hide edit form if open
     document.getElementById('new-member-form').classList.remove('hidden');
 }
 
@@ -116,9 +170,21 @@ function hideNewMemberForm() {
     document.getElementById('create-member-form').reset();
 }
 
+function showEditMemberForm() {
+    hideNewMemberForm(); // Hide create form if open
+    document.getElementById('edit-member-form').classList.remove('hidden');
+    // Scroll to the form
+    document.getElementById('edit-member-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideEditMemberForm() {
+    document.getElementById('edit-member-form').classList.add('hidden');
+    document.getElementById('update-member-form').reset();
+}
+
 document.getElementById('create-member-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     const memberData = {
         firstname: document.getElementById('new-member-firstname').value,
         lastname: document.getElementById('new-member-lastname').value,
@@ -126,16 +192,16 @@ document.getElementById('create-member-form')?.addEventListener('submit', async 
         password: document.getElementById('new-member-password').value,
         role: document.getElementById('new-member-role').value
     };
-    
+
     try {
         const response = await fetch('/members/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(memberData)
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             showToast('Mitglied erfolgreich erstellt!');
             setTimeout(() => window.location.reload(), 500);
@@ -147,32 +213,150 @@ document.getElementById('create-member-form')?.addEventListener('submit', async 
     }
 });
 
+document.getElementById('update-member-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const memberId = document.getElementById('edit-member-id').value;
+    const currentStatus = document.querySelector('input[name="member-status"]:checked').value;
+    const wasActive = document.getElementById('edit-member-form').dataset.wasActive === 'true';
+
+    const memberData = {
+        firstname: document.getElementById('edit-member-firstname').value,
+        lastname: document.getElementById('edit-member-lastname').value,
+        email: document.getElementById('edit-member-email').value,
+        role: document.getElementById('edit-member-role').value
+    };
+
+    // Only include password if provided
+    const password = document.getElementById('edit-member-password').value;
+    if (password) {
+        memberData.password = password;
+    }
+
+    try {
+        // First update the member data
+        const response = await fetch(`/members/${memberId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(memberData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.error || 'Fehler beim Aktualisieren', 'error');
+            return;
+        }
+
+        // Handle status change (activate/deactivate) if needed
+        if (currentStatus === 'inactive' && wasActive) {
+            // Deactivate the member
+            const deactivateResponse = await fetch(`/members/${memberId}/deactivate`, {
+                method: 'POST'
+            });
+
+            if (!deactivateResponse.ok) {
+                const deactivateData = await deactivateResponse.json();
+                showToast(deactivateData.error || 'Fehler beim Deaktivieren', 'error');
+                return;
+            }
+        } else if (currentStatus === 'active' && !wasActive) {
+            // Reactivate the member
+            const reactivateResponse = await fetch(`/members/${memberId}/reactivate`, {
+                method: 'POST'
+            });
+
+            if (!reactivateResponse.ok) {
+                const reactivateData = await reactivateResponse.json();
+                showToast(reactivateData.error || 'Fehler beim Reaktivieren', 'error');
+                return;
+            }
+        }
+
+        showToast('Mitglied erfolgreich aktualisiert!');
+        setTimeout(() => window.location.reload(), 500);
+
+    } catch (error) {
+        showToast('Fehler beim Aktualisieren des Mitglieds', 'error');
+    }
+});
+
+async function editMember(memberId) {
+    try {
+        // Fetch member details
+        const response = await fetch(`/members/${memberId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.error || 'Fehler beim Laden der Mitgliedsdaten', 'error');
+            return;
+        }
+
+        // Populate the form
+        document.getElementById('edit-member-id').value = data.id;
+        document.getElementById('edit-member-firstname').value = data.firstname;
+        document.getElementById('edit-member-lastname').value = data.lastname;
+        document.getElementById('edit-member-email').value = data.email;
+        document.getElementById('edit-member-role').value = data.role;
+        document.getElementById('edit-member-password').value = '';
+
+        // Set status radio buttons
+        if (data.is_active) {
+            document.getElementById('edit-member-active').checked = true;
+        } else {
+            document.getElementById('edit-member-inactive').checked = true;
+        }
+
+        // Store original active status for comparison
+        document.getElementById('edit-member-form').dataset.wasActive = data.is_active;
+
+        // Show the edit form
+        showEditMemberForm();
+
+    } catch (error) {
+        showToast('Fehler beim Laden der Mitgliedsdaten', 'error');
+    }
+}
+
 async function deleteMember(memberId) {
     if (!confirm('Möchten Sie dieses Mitglied wirklich löschen?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`/members/${memberId}`, {
             method: 'DELETE'
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             showToast('Mitglied erfolgreich gelöscht!');
             setTimeout(() => window.location.reload(), 500);
         } else {
-            showToast(data.error || 'Unbekannter Fehler', 'error');
+            // If deletion failed due to active reservations, ask if they want to force delete
+            if (data.error && data.error.includes('aktive Buchungen')) {
+                if (confirm(data.error + '\n\nMöchten Sie das Mitglied trotzdem löschen? Alle Buchungen werden storniert.')) {
+                    // Force delete
+                    const forceResponse = await fetch(`/members/${memberId}?force=true`, {
+                        method: 'DELETE'
+                    });
+                    const forceData = await forceResponse.json();
+
+                    if (forceResponse.ok) {
+                        showToast('Mitglied und alle Buchungen erfolgreich gelöscht!');
+                        setTimeout(() => window.location.reload(), 500);
+                    } else {
+                        showToast(forceData.error || 'Unbekannter Fehler', 'error');
+                    }
+                }
+            } else {
+                showToast(data.error || 'Unbekannter Fehler', 'error');
+            }
         }
     } catch (error) {
         showToast('Fehler beim Löschen des Mitglieds', 'error');
     }
-}
-
-function editMember(memberId) {
-    // In a full implementation, this would open an edit form
-    showToast('Bearbeitungsfunktion wird in Kürze verfügbar sein', 'error');
 }
 </script>
 {% endblock %}
