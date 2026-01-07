@@ -97,23 +97,12 @@
                         </div>
                         {% endif %}
 
-                        <!-- Teamster Panel Dropdown (teamsters only, NOT admins) -->
+                        <!-- Teamster Panel Link (teamsters only, NOT admins) -->
                         {% if current_user.is_teamster() and not current_user.is_admin() %}
-                        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
-                            <button class="hover:bg-green-600 px-3 py-2 rounded transition-colors flex items-center gap-1" aria-haspopup="true" :aria-expanded="open">
-                                <span class="material-icons text-sm">block</span>
-                                <span>Platz-Sperrungen</span>
-                                <span class="material-icons text-sm" :class="{ 'rotate-180': open }" style="transition: transform 0.2s">expand_more</span>
-                            </button>
-                            <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-50">
-                                <div class="py-1">
-                                    <a href="{{ url_for('admin.court_blocking') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                        <span class="material-icons text-sm">block</span>
-                                        <span>Platz-Sperrungen</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                        <a href="{{ url_for('admin.court_blocking') }}" class="hover:bg-green-600 px-3 py-2 rounded transition-colors flex items-center gap-1">
+                            <span class="material-icons text-sm">block</span>
+                            <span>Platz-Sperrungen</span>
+                        </a>
                         {% endif %}
 
                         <!-- My Account Dropdown -->
@@ -203,23 +192,12 @@
                     </div>
                     {% endif %}
 
-                    <!-- Teamster Panel Section (teamsters only, NOT admins) -->
+                    <!-- Teamster Panel Link (teamsters only, NOT admins) -->
                     {% if current_user.is_teamster() and not current_user.is_admin() %}
-                    <div x-data="{ teamsterOpen: false }" class="mt-2">
-                        <button @click="teamsterOpen = !teamsterOpen" class="w-full flex items-center justify-between px-3 py-2 hover:bg-green-600 rounded">
-                            <div class="flex items-center gap-2">
-                                <span class="material-icons text-sm">block</span>
-                                <span>Platz-Sperrungen</span>
-                            </div>
-                            <span class="material-icons text-sm" :class="{ 'rotate-180': teamsterOpen }" style="transition: transform 0.2s">expand_more</span>
-                        </button>
-                        <div x-show="teamsterOpen" x-cloak class="pl-6 mt-1 space-y-1">
-                            <a href="{{ url_for('admin.court_blocking') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
-                                <span class="material-icons text-sm">block</span>
-                                <span>Platz-Sperrungen verwalten</span>
-                            </a>
-                        </div>
-                    </div>
+                    <a href="{{ url_for('admin.court_blocking') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded mt-2">
+                        <span class="material-icons text-sm">block</span>
+                        <span>Platz-Sperrungen</span>
+                    </a>
                     {% endif %}
 
                     <!-- My Account Section -->
