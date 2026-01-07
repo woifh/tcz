@@ -243,9 +243,9 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                <div class="mb-4 p-4 rounded flex items-center gap-3 {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                <div class="mb-4 p-4 rounded flex items-center gap-3 {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% elif category == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
                     <span class="material-icons">
-                        {% if category == 'error' %}error{% elif category == 'success' %}check_circle{% else %}info{% endif %}
+                        {% if category == 'error' %}error{% elif category == 'success' %}check_circle{% elif category == 'warning' %}warning{% else %}info{% endif %}
                     </span>
                     <span>{{ message }}</span>
                 </div>

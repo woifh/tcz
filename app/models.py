@@ -28,6 +28,13 @@ class Member(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     deactivated_at = db.Column(db.DateTime, nullable=True)
     deactivated_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True)
+
+    # Membership type: 'full' (can reserve courts) or 'sustaining' (no access to booking system)
+    membership_type = db.Column(db.String(20), nullable=False, default='full')
+    # Annual fee payment tracking
+    fee_paid = db.Column(db.Boolean, nullable=False, default=False)
+    fee_paid_date = db.Column(db.Date, nullable=True)
+    fee_paid_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True)
     
     @property
     def name(self):
@@ -98,6 +105,29 @@ class Member(db.Model, UserMixin):
         if self.is_teamster():
             return block.created_by_id == self.id
         return False
+
+    def is_full_member(self):
+        """Check if the member has full membership (can reserve courts)."""
+        return self.membership_type == 'full'
+
+    def is_sustaining_member(self):
+        """Check if the member has sustaining membership (no access to booking system)."""
+        return self.membership_type == 'sustaining'
+
+    def can_reserve_courts(self):
+        """Check if the member is allowed to make court reservations."""
+        return self.is_active and self.is_full_member()
+
+    def has_unpaid_fee(self):
+        """Check if the member has an unpaid membership fee."""
+        return not self.fee_paid
+
+    def is_payment_restricted(self):
+        """Check if member is restricted from booking due to unpaid fee past deadline."""
+        if self.fee_paid:
+            return False  # Paid members are never restricted
+        from app.services.settings_service import SettingsService
+        return SettingsService.is_past_payment_deadline()
 
     def __repr__(self):
         return f'<Member {self.name} ({self.email})>'
@@ -265,7 +295,7 @@ class MemberAuditLog(db.Model):
     def __init__(self, **kwargs):
         """Initialize audit log with validation."""
         super(MemberAuditLog, self).__init__(**kwargs)
-        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate']
+        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate', 'membership_change', 'payment_update']
         if self.operation and self.operation not in valid_operations:
             raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
 
@@ -312,19 +342,34 @@ class Block(db.Model):
 
 class Notification(db.Model):
     """Notification model for member notifications."""
-    
+
     __tablename__ = 'notification'
     __table_args__ = (
         db.Index('idx_notification_recipient', 'recipient_id'),
         db.Index('idx_notification_timestamp', 'timestamp'),
     )
-    
+
     id = db.Column(db.Integer, primary_key=True)
     recipient_id = db.Column(db.Integer, db.ForeignKey('member.id', ondelete='CASCADE'), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     read = db.Column(db.Boolean, nullable=False, default=False)
-    
+
     def __repr__(self):
         return f'<Notification {self.type} for Member {self.recipient_id}>'
+
+
+class SystemSetting(db.Model):
+    """SystemSetting model for storing application-wide settings."""
+
+    __tablename__ = 'system_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    value = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<SystemSetting {self.key}={self.value}>'

@@ -42,6 +42,13 @@
                     <option value="administrator">Administrator</option>
                 </select>
             </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Mitgliedschaft</label>
+                <select id="new-member-membership-type" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="full">Vollmitglied</option>
+                    <option value="sustaining">Fördermitglied</option>
+                </select>
+            </div>
             <div class="md:col-span-2 flex gap-4">
                 <button type="submit" class="bg-green-600 text-white py-2 px-6 rounded hover:bg-green-700">
                     Erstellen
@@ -81,6 +88,26 @@
                     <option value="teamster">Mannschaftsführer</option>
                     <option value="administrator">Administrator</option>
                 </select>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Mitgliedschaft</label>
+                <select id="edit-member-membership-type" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="full">Vollmitglied</option>
+                    <option value="sustaining">Fördermitglied</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Beitrag</label>
+                <div class="flex items-center gap-4 mt-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="member-fee-paid" value="true" id="edit-member-fee-paid" class="mr-2">
+                        <span class="text-sm text-green-600">Bezahlt</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="member-fee-paid" value="false" id="edit-member-fee-unpaid" class="mr-2">
+                        <span class="text-sm text-red-600">Offen</span>
+                    </label>
+                </div>
             </div>
             <div>
                 <label class="block text-gray-700 font-semibold mb-2">Status</label>
@@ -133,6 +160,12 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="role">
                         <span class="flex items-center gap-1">Rolle <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
                     </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="membership">
+                        <span class="flex items-center gap-1">Mitgliedschaft <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="payment">
+                        <span class="flex items-center gap-1">Beitrag <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
+                    </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="bookings">
                         <span class="flex items-center gap-1">Buchungen <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
                     </th>
@@ -153,6 +186,24 @@
                         <span class="{% if member.role == 'administrator' %}text-yellow-600{% elif member.role == 'teamster' %}text-blue-600{% else %}text-gray-600{% endif %}">
                             {{ 'Administrator' if member.role == 'administrator' else 'Mannschaftsführer' if member.role == 'teamster' else 'Mitglied' }}
                         </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="{% if member.membership_type == 'full' %}text-green-600{% else %}text-blue-600{% endif %}">
+                            {{ 'Vollmitglied' if member.membership_type == 'full' else 'Fördermitglied' }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if member.fee_paid %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span class="material-icons text-xs mr-1">check_circle</span>
+                            Bezahlt
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <span class="material-icons text-xs mr-1">warning</span>
+                            Offen
+                        </span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm">
@@ -218,7 +269,8 @@ document.getElementById('create-member-form')?.addEventListener('submit', async 
         lastname: document.getElementById('new-member-lastname').value,
         email: document.getElementById('new-member-email').value,
         password: document.getElementById('new-member-password').value,
-        role: document.getElementById('new-member-role').value
+        role: document.getElementById('new-member-role').value,
+        membership_type: document.getElementById('new-member-membership-type').value
     };
 
     try {
@@ -252,7 +304,9 @@ document.getElementById('update-member-form')?.addEventListener('submit', async 
         firstname: document.getElementById('edit-member-firstname').value,
         lastname: document.getElementById('edit-member-lastname').value,
         email: document.getElementById('edit-member-email').value,
-        role: document.getElementById('edit-member-role').value
+        role: document.getElementById('edit-member-role').value,
+        membership_type: document.getElementById('edit-member-membership-type').value,
+        fee_paid: document.querySelector('input[name="member-fee-paid"]:checked').value
     };
 
     // Only include password if provided
@@ -327,6 +381,16 @@ async function editMember(memberId) {
         document.getElementById('edit-member-email').value = data.email;
         document.getElementById('edit-member-role').value = data.role;
         document.getElementById('edit-member-password').value = '';
+
+        // Set membership type
+        document.getElementById('edit-member-membership-type').value = data.membership_type || 'full';
+
+        // Set fee paid radio buttons
+        if (data.fee_paid) {
+            document.getElementById('edit-member-fee-paid').checked = true;
+        } else {
+            document.getElementById('edit-member-fee-unpaid').checked = true;
+        }
 
         // Set status radio buttons
         if (data.is_active) {
@@ -451,8 +515,10 @@ async function deleteMember(memberId) {
             'name': 0,
             'email': 1,
             'role': 2,
-            'bookings': 3,
-            'created': 4
+            'membership': 3,
+            'payment': 4,
+            'bookings': 5,
+            'created': 6
         }[column];
 
         rows.sort((a, b) => {
@@ -470,10 +536,10 @@ async function deleteMember(memberId) {
                 return direction === 'asc' ? aVal - bVal : bVal - aVal;
             }
 
-            // Handle numeric sorting for bookings
+            // Handle numeric sorting for bookings (extract number from "X Buchungen")
             if (column === 'bookings') {
-                aVal = parseInt(aVal.split('/')[0]) || 0;
-                bVal = parseInt(bVal.split('/')[0]) || 0;
+                aVal = parseInt(aVal.match(/\d+/)?.[0]) || 0;
+                bVal = parseInt(bVal.match(/\d+/)?.[0]) || 0;
                 return direction === 'asc' ? aVal - bVal : bVal - aVal;
             }
 
@@ -482,6 +548,22 @@ async function deleteMember(memberId) {
                 const rolePriority = { 'Administrator': 3, 'Mannschaftsführer': 2, 'Mitglied': 1 };
                 aVal = rolePriority[aVal] || 0;
                 bVal = rolePriority[bVal] || 0;
+                return direction === 'asc' ? aVal - bVal : bVal - aVal;
+            }
+
+            // Handle membership sorting (Vollmitglied > Fördermitglied)
+            if (column === 'membership') {
+                const membershipPriority = { 'Vollmitglied': 2, 'Fördermitglied': 1 };
+                aVal = membershipPriority[aVal] || 0;
+                bVal = membershipPriority[bVal] || 0;
+                return direction === 'asc' ? aVal - bVal : bVal - aVal;
+            }
+
+            // Handle payment sorting (Bezahlt > Offen)
+            if (column === 'payment') {
+                const paymentPriority = { 'Bezahlt': 2, 'Offen': 1 };
+                aVal = paymentPriority[aVal] || 0;
+                bVal = paymentPriority[bVal] || 0;
                 return direction === 'asc' ? aVal - bVal : bVal - aVal;
             }
 

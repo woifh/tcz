@@ -270,14 +270,27 @@ class ValidationService:
         try:
             from datetime import datetime, timedelta
             from app.utils.error_handling import get_time_based_error_messages, log_error_with_context
-            
+            from app.models import Member
+            from app.constants.messages import ErrorMessages
+
             # Get updated error messages
             error_messages = get_time_based_error_messages()
-            
+
             # Ensure consistent Europe/Berlin timezone handling
             berlin_time = ensure_berlin_timezone(current_time)
             log_timezone_operation("validate_all_booking_constraints", current_time, berlin_time)
-            
+
+            # Validate member can reserve (membership type check)
+            member = Member.query.get(member_id)
+            if not member:
+                return False, ErrorMessages.MEMBER_NOT_FOUND
+            if not member.can_reserve_courts():
+                return False, ErrorMessages.SUSTAINING_MEMBER_NO_ACCESS
+
+            # Check if member is restricted due to unpaid fee past deadline
+            if member.is_payment_restricted():
+                return False, ErrorMessages.PAYMENT_DEADLINE_PASSED
+
             # Validate not in the past (with special handling for short notice bookings)
             booking_datetime = datetime.combine(date, start_time)
             

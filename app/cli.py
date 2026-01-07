@@ -140,16 +140,16 @@ Ihr Tennisclub-Team
 def delete_reservations_command(confirm):
     """Delete all reservations from the database."""
     count = Reservation.query.count()
-    
+
     if count == 0:
         click.echo('No reservations to delete.')
         return
-    
+
     if not confirm:
         if not click.confirm(f'Are you sure you want to delete all {count} reservations?'):
             click.echo('Deletion cancelled.')
             return
-    
+
     try:
         Reservation.query.delete()
         db.session.commit()
@@ -159,9 +159,65 @@ def delete_reservations_command(confirm):
         click.echo(f'✗ Failed to delete reservations: {str(e)}')
 
 
+@click.command('reset-payment-status')
+@click.option('--confirm', is_flag=True, help='Confirm reset without prompt')
+@click.option('--force', is_flag=True, help='Force reset even if already done this year')
+@with_appcontext
+def reset_payment_status_command(confirm, force):
+    """Reset all members' payment status to unpaid.
+
+    This command is intended to be run on January 1st each year,
+    either manually or via a cron job.
+
+    Example cron entry (run at midnight on Jan 1st):
+        0 0 1 1 * cd /path/to/tcz && flask reset-payment-status --confirm
+    """
+    from datetime import date
+    from flask import current_app
+    from app.services.member_service import MemberService
+
+    today = date.today()
+
+    # Check if we should run (only on January 1st unless forced)
+    if not force and (today.day != 1 or today.month != 1):
+        click.echo(f'Payment reset should only run on January 1st.')
+        click.echo(f'Today is {today.strftime("%d.%m.%Y")}.')
+        click.echo('Use --force to run anyway.')
+        return
+
+    # Count members with paid status
+    paid_count = Member.query.filter_by(fee_paid=True).count()
+    total_count = Member.query.filter_by(is_active=True).count()
+
+    if paid_count == 0:
+        click.echo('No members have paid status to reset.')
+        return
+
+    click.echo(f'Found {paid_count} members with paid status (out of {total_count} active members).')
+
+    if not confirm:
+        if not click.confirm('Are you sure you want to reset all payment statuses to unpaid?'):
+            click.echo('Reset cancelled.')
+            return
+
+    try:
+        reset_count, error = MemberService.reset_all_payment_status()
+
+        if error:
+            click.echo(f'✗ Failed to reset payment status: {error}')
+            return
+
+        click.echo(f'✓ Reset payment status for {reset_count} members.')
+        click.echo(f'  All members now have fee_paid=False')
+
+    except Exception as e:
+        click.echo(f'✗ Failed to reset payment status: {str(e)}')
+
+
 def init_app(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(create_admin_command)
     app.cli.add_command(init_courts_command)
     app.cli.add_command(test_email_command)
     app.cli.add_command(delete_reservations_command)
+    app.cli.add_command(reset_payment_status_command)

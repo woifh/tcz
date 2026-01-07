@@ -4,6 +4,7 @@ from flask_login import login_user, logout_user, current_user
 # Removed limiter import for local development
 from app.models import Member
 from app.utils.validators import validate_email_address, validate_string_length, ValidationError
+from app.constants.messages import ErrorMessages
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -32,7 +33,17 @@ def login():
                 flash('Ihr Konto wurde deaktiviert. Bitte kontaktieren Sie den Administrator.', 'error')
                 return render_template('login.html')
 
+            # Check if sustaining member (no access to booking system)
+            if member.is_sustaining_member():
+                flash(ErrorMessages.SUSTAINING_MEMBER_NO_ACCESS, 'error')
+                return render_template('login.html')
+
             login_user(member)
+
+            # Show payment reminder if fee is unpaid
+            if member.has_unpaid_fee():
+                flash(ErrorMessages.MEMBER_FEE_UNPAID_REMINDER, 'warning')
+
             flash('Erfolgreich angemeldet!', 'success')
             next_page = request.args.get('next')
             return redirect(next_page or url_for('dashboard.index'))

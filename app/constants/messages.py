@@ -56,6 +56,18 @@ class ErrorMessages:
     MEMBER_NOT_DEACTIVATED = "Mitglied ist nicht deaktiviert"
     MEMBER_HAS_ACTIVE_RESERVATIONS = "Mitglied hat aktive Buchungen und kann nicht gelöscht werden"
 
+    # Membership type errors
+    SUSTAINING_MEMBER_NO_ACCESS = "Fördermitglieder haben keinen Zugang zum Buchungssystem"
+    MEMBER_INVALID_MEMBERSHIP_TYPE = "Ungültiger Mitgliedschaftstyp"
+
+    # Payment errors
+    MEMBER_FEE_UNPAID_REMINDER = "Ihr Mitgliedsbeitrag ist noch nicht bezahlt. Bitte kontaktieren Sie den Vorstand."
+    MEMBER_FEE_UNPAID_BOOKING_WARNING = "Hinweis: Ihr Mitgliedsbeitrag ist noch nicht bezahlt."
+
+    # Payment deadline errors
+    PAYMENT_DEADLINE_PASSED = "Die Zahlungsfrist ist abgelaufen. Bitte bezahlen Sie Ihren Mitgliedsbeitrag, um wieder buchen zu können."
+    PAYMENT_DEADLINE_INVALID_DATE = "Ungültiges Datum für Zahlungsfrist"
+
 class SuccessMessages:
     """Success messages used throughout the application."""
 
@@ -81,6 +93,15 @@ class SuccessMessages:
     MEMBER_DEACTIVATED = "Mitglied erfolgreich deaktiviert"
     MEMBER_REACTIVATED = "Mitglied erfolgreich reaktiviert"
     MEMBER_ROLE_CHANGED = "Mitgliederrolle erfolgreich geändert"
+
+    # Membership and payment success
+    MEMBER_MEMBERSHIP_TYPE_CHANGED = "Mitgliedschaftstyp erfolgreich geändert"
+    MEMBER_FEE_MARKED_PAID = "Beitragszahlung erfolgreich vermerkt"
+    MEMBER_FEE_MARKED_UNPAID = "Beitragszahlung entfernt"
+
+    # Payment deadline success
+    PAYMENT_DEADLINE_SET = "Zahlungsfrist erfolgreich gesetzt"
+    PAYMENT_DEADLINE_CLEARED = "Zahlungsfrist wurde entfernt"
 
 
 class InfoMessages:

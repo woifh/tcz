@@ -5,6 +5,7 @@ from app import db
 from app.models import Member, MemberAuditLog, Reservation, favourites
 from app.constants.messages import ErrorMessages, SuccessMessages
 from app.constants.roles import UserRole
+from app.constants.membership import MembershipType
 from app.utils.validators import (
     validate_required_fields,
     validate_email_address,
@@ -32,7 +33,7 @@ class MemberService:
         return value
 
     @staticmethod
-    def create_member(firstname, lastname, email, password, role='member', admin_id=None):
+    def create_member(firstname, lastname, email, password, role='member', membership_type='full', admin_id=None):
         """
         Create a new member with validation.
 
@@ -42,6 +43,7 @@ class MemberService:
             email: Member's email address
             password: Plain text password
             role: Member role (default: 'member')
+            membership_type: Membership type 'full' or 'sustaining' (default: 'full')
             admin_id: ID of administrator creating the member
 
         Returns:
@@ -84,12 +86,17 @@ class MemberService:
             if not UserRole.is_valid(role):
                 return None, ErrorMessages.MEMBER_INVALID_ROLE
 
+            # Validate membership type
+            if not MembershipType.is_valid(membership_type):
+                return None, ErrorMessages.MEMBER_INVALID_MEMBERSHIP_TYPE
+
             # Create member
             member = Member(
                 firstname=firstname.strip(),
                 lastname=lastname.strip(),
                 email=email.lower(),
-                role=role
+                role=role,
+                membership_type=membership_type
             )
             member.set_password(password)
 
@@ -105,7 +112,8 @@ class MemberService:
                         'firstname': firstname,
                         'lastname': lastname,
                         'email': email,
-                        'role': role
+                        'role': role,
+                        'membership_type': membership_type
                     },
                     performed_by_id=admin_id
                 )
@@ -243,6 +251,33 @@ class MemberService:
                     member.role = new_role
                     role_changed = True
 
+            # Update membership type (admin only)
+            membership_changed = False
+            if 'membership_type' in updates:
+                new_membership_type = updates['membership_type']
+                if not MembershipType.is_valid(new_membership_type):
+                    return None, ErrorMessages.MEMBER_INVALID_MEMBERSHIP_TYPE
+                if member.membership_type != new_membership_type:
+                    changes['membership_type'] = {'old': member.membership_type, 'new': new_membership_type}
+                    member.membership_type = new_membership_type
+                    membership_changed = True
+
+            # Update fee_paid (admin only)
+            payment_changed = False
+            if 'fee_paid' in updates:
+                new_fee_paid = bool(updates['fee_paid'])
+                if member.fee_paid != new_fee_paid:
+                    changes['fee_paid'] = {'old': member.fee_paid, 'new': new_fee_paid}
+                    member.fee_paid = new_fee_paid
+                    if new_fee_paid:
+                        from datetime import date
+                        member.fee_paid_date = date.today()
+                        member.fee_paid_by_id = admin_id
+                    else:
+                        member.fee_paid_date = None
+                        member.fee_paid_by_id = None
+                    payment_changed = True
+
             # If no changes, return early
             if not changes:
                 return member, None
@@ -251,7 +286,15 @@ class MemberService:
 
             # Log the operation
             if admin_id:
-                operation = 'role_change' if role_changed and len(changes) == 1 else 'update'
+                # Determine operation type based on what changed
+                if role_changed and len(changes) == 1:
+                    operation = 'role_change'
+                elif membership_changed and len(changes) == 1:
+                    operation = 'membership_change'
+                elif payment_changed and len(changes) == 1:
+                    operation = 'payment_update'
+                else:
+                    operation = 'update'
                 MemberService.log_member_operation(
                     operation=operation,
                     member_id=member_id,
@@ -576,3 +619,38 @@ class MemberService:
         ).limit(50).all()  # Limit to 50 members
 
         return results
+
+    @staticmethod
+    def reset_all_payment_status():
+        """
+        Reset payment status for all members (for annual fee reset).
+        This is called on January 1st each year.
+
+        Returns:
+            tuple: (count of members reset, error message or None)
+        """
+        try:
+            # Count members that will be affected
+            count = Member.query.filter(Member.fee_paid == True).count()
+
+            if count == 0:
+                logger.info("No members with paid status to reset")
+                return 0, None
+
+            # Reset all payment statuses
+            Member.query.update({
+                'fee_paid': False,
+                'fee_paid_date': None,
+                'fee_paid_by_id': None
+            }, synchronize_session=False)
+
+            db.session.commit()
+
+            logger.info(f"Reset payment status for {count} members (annual reset)")
+
+            return count, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to reset payment status: {str(e)}")
+            return 0, f"Fehler beim Zurücksetzen der Beitragszahlungen: {str(e)}"

@@ -114,6 +114,7 @@ def create_member():
         email = data.get('email')
         password = data.get('password')
         role = data.get('role', 'member')
+        membership_type = data.get('membership_type', 'full')
 
         # Create member via service
         member, error = MemberService.create_member(
@@ -122,6 +123,7 @@ def create_member():
             email=email,
             password=password,
             role=role,
+            membership_type=membership_type,
             admin_id=current_user.id
         )
 
@@ -133,6 +135,7 @@ def create_member():
             'name': member.name,
             'email': member.email,
             'role': member.role,
+            'membership_type': member.membership_type,
             'message': SuccessMessages.MEMBER_CREATED
         }), 201
 
@@ -157,6 +160,8 @@ def get_member(id):
         'name': member.name,
         'email': member.email,
         'role': member.role,
+        'membership_type': member.membership_type,
+        'fee_paid': member.fee_paid,
         'is_active': member.is_active,
         'created_at': member.created_at.isoformat() if member.created_at else None
     }), 200
@@ -188,6 +193,19 @@ def update_member(id):
         if 'role' in data and current_user.is_admin():
             updates['role'] = data['role']
 
+        # Only admin can change membership type
+        if 'membership_type' in data and current_user.is_admin():
+            updates['membership_type'] = data['membership_type']
+
+        # Only admin can change fee_paid status
+        if 'fee_paid' in data and current_user.is_admin():
+            # Handle string 'true'/'false' or boolean
+            fee_paid_value = data['fee_paid']
+            if isinstance(fee_paid_value, str):
+                updates['fee_paid'] = fee_paid_value.lower() in ('true', '1', 'yes')
+            else:
+                updates['fee_paid'] = bool(fee_paid_value)
+
         # Update member via service
         member, error = MemberService.update_member(
             member_id=id,
@@ -203,6 +221,8 @@ def update_member(id):
             'name': member.name,
             'email': member.email,
             'role': member.role,
+            'membership_type': member.membership_type,
+            'fee_paid': member.fee_paid,
             'message': SuccessMessages.MEMBER_UPDATED
         }), 200
 

@@ -143,5 +143,70 @@ def create_app(config_name=None):
     # Register CLI commands
     from app import cli
     cli.init_app(app)
-    
+
+    # Auto-reset payment status on January 1st
+    with app.app_context():
+        _check_annual_payment_reset(app)
+
     return app
+
+
+def _check_annual_payment_reset(app):
+    """Check if annual payment reset is needed on January 1st.
+
+    This runs once per app startup and checks if today is January 1st.
+    If so, and if payment statuses haven't been reset yet this year,
+    it automatically resets all members' fee_paid status to False.
+    """
+    import logging
+    from datetime import date
+    from app.models import Member, SystemSetting
+
+    logger = logging.getLogger(__name__)
+    today = date.today()
+
+    # Only run on January 1st
+    if today.month != 1 or today.day != 1:
+        return
+
+    try:
+        # Check if we already reset this year using a system setting
+        current_year = today.year
+        setting_key = f'payment_reset_year_{current_year}'
+
+        # Try to get existing setting
+        existing_setting = SystemSetting.query.filter_by(key=setting_key).first()
+
+        if existing_setting:
+            # Already reset this year
+            logger.info(f'Payment reset already performed for {current_year}')
+            return
+
+        # Count members that need reset
+        paid_count = Member.query.filter_by(fee_paid=True).count()
+
+        if paid_count == 0:
+            logger.info('No members need payment status reset')
+            # Still mark as done so we don't check again
+            new_setting = SystemSetting(key=setting_key, value='done')
+            db.session.add(new_setting)
+            db.session.commit()
+            return
+
+        # Perform the reset
+        from app.services.member_service import MemberService
+        reset_count, error = MemberService.reset_all_payment_status()
+
+        if error:
+            logger.error(f'Failed to auto-reset payment status: {error}')
+            return
+
+        # Mark as done for this year
+        new_setting = SystemSetting(key=setting_key, value='done')
+        db.session.add(new_setting)
+        db.session.commit()
+
+        logger.info(f'Auto-reset payment status for {reset_count} members on {today}')
+
+    except Exception as e:
+        logger.error(f'Error during annual payment reset check: {e}')

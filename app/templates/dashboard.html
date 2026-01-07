@@ -3,6 +3,53 @@
 {% block title %}Übersicht - Tennisclub{% endblock %}
 
 {% block content %}
+<!-- Payment Reminder Banner -->
+{% if current_user.has_unpaid_fee() %}
+    {% if is_past_deadline %}
+    <!-- Booking restricted - deadline passed -->
+    <div class="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+        <div class="flex items-center">
+            <span class="material-icons text-red-600 mr-3">block</span>
+            <div>
+                <p class="text-red-800 font-semibold">Buchungen gesperrt</p>
+                <p class="text-red-700 text-sm">Die Zahlungsfrist ist abgelaufen. Bitte bezahlen Sie Ihren Mitgliedsbeitrag, um wieder buchen zu können.</p>
+            </div>
+        </div>
+    </div>
+    {% elif payment_deadline %}
+    <!-- Deadline set but not passed - show countdown -->
+    <div class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+        <div class="flex items-center">
+            <span class="material-icons text-yellow-600 mr-3">schedule</span>
+            <div>
+                <p class="text-yellow-800 font-semibold">Mitgliedsbeitrag offen</p>
+                <p class="text-yellow-700 text-sm">
+                    {% if days_until_deadline == 0 %}
+                    Zahlungsfrist: <strong>Heute</strong> ({{ payment_deadline.strftime('%d.%m.%Y') }})
+                    {% elif days_until_deadline == 1 %}
+                    Noch <strong>1 Tag</strong> bis zur Zahlungsfrist am {{ payment_deadline.strftime('%d.%m.%Y') }}
+                    {% else %}
+                    Noch <strong>{{ days_until_deadline }} Tage</strong> bis zur Zahlungsfrist am {{ payment_deadline.strftime('%d.%m.%Y') }}
+                    {% endif %}
+                </p>
+                <p class="text-yellow-600 text-xs mt-1">Bitte kontaktieren Sie den Vorstand, um Ihren Beitrag zu bezahlen.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- No deadline set - just reminder -->
+    <div class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+        <div class="flex items-center">
+            <span class="material-icons text-yellow-600 mr-3">warning</span>
+            <div>
+                <p class="text-yellow-800 font-semibold">Mitgliedsbeitrag offen</p>
+                <p class="text-yellow-700 text-sm">Ihr Mitgliedsbeitrag ist noch nicht bezahlt. Bitte kontaktieren Sie den Vorstand.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}
+
 <div class="bg-white rounded-lg shadow-md p-6" x-data="dashboard()" x-init="init()">
     <div class="flex justify-between items-center mb-6">
         <h2 class="hidden lg:flex text-2xl font-bold items-center gap-2">

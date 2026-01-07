@@ -20,7 +20,24 @@ def index():
 @login_required
 def dashboard():
     """User dashboard - main authenticated dashboard."""
-    return render_template('dashboard.html')
+    from app.services.settings_service import SettingsService
+
+    # Get payment deadline info for members with unpaid fees
+    payment_deadline = None
+    days_until_deadline = None
+    is_past_deadline = False
+
+    if current_user.has_unpaid_fee():
+        payment_deadline = SettingsService.get_payment_deadline()
+        days_until_deadline = SettingsService.days_until_deadline()
+        is_past_deadline = SettingsService.is_past_payment_deadline()
+
+    return render_template(
+        'dashboard.html',
+        payment_deadline=payment_deadline,
+        days_until_deadline=days_until_deadline,
+        is_past_deadline=is_past_deadline
+    )
 
 
 @bp.route('/overview')
