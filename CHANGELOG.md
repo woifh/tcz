@@ -5,9 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [2.2.0] - 2026-01-07
 
 ### Added
-- Unified audit log combining block and member operations
-- Filter functionality in audit log (All/Blocks/Members)
+- Unified audit log combining block, member, and blocking reason operations
+- Filter functionality in audit log (All/Blocks/Members/Blocking Reasons)
 - Human-readable audit log details with formatted timestamps and actions
+- Audit logging for blocking reason management (create, update, delete, deactivate)
 
 ### Changed
 - Removed email column from member list view for cleaner layout
