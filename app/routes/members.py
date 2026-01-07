@@ -15,22 +15,28 @@ bp = Blueprint('members', __name__, url_prefix='/members')
 @admin_required
 def list_members():
     """List all members (admin only)."""
-    from app.services.reservation_service import ReservationService
+    from app.models import Reservation
 
     members, error = MemberService.get_all_members(include_inactive=False)
     if error:
         flash(error, 'error')
         return redirect(url_for('dashboard.index'))
 
-    # Add reservation counts to each member
+    # Add total reservation counts to each member
     for member in members:
-        # Get active booking sessions (excludes short notice by default)
-        active_sessions = ReservationService.get_member_active_booking_sessions(member.id)
-        member.active_booking_count = len(active_sessions)
+        # Count total ordinary bookings (not short notice)
+        member.total_booking_count = Reservation.query.filter(
+            Reservation.booked_for_id == member.id,
+            Reservation.is_short_notice == False,
+            Reservation.status == 'active'
+        ).count()
 
-        # Get active short notice bookings
-        short_notice_bookings = ReservationService.get_member_active_short_notice_bookings(member.id)
-        member.short_notice_count = len(short_notice_bookings)
+        # Count total short notice bookings
+        member.short_notice_count = Reservation.query.filter(
+            Reservation.booked_for_id == member.id,
+            Reservation.is_short_notice == True,
+            Reservation.status == 'active'
+        ).count()
 
     return render_template('members.html', members=members)
 
