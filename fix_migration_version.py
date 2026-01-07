@@ -9,11 +9,28 @@ Usage:
     python fix_migration_version.py
 """
 import sys
+import os
+from pathlib import Path
+
+# Load production environment variables before importing app
+try:
+    from dotenv import load_dotenv
+    env_file = Path(__file__).parent / '.env.production'
+    if env_file.exists():
+        print(f"Loading environment from: {env_file}")
+        load_dotenv(env_file)
+    else:
+        print("Warning: .env.production not found, using default .env")
+        load_dotenv()
+except ImportError:
+    print("Warning: python-dotenv not installed")
+
 from app import create_app, db
 
 def fix_migration_version():
     """Update alembic_version to the current migration."""
-    app = create_app()
+    # Ensure we're using production config
+    app = create_app('production')
 
     with app.app_context():
         # Current migration version in migrations/versions/
