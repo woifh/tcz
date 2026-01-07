@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [2.1.0] - 2026-01-07
 
 ### Fixed
-- Member search in booking dialog not showing on production (race condition between Alpine.js and ES module loading)
+- Member search in booking dialog not showing on production
 
 ## [2.0.0] - 2026-01-07
 
