@@ -58,19 +58,28 @@
         <!-- Row 4: Email | Phone -->
         <div>
             <label class="block text-gray-700 font-semibold mb-2">E-Mail</label>
-            <input type="email" id="member-email" class="w-full border border-gray-300 rounded px-3 py-2" required>
+            <input type="email" id="member-email" class="w-full border border-gray-300 rounded px-3 py-2" autocomplete="off" required>
         </div>
         <div>
             <label class="block text-gray-700 font-semibold mb-2">Telefon</label>
             <input type="tel" id="member-phone" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Telefonnummer">
         </div>
 
-        <!-- Row 5: Password (full width) -->
-        <div class="md:col-span-2">
+        <!-- Row 5: Password | Password Confirmation -->
+        <div>
             <label class="block text-gray-700 font-semibold mb-2">
                 {% if edit_member_data %}Neues Passwort (optional){% else %}Passwort{% endif %}
             </label>
             <input type="password" id="member-password" class="w-full border border-gray-300 rounded px-3 py-2"
+                   autocomplete="new-password"
+                   {% if edit_member_data %}placeholder="Leer lassen, um beizubehalten"{% else %}required{% endif %}>
+        </div>
+        <div>
+            <label class="block text-gray-700 font-semibold mb-2">
+                {% if edit_member_data %}Passwort bestätigen{% else %}Passwort bestätigen{% endif %}
+            </label>
+            <input type="password" id="member-password-confirm" class="w-full border border-gray-300 rounded px-3 py-2"
+                   autocomplete="new-password"
                    {% if edit_member_data %}placeholder="Leer lassen, um beizubehalten"{% else %}required{% endif %}>
         </div>
 
@@ -184,7 +193,14 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         const password = document.getElementById('member-password').value;
-        if (password) {
+        const passwordConfirm = document.getElementById('member-password-confirm').value;
+
+        // Validate password confirmation
+        if (password || passwordConfirm) {
+            if (password !== passwordConfirm) {
+                showToast('Passwörter stimmen nicht überein', 'error');
+                return;
+            }
             memberData.password = password;
         }
 
