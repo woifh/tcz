@@ -349,6 +349,21 @@ window.isAuthenticated = true;
 window.dashboard = dashboard;
 window.bookingModal = bookingModal;
 
+// Re-initialize Alpine components if Alpine already loaded
+// This handles the race condition where Alpine loads before our module
+if (window.Alpine) {
+    // Find elements that need reinitialization
+    document.querySelectorAll('[x-data*="bookingModal"]').forEach(el => {
+        // Destroy existing (broken) Alpine state and reinitialize
+        window.Alpine.destroyTree(el);
+        window.Alpine.initTree(el);
+    });
+    document.querySelectorAll('[x-data*="dashboard"]').forEach(el => {
+        window.Alpine.destroyTree(el);
+        window.Alpine.initTree(el);
+    });
+}
+
 console.log('Alpine components loaded');
 </script>
 {% endblock %}

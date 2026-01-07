@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.1.0] - 2026-01-07
+
+### Behoben
+- Mitglieder-Suche im Buchungsdialog wurde auf Produktion nicht angezeigt (Race Condition zwischen Alpine.js und ES-Modul-Laden behoben)
+
 ## [2.0.0] - 2026-01-07
 
 ### Hinzugefügt
