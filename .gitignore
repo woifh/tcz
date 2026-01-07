@@ -28,7 +28,10 @@ instance/
 .webassets-cache
 
 # Environment variables
+# IMPORTANT: Never commit production credentials!
 .env
+.env.production
+.env.*.local
 
 # Database
 *.db

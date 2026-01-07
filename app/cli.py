@@ -50,23 +50,88 @@ def init_courts_command():
 
 
 @click.command('test-email')
-@click.option('--to', prompt='Recipient email', help='Test email recipient')
+@click.argument('recipient', required=False)
 @with_appcontext
-def test_email_command(to):
-    """Test email configuration."""
+def test_email_command(recipient):
+    """Test email configuration by sending a test email.
+
+    Usage:
+        flask test-email recipient@example.com
+    """
+    from flask import current_app
     from flask_mail import Message
     from app import mail
-    
+
+    # Display current email configuration (without exposing password)
+    click.echo('\nEmail Configuration:')
+    click.echo(f'  Server: {current_app.config.get("MAIL_SERVER")}:{current_app.config.get("MAIL_PORT")}')
+    click.echo(f'  TLS: {"Enabled" if current_app.config.get("MAIL_USE_TLS") else "Disabled"}')
+    click.echo(f'  SSL: {"Enabled" if current_app.config.get("MAIL_USE_SSL") else "Disabled"}')
+
+    username = current_app.config.get('MAIL_USERNAME')
+    if username:
+        click.echo(f'  Username: {username}')
+    else:
+        click.echo(f'  Username: Not configured')
+
+    click.echo(f'  Default Sender: {current_app.config.get("MAIL_DEFAULT_SENDER")}')
+    click.echo('')
+
+    # Check if email is configured
+    if not username or not current_app.config.get('MAIL_PASSWORD'):
+        click.echo('⚠ Email is not configured')
+        click.echo('  Set MAIL_USERNAME and MAIL_PASSWORD in your .env file to enable email notifications.')
+        click.echo('  See docs/EMAIL_SETUP.md for instructions on setting up Gmail App Password.')
+        return
+
+    # Prompt for recipient if not provided
+    if not recipient:
+        recipient = click.prompt('Recipient email address')
+
+    # Send test email
     try:
         msg = Message(
-            subject='Test Email - Tennis Club',
-            recipients=[to],
-            body='Dies ist eine Test-E-Mail vom Tennisclub-Reservierungssystem.\n\nWenn Sie diese E-Mail erhalten, funktioniert die E-Mail-Konfiguration korrekt.'
+            subject='Tennis Club - Email Configuration Test',
+            recipients=[recipient],
+            body='''Hallo,
+
+Dies ist eine Test-E-Mail vom Tennisclub-Reservierungssystem.
+
+Wenn Sie diese E-Mail erhalten, funktioniert die E-Mail-Konfiguration korrekt.
+
+SMTP Server: {server}:{port}
+TLS: {tls}
+From: {sender}
+
+Weitere Informationen zur E-Mail-Konfiguration finden Sie in docs/EMAIL_SETUP.md
+
+Mit freundlichen Grüßen
+Ihr Tennisclub-Team
+'''.format(
+                server=current_app.config.get('MAIL_SERVER'),
+                port=current_app.config.get('MAIL_PORT'),
+                tls='Aktiviert' if current_app.config.get('MAIL_USE_TLS') else 'Deaktiviert',
+                sender=current_app.config.get('MAIL_DEFAULT_SENDER')
+            )
         )
+
         mail.send(msg)
-        click.echo(f'✓ Test email sent to: {to}')
+
+        click.echo('✓ Email configuration test successful!')
+        click.echo(f'  Test email sent to: {recipient}')
+        click.echo('  Check your inbox to confirm receipt.')
+        click.echo('')
+
     except Exception as e:
-        click.echo(f'✗ Failed to send email: {str(e)}')
+        click.echo(f'✗ Failed to send test email')
+        click.echo(f'  Error: {str(e)}')
+        click.echo('')
+        click.echo('Troubleshooting tips:')
+        click.echo('  1. Verify you are using a Gmail App Password (not your account password)')
+        click.echo('  2. Check that MAIL_USERNAME and MAIL_PASSWORD are correct in .env')
+        click.echo('  3. Ensure 2-Step Verification is enabled on your Gmail account')
+        click.echo('  4. See docs/EMAIL_SETUP.md for detailed setup instructions')
+        click.echo('')
 
 
 @click.command('delete-reservations')

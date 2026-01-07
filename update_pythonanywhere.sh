@@ -50,16 +50,54 @@ echo "Step 4: Updating dependencies..."
 pip install -r requirements.txt --upgrade
 print_status "Dependencies updated"
 
-# Step 5: Run database migrations
+# Step 5: Check email configuration
 echo ""
-echo "Step 5: Running database migrations..."
+echo "Step 5: Checking email configuration..."
+if [ -f ".env.production" ]; then
+    print_status ".env.production file exists"
+
+    # Check if email credentials are set (without exposing them)
+    if grep -q "^MAIL_USERNAME=.\+@.\+\...\+" .env.production && \
+       grep -q "^MAIL_PASSWORD=.\+" .env.production; then
+        print_status "Email credentials appear to be configured"
+    else
+        print_warning "Email credentials may not be configured in .env.production"
+        echo "  If you want email notifications, ensure MAIL_USERNAME and MAIL_PASSWORD are set"
+        echo "  See docs/EMAIL_SETUP.md for setup instructions"
+    fi
+else
+    print_warning ".env.production file not found"
+    echo "  Email notifications may not work in production"
+    echo "  Copy .env.production.example to .env.production and configure it"
+    echo "  See docs/EMAIL_SETUP.md for detailed instructions"
+fi
+
+# Step 6: Run database migrations
+echo ""
+echo "Step 6: Running database migrations..."
 export FLASK_APP=wsgi.py
 flask db upgrade
 print_status "Database migrations completed"
 
-# Step 6: Reload web app
+# Step 7: Optional - Test email configuration
 echo ""
-echo "Step 6: Reloading web app..."
+echo "Step 7: (Optional) Test email configuration..."
+echo ""
+echo "To test email sending, run:"
+echo "  flask test-email your-email@gmail.com"
+echo ""
+read -p "Do you want to test email now? (y/N): " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    read -p "Enter recipient email address: " EMAIL_RECIPIENT
+    flask test-email "$EMAIL_RECIPIENT"
+else
+    echo "Skipping email test"
+fi
+
+# Step 8: Reload web app
+echo ""
+echo "Step 8: Reloading web app..."
 echo ""
 print_warning "You need to reload your web app manually:"
 echo "1. Go to: https://www.pythonanywhere.com/user/$USERNAME/webapps/"
