@@ -48,11 +48,18 @@ else
     echo "⚠️  Database migrations failed (may be okay if no new migrations)"
 fi
 
+# Touch wsgi.py to force reload
+echo ""
+echo "🔄 Forcing application reload..."
+touch wsgi.py
+echo "✓ wsgi.py touched - app will reload on next request"
+
 echo ""
 echo "✅ Deployment complete!"
 echo ""
 echo "Next steps:"
 echo "1. Reload your webapp at: https://www.pythonanywhere.com/user/woifh/webapps/"
 echo "2. Or tell Kiro to 'reload the webapp'"
-echo "3. Test your app at: https://woifh.pythonanywhere.com"
+echo "3. Clear browser cache (Ctrl+Shift+R) to see JavaScript changes"
+echo "4. Test your app at: https://woifh.pythonanywhere.com"
 echo ""
