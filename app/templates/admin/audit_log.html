@@ -8,10 +8,10 @@
         <h2 class="text-2xl font-bold">Audit-Protokoll</h2>
     </div>
 
-    <p class="text-gray-600 mb-6">Verlauf aller administrativen Operationen (Sperrungen, Mitgliederverwaltung).</p>
+    <p class="text-gray-600 mb-6">Verlauf aller administrativen Operationen (Sperrungen, Mitglieder, Sperrungsgründe).</p>
 
     <!-- Filter Buttons -->
-    <div class="flex gap-2 mb-6">
+    <div class="flex flex-wrap gap-2 mb-6">
         <button id="filter-all" class="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
             Alle
         </button>
@@ -20,6 +20,9 @@
         </button>
         <button id="filter-member" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">
             Mitglieder
+        </button>
+        <button id="filter-reason" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">
+            Sperrungsgründe
         </button>
     </div>
 
@@ -40,6 +43,7 @@
     document.getElementById('filter-all').addEventListener('click', () => setFilter(null));
     document.getElementById('filter-block').addEventListener('click', () => setFilter('block'));
     document.getElementById('filter-member').addEventListener('click', () => setFilter('member'));
+    document.getElementById('filter-reason').addEventListener('click', () => setFilter('reason'));
 
     function setFilter(type) {
         currentFilter = type;
@@ -51,7 +55,8 @@
         const buttons = {
             'filter-all': null,
             'filter-block': 'block',
-            'filter-member': 'member'
+            'filter-member': 'member',
+            'filter-reason': 'reason'
         };
 
         Object.entries(buttons).forEach(([id, filterType]) => {
@@ -83,6 +88,8 @@
             return '<span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">Sperrung</span>';
         } else if (type === 'member') {
             return '<span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">Mitglied</span>';
+        } else if (type === 'reason') {
+            return '<span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">Sperrungsgrund</span>';
         }
         return '';
     }

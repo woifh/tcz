@@ -9,9 +9,26 @@ from flask_login import login_required, current_user
 
 from app import db
 from app.decorators import admin_required, teamster_or_admin_required
-from app.models import BlockReason
+from app.models import BlockReason, ReasonAuditLog
 from app.services.block_reason_service import BlockReasonService
 from . import bp
+
+
+def log_reason_operation(operation, reason_id, operation_data, performed_by_id):
+    """Log a reason operation for audit purposes."""
+    try:
+        audit_log = ReasonAuditLog(
+            operation=operation,
+            reason_id=reason_id,
+            operation_data=operation_data,
+            performed_by_id=performed_by_id
+        )
+        db.session.add(audit_log)
+        db.session.commit()
+    except Exception as e:
+        # Don't let audit logging failure affect the main operation
+        db.session.rollback()
+        print(f"Failed to log reason operation: {e}")
 
 
 @bp.route('/block-reasons', methods=['GET'])
@@ -85,6 +102,17 @@ def create_block_reason():
         if error:
             return jsonify({'error': error}), 400
 
+        # Log the operation
+        log_reason_operation(
+            operation='create',
+            reason_id=reason.id,
+            operation_data={
+                'name': reason.name,
+                'teamster_usable': reason.teamster_usable
+            },
+            performed_by_id=current_user.id
+        )
+
         return jsonify({
             'id': reason.id,
             'message': 'Sperrungsgrund erfolgreich erstellt',
@@ -120,6 +148,13 @@ def update_block_reason(reason_id):
         if name is not None and not name:
             return jsonify({'error': 'Name ist erforderlich'}), 400
 
+        # Get old values for audit log
+        reason = BlockReason.query.get(reason_id)
+        old_values = {
+            'name': reason.name if reason else None,
+            'teamster_usable': reason.teamster_usable if reason else None
+        } if reason else {}
+
         # Update the reason
         success, error = BlockReasonService.update_block_reason(
             reason_id=reason_id,
@@ -130,6 +165,21 @@ def update_block_reason(reason_id):
 
         if error:
             return jsonify({'error': error}), 400
+
+        # Log the operation with changes
+        changes = {}
+        if name is not None and name != old_values.get('name'):
+            changes['name'] = {'old': old_values.get('name'), 'new': name}
+        if teamster_usable is not None and teamster_usable != old_values.get('teamster_usable'):
+            changes['teamster_usable'] = {'old': old_values.get('teamster_usable'), 'new': teamster_usable}
+
+        if changes:
+            log_reason_operation(
+                operation='update',
+                reason_id=reason_id,
+                operation_data={'changes': changes, 'name': name or old_values.get('name')},
+                performed_by_id=current_user.id
+            )
 
         return jsonify({'message': 'Sperrungsgrund erfolgreich aktualisiert'}), 200
 
@@ -144,17 +194,35 @@ def update_block_reason(reason_id):
 def delete_block_reason(reason_id):
     """Delete block reason with usage check (admin only)."""
     try:
+        # Get reason name before deletion for audit log
+        reason = BlockReason.query.get(reason_id)
+        reason_name = reason.name if reason else 'Unbekannt'
+
         success, error_or_message = BlockReasonService.delete_block_reason(reason_id, current_user.id)
-        
+
         if not success:
             return jsonify({'error': error_or_message}), 400
-        
+
         # If there's a message, it means the reason was deactivated instead of deleted
         if error_or_message:
+            # Log deactivation
+            log_reason_operation(
+                operation='deactivate',
+                reason_id=reason_id,
+                operation_data={'name': reason_name},
+                performed_by_id=current_user.id
+            )
             return jsonify({'message': error_or_message, 'deactivated': True}), 200
         else:
+            # Log deletion
+            log_reason_operation(
+                operation='delete',
+                reason_id=reason_id,
+                operation_data={'name': reason_name},
+                performed_by_id=current_user.id
+            )
             return jsonify({'message': 'Sperrungsgrund erfolgreich gelöscht', 'deleted': True}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

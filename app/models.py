@@ -310,6 +310,38 @@ class MemberAuditLog(db.Model):
         return f'<MemberAuditLog {self.operation} on member {self.member_id} by {self.performed_by_id}>'
 
 
+class ReasonAuditLog(db.Model):
+    """ReasonAuditLog model for tracking block reason operations."""
+
+    __tablename__ = 'reason_audit_log'
+    __table_args__ = (
+        db.Index('idx_reason_audit_timestamp', 'timestamp'),
+        db.Index('idx_reason_audit_admin', 'performed_by_id'),
+        db.Index('idx_reason_audit_operation', 'operation'),
+        db.Index('idx_reason_audit_reason', 'reason_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    reason_id = db.Column(db.Integer, nullable=False)  # Not FK because reason might be deleted
+    operation = db.Column(db.String(20), nullable=False)  # 'create', 'update', 'delete', 'deactivate'
+    operation_data = db.Column(db.JSON, nullable=True)  # JSON data about the operation
+    performed_by_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    performed_by = db.relationship('Member', backref='reason_audit_logs')
+
+    def __init__(self, **kwargs):
+        """Initialize audit log with validation."""
+        super(ReasonAuditLog, self).__init__(**kwargs)
+        valid_operations = ['create', 'update', 'delete', 'deactivate']
+        if self.operation and self.operation not in valid_operations:
+            raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
+
+    def __repr__(self):
+        return f'<ReasonAuditLog {self.operation} on reason {self.reason_id} by {self.performed_by_id}>'
+
+
 class Block(db.Model):
     """Block model representing court availability blocks."""
     

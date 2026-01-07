@@ -9,7 +9,7 @@ from flask import request, jsonify
 from flask_login import login_required, current_user
 
 from app.decorators import admin_required
-from app.models import BlockAuditLog, MemberAuditLog, Member
+from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog, Member, BlockReason
 from app import db
 from . import bp
 
@@ -187,20 +187,65 @@ def format_member_details(operation, data, member_id=None):
     return '-'
 
 
+def format_reason_details(operation, data, reason_id=None):
+    """Format reason audit log details into human-readable text."""
+    if not data:
+        return '-'
+
+    name = data.get('name', '')
+
+    # If name not in operation_data, try to look up the reason
+    if not name and reason_id:
+        reason = BlockReason.query.get(reason_id)
+        if reason:
+            name = reason.name
+
+    name = name or 'Gelöschter Grund'
+
+    if operation == 'create':
+        teamster_usable = data.get('teamster_usable', False)
+        usable_text = 'für Mannschaftsführer freigegeben' if teamster_usable else 'nur für Admins'
+        return f"Sperrungsgrund erstellt: {name} ({usable_text})"
+
+    elif operation == 'update':
+        changes = data.get('changes', {})
+        if changes:
+            change_texts = []
+            for field, vals in changes.items():
+                if isinstance(vals, dict) and 'old' in vals and 'new' in vals:
+                    if field == 'name':
+                        change_texts.append(f"Name: {vals['old']} → {vals['new']}")
+                    elif field == 'teamster_usable':
+                        old_text = 'Ja' if vals['old'] else 'Nein'
+                        new_text = 'Ja' if vals['new'] else 'Nein'
+                        change_texts.append(f"Mannschaftsführer: {old_text} → {new_text}")
+            if change_texts:
+                return f"Sperrungsgrund aktualisiert: {name} - {', '.join(change_texts)}"
+        return f"Sperrungsgrund aktualisiert: {name}"
+
+    elif operation == 'delete':
+        return f"Sperrungsgrund gelöscht: {name}"
+
+    elif operation == 'deactivate':
+        return f"Sperrungsgrund deaktiviert: {name}"
+
+    return '-'
+
+
 @bp.route('/blocks/audit-log', methods=['GET'])
 @login_required
 @admin_required
 def get_audit_log():
-    """Get unified audit log combining block and member operations (admin only)."""
+    """Get unified audit log combining block, member, and reason operations (admin only)."""
     try:
         # Get filter parameters
-        log_type = request.args.get('type')  # 'block', 'member', or None for all
+        log_type = request.args.get('type')  # 'block', 'member', 'reason', or None for all
         limit = min(int(request.args.get('limit', 100)), 500)  # Max 500 entries
 
         logs = []
 
-        # Query BlockAuditLog if not filtered to members only
-        if log_type != 'member':
+        # Query BlockAuditLog if not filtered to other types only
+        if log_type in (None, 'block'):
             block_logs = BlockAuditLog.query.order_by(BlockAuditLog.timestamp.desc()).limit(limit).all()
             for log in block_logs:
                 logs.append({
@@ -211,8 +256,8 @@ def get_audit_log():
                     'type': 'block'
                 })
 
-        # Query MemberAuditLog if not filtered to blocks only
-        if log_type != 'block':
+        # Query MemberAuditLog if not filtered to other types only
+        if log_type in (None, 'member'):
             member_logs = MemberAuditLog.query.order_by(MemberAuditLog.timestamp.desc()).limit(limit).all()
             for log in member_logs:
                 logs.append({
@@ -221,6 +266,18 @@ def get_audit_log():
                     'user': log.performed_by.name if log.performed_by else 'System',
                     'details': format_member_details(log.operation, log.operation_data, log.member_id),
                     'type': 'member'
+                })
+
+        # Query ReasonAuditLog if not filtered to other types only
+        if log_type in (None, 'reason'):
+            reason_logs = ReasonAuditLog.query.order_by(ReasonAuditLog.timestamp.desc()).limit(limit).all()
+            for log in reason_logs:
+                logs.append({
+                    'timestamp': log.timestamp.isoformat(),
+                    'action': log.operation,
+                    'user': log.performed_by.name if log.performed_by else 'System',
+                    'details': format_reason_details(log.operation, log.operation_data, log.reason_id),
+                    'type': 'reason'
                 })
 
         # Sort combined logs by timestamp descending
