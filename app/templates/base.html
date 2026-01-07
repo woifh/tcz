@@ -41,7 +41,7 @@
         <div class="container mx-auto">
             <!-- Desktop/Tablet Navigation -->
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold flex items-center gap-2">
+                <h1 class="text-2xl font-bold flex items-center gap-2 lg:!flex" :class="{ 'hidden': mobileMenuOpen }">
                     <span class="material-icons">sports_tennis</span>
                     <span class="hidden sm:inline">Tennisclub Zellerndorf</span>
                     <span class="sm:hidden">TC Zellerndorf</span>
@@ -143,48 +143,50 @@
                         <span class="material-icons">menu</span>
                     </button>
                 </div>
+            </div>
+        </div>
 
-            <!-- Mobile Menu (shown when hamburger is clicked) -->
-            <div x-show="mobileMenuOpen" x-cloak @click.away="mobileMenuOpen = false" class="lg:hidden mt-4 pb-4">
+        <!-- Mobile Menu (shown when hamburger is clicked) -->
+        <div x-show="mobileMenuOpen" x-cloak @click.away="mobileMenuOpen = false" class="lg:hidden pb-4">
                 {% if current_user.is_authenticated %}
                     <!-- Dashboard -->
-                    <a href="{{ url_for('dashboard.dashboard') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded">
-                        <span class="material-icons text-sm">home</span>
-                        <span>Dashboard</span>
+                    <a href="{{ url_for('dashboard.dashboard') }}" class="block w-full flex items-center gap-2 px-4 py-3 hover:bg-green-600">
+                        <span class="material-icons text-sm">dashboard</span>
+                        <span>Platzübersicht</span>
                     </a>
 
                     <!-- Admin Panel Section (only for admins) -->
                     {% if current_user.is_admin() %}
-                    <div x-data="{ adminOpen: false }" class="mt-2">
-                        <button @click="adminOpen = !adminOpen" class="w-full flex items-center justify-between px-3 py-2 hover:bg-green-600 rounded">
+                    <div x-data="{ adminOpen: false }">
+                        <button @click="adminOpen = !adminOpen" class="w-full flex items-center justify-between px-4 py-3 hover:bg-green-600">
                             <div class="flex items-center gap-2">
                                 <span class="material-icons text-sm">admin_panel_settings</span>
                                 <span>Admin</span>
                             </div>
                             <span class="material-icons text-sm" :class="{ 'rotate-180': adminOpen }" style="transition: transform 0.2s">expand_more</span>
                         </button>
-                        <div x-show="adminOpen" x-cloak class="pl-6 mt-1 space-y-1">
-                            <a href="{{ url_for('admin.overview') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
-                                <span class="material-icons text-sm">dashboard</span>
+                        <div x-show="adminOpen" x-cloak class="bg-green-800 bg-opacity-50">
+                            <a href="{{ url_for('admin.overview') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
+                                <span class="material-icons text-sm">home</span>
                                 <span>Übersicht</span>
                             </a>
-                            <a href="{{ url_for('admin.court_blocking') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('admin.court_blocking') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">block</span>
                                 <span>Platz-Sperrungen</span>
                             </a>
-                            <a href="{{ url_for('admin.reasons') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('admin.reasons') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">list_alt</span>
                                 <span>Sperrungsgründe</span>
                             </a>
-                            <a href="{{ url_for('admin.calendar') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('admin.calendar') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">calendar_month</span>
                                 <span>Kalenderansicht</span>
                             </a>
-                            <a href="{{ url_for('members.list_members') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('members.list_members') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">people</span>
                                 <span>Mitglieder</span>
                             </a>
-                            <a href="{{ url_for('admin.audit_log') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('admin.audit_log') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">history</span>
                                 <span>Audit-Protokoll</span>
                             </a>
@@ -194,7 +196,7 @@
 
                     <!-- Teamster Panel Link (teamsters only, NOT admins) -->
                     {% if current_user.is_teamster() and not current_user.is_admin() %}
-                    <a href="{{ url_for('admin.court_blocking') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded mt-2">
+                    <a href="{{ url_for('admin.court_blocking') }}" class="block w-full flex items-center gap-2 px-4 py-3 hover:bg-green-600">
                         <span class="material-icons text-sm">block</span>
                         <span>Platz-Sperrungen</span>
                     </a>
@@ -202,40 +204,39 @@
 
                     <!-- My Account Section -->
                     <div x-data="{ accountOpen: false }">
-                        <button @click="accountOpen = !accountOpen" class="w-full flex items-center justify-between px-3 py-2 hover:bg-green-600 rounded">
+                        <button @click="accountOpen = !accountOpen" class="w-full flex items-center justify-between px-4 py-3 hover:bg-green-600">
                             <div class="flex items-center gap-2">
                                 <span class="material-icons text-sm">account_circle</span>
                                 <span>Mein Konto</span>
                             </div>
                             <span class="material-icons text-sm" :class="{ 'rotate-180': accountOpen }" style="transition: transform 0.2s">expand_more</span>
                         </button>
-                        <div x-show="accountOpen" x-cloak class="pl-6 mt-1 space-y-1">
-                            <a href="{{ url_for('reservations.list_reservations') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                        <div x-show="accountOpen" x-cloak class="bg-green-800 bg-opacity-50">
+                            <a href="{{ url_for('reservations.list_reservations') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">event</span>
                                 <span>Meine Reservierungen</span>
                             </a>
-                            <a href="{{ url_for('members.favourites_page') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('members.favourites_page') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">star</span>
                                 <span>Favoriten</span>
                             </a>
-                            <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded text-sm">
+                            <a href="{{ url_for('auth.logout') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">logout</span>
                                 <span>Abmelden</span>
                             </a>
                         </div>
                     </div>
                 {% else %}
-                    <a href="{{ url_for('dashboard.anonymous_overview') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded">
+                    <a href="{{ url_for('dashboard.anonymous_overview') }}" class="block w-full flex items-center gap-2 px-4 py-3 hover:bg-green-600">
                         <span class="material-icons text-sm">visibility</span>
                         <span>Platzübersicht</span>
                     </a>
-                    <a href="{{ url_for('auth.login') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-green-600 rounded">
+                    <a href="{{ url_for('auth.login') }}" class="block w-full flex items-center gap-2 px-4 py-3 hover:bg-green-600">
                         <span class="material-icons text-sm">login</span>
                         <span>Anmelden</span>
                     </a>
                 {% endif %}
             </div>
-        </div>
     </nav>
 
     <div class="container mx-auto mt-8 px-4">
