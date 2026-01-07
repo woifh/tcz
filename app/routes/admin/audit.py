@@ -9,7 +9,7 @@ from flask import request, jsonify
 from flask_login import login_required, current_user
 
 from app.decorators import admin_required
-from app.models import BlockAuditLog, MemberAuditLog
+from app.models import BlockAuditLog, MemberAuditLog, Member
 from app import db
 from . import bp
 
@@ -98,14 +98,22 @@ def format_block_details(operation, data):
     return '-'
 
 
-def format_member_details(operation, data):
+def format_member_details(operation, data, member_id=None):
     """Format member audit log details into human-readable text."""
     if not data:
         return '-'
 
     firstname = data.get('firstname', '')
     lastname = data.get('lastname', '')
-    name = f"{firstname} {lastname}".strip() or data.get('name', 'Unbekannt')
+    name = f"{firstname} {lastname}".strip() or data.get('name', '')
+
+    # If name not in operation_data, try to look up the member
+    if not name and member_id:
+        member = Member.query.get(member_id)
+        if member:
+            name = member.name
+
+    name = name or 'Gelöschtes Mitglied'
 
     if operation == 'create':
         email = data.get('email', '')
@@ -211,7 +219,7 @@ def get_audit_log():
                     'timestamp': log.timestamp.isoformat(),
                     'action': log.operation,
                     'user': log.performed_by.name if log.performed_by else 'System',
-                    'details': format_member_details(log.operation, log.operation_data),
+                    'details': format_member_details(log.operation, log.operation_data, log.member_id),
                     'type': 'member'
                 })
 
