@@ -650,7 +650,9 @@ class MemberService:
             # Exclude existing favourites
             ~Member.id.in_(favourite_ids_subquery),
             # Only active members
-            Member.is_active == True
+            Member.is_active == True,
+            # Only full members (exclude sustaining members who cannot book)
+            Member.membership_type == 'full'
         ).order_by(
             # Order alphabetically by lastname, then firstname
             Member.lastname,

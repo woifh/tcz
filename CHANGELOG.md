@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.4] - 2026-01-09
+
+### Fixed
+- Supporting members are no longer visible in member search or favorites for booking
+
 ## [2.2.3] - 2026-01-09
 
 ### Added

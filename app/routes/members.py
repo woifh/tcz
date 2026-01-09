@@ -372,6 +372,7 @@ def get_favourites(id):
 
         favourites = member.favourites.all()
 
+        # Only return full members (exclude sustaining members who cannot book)
         return jsonify({
             'favourites': [
                 {
@@ -380,6 +381,7 @@ def get_favourites(id):
                     'email': fav.email
                 }
                 for fav in favourites
+                if fav.membership_type == 'full' and fav.is_active
             ]
         }), 200
 
