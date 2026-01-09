@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.1] - 2026-01-09
+
+### Fixed
+- Duplicate API calls to `/courts/availability` on dashboard load
+- Dashboard now loads availability data only once instead of twice
+
+### Changed
+- Replaced `@change` with `@input` on date picker to prevent initialization trigger
+- Added initialization guard to prevent double component initialization
+
 ## [2.2.0] - 2026-01-07
 
 ### Added

@@ -3,6 +3,9 @@
  * Manages court availability grid, date navigation, and user reservations
  */
 
+// Track which component instances have been initialized to prevent double init
+const initializedComponents = new WeakSet();
+
 export function dashboard() {
     return {
         // State
@@ -18,9 +21,13 @@ export function dashboard() {
         
         // Lifecycle
         init() {
+            // Prevent double initialization (e.g., from Alpine reinit or x-init calling twice)
+            if (initializedComponents.has(this.$el)) return;
+            initializedComponents.add(this.$el);
+
             // Detect authentication status from global variable or DOM
             this.isAuthenticated = window.isAuthenticated !== undefined ? window.isAuthenticated : true;
-            
+
             // Get current user ID from the page (only for authenticated users)
             if (this.isAuthenticated) {
                 const bookingForSelect = document.getElementById('booking-for');
@@ -29,9 +36,10 @@ export function dashboard() {
                     this.currentUserId = firstOption ? parseInt(firstOption.value) : null;
                 }
             }
-            
+
+            // Load initial availability
             this.loadAvailability();
-            
+
             // Only load user reservations for authenticated users
             if (this.isAuthenticated) {
                 this.loadUserReservations();
