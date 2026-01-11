@@ -1,5 +1,5 @@
 """Authentication routes."""
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, current_user
 # Removed limiter import for local development
 from app.models import Member
@@ -46,6 +46,41 @@ def login():
             flash('E-Mail oder Passwort ist falsch', 'error')
     
     return render_template('login.html')
+
+
+@bp.route('/login/api', methods=['POST'])
+def login_api():
+    """JSON API login endpoint for mobile apps."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+
+    if not email or not password:
+        return jsonify({'error': 'E-Mail und Passwort erforderlich'}), 400
+
+    member = Member.query.filter_by(email=email).first()
+
+    if member and member.check_password(password):
+        if not member.is_active:
+            return jsonify({'error': 'Ihr Konto wurde deaktiviert'}), 403
+        if member.is_sustaining_member():
+            return jsonify({'error': ErrorMessages.SUSTAINING_MEMBER_NO_ACCESS}), 403
+
+        login_user(member)
+        return jsonify({
+            'user': {
+                'id': member.id,
+                'firstname': member.firstname,
+                'lastname': member.lastname,
+                'email': member.email,
+                'name': member.name
+            }
+        })
+
+    return jsonify({'error': 'E-Mail oder Passwort ist falsch'}), 401
 
 
 @bp.route('/logout')
