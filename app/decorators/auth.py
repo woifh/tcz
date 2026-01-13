@@ -4,6 +4,8 @@ from flask import flash, redirect, url_for, jsonify, request, current_app
 from flask_login import current_user, login_user
 import jwt
 
+from app import csrf
+
 
 def jwt_or_session_required(f):
     """
@@ -47,7 +49,11 @@ def jwt_or_session_required(f):
             return f(*args, **kwargs)
 
         return jsonify({'error': 'Authentifizierung erforderlich'}), 401
-    return decorated_function
+
+    # Exempt from CSRF - Bearer tokens don't need CSRF, and session auth
+    # routes using this decorator are API endpoints that accept JSON
+    return csrf.exempt(decorated_function)
+    
 
 
 def login_required_json(f):

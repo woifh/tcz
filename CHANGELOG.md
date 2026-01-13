@@ -5,8 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [3.4.0] - 2026-01-14
 
 ### Added
-- JWT bearer token authentication for mobile API clients
-- Dual auth support: session cookies (web) + Bearer tokens (mobile)
+- Mobile app login support
 
 ## [3.3.0] - 2026-01-13
 
