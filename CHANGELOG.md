@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Email validation required before enabling notifications
 - Sub-options are visually unchecked when master notification toggle is disabled
 - Improved spacing in notification settings section
+- Added "Back to overview" link on login page for easier navigation
 
 ## [3.1.0] - 2026-01-13
 

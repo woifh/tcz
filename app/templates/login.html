@@ -24,5 +24,12 @@
             Anmelden
         </button>
     </form>
+
+    <div class="mt-6 text-center">
+        <a href="{{ url_for('dashboard.anonymous_overview') }}" class="text-gray-600 hover:text-green-600 transition duration-200 flex items-center justify-center gap-1">
+            <span class="material-icons text-sm">arrow_back</span>
+            Zurück zur Übersicht
+        </a>
+    </div>
 </div>
 {% endblock %}
