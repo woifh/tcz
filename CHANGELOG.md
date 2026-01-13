@@ -7,6 +7,12 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Booking form validation failed due to UUID parsing issue
 
+### Improved
+- Notification settings now available when creating new members (not just editing)
+- Email validation required before enabling notifications
+- Sub-options are visually unchecked when master notification toggle is disabled
+- Improved spacing in notification settings section
+
 ## [3.1.0] - 2026-01-13
 
 ### Added

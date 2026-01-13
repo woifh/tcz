@@ -126,9 +126,10 @@
             </div>
         </div>
 
-        <!-- Notification Preferences Section (only shown in edit mode) -->
-        <div id="notification-section" class="md:col-span-2 border-t pt-6 mt-4 hidden">
-            <h3 class="text-lg font-semibold mb-4">E-Mail Benachrichtigungen</h3>
+        <!-- Notification Preferences Section -->
+        <div id="notification-section" class="md:col-span-2 border-t pt-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4 mt-4">E-Mail Benachrichtigungen</h3>
+            <p id="notification-email-hint" class="text-sm text-gray-500 mb-4 hidden">Bitte geben Sie eine gültige E-Mail-Adresse ein, um Benachrichtigungen zu aktivieren.</p>
 
             <!-- Master Toggle -->
             <div class="mb-3">
@@ -184,17 +185,95 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Store original status for change detection
     let originalIsActive = true;
 
+    // Email validation pattern
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // Function to check if email is valid
+    function isValidEmail(email) {
+        return emailPattern.test(email);
+    }
+
+    // Track if notifications were enabled before email became invalid
+    let notificationsWereEnabled = false;
+
+    // Function to update notification section based on email validity
+    function updateNotificationSectionState() {
+        const emailInput = document.getElementById('member-email');
+        const notificationsEnabled = document.getElementById('notifications-enabled');
+        const notificationOptions = document.getElementById('notification-options');
+        const emailHint = document.getElementById('notification-email-hint');
+        const hasValidEmail = isValidEmail(emailInput.value);
+
+        if (hasValidEmail) {
+            emailHint.classList.add('hidden');
+            notificationsEnabled.disabled = false;
+            notificationsEnabled.parentElement.classList.remove('opacity-50', 'cursor-not-allowed');
+            notificationsEnabled.parentElement.classList.add('cursor-pointer');
+            // Restore previous state or enable by default for new members
+            if (notificationsWereEnabled || !isEditMode) {
+                notificationsEnabled.checked = true;
+            }
+        } else {
+            emailHint.classList.remove('hidden');
+            // Remember if notifications were enabled before disabling
+            if (notificationsEnabled.checked) {
+                notificationsWereEnabled = true;
+            }
+            notificationsEnabled.disabled = true;
+            notificationsEnabled.checked = false;
+            notificationsEnabled.parentElement.classList.add('opacity-50', 'cursor-not-allowed');
+            notificationsEnabled.parentElement.classList.remove('cursor-pointer');
+        }
+        updateNotificationOptions();
+    }
+
+    // Store sub-option states when master toggle is disabled
+    let savedSubOptions = {
+        ownBookings: true,
+        otherBookings: true,
+        courtBlocked: true,
+        bookingOverridden: true
+    };
+
     // Function to update sub-options state based on master toggle
     function updateNotificationOptions() {
         const notificationsEnabled = document.getElementById('notifications-enabled');
         const notificationOptions = document.getElementById('notification-options');
-        const enabled = notificationsEnabled.checked;
+        const enabled = notificationsEnabled.checked && !notificationsEnabled.disabled;
+
+        const notifyOwnBookings = document.getElementById('notify-own-bookings');
+        const notifyOtherBookings = document.getElementById('notify-other-bookings');
+        const notifyCourtBlocked = document.getElementById('notify-court-blocked');
+        const notifyBookingOverridden = document.getElementById('notify-booking-overridden');
+
         notificationOptions.style.opacity = enabled ? '1' : '0.5';
-        document.getElementById('notify-own-bookings').disabled = !enabled;
-        document.getElementById('notify-other-bookings').disabled = !enabled;
-        document.getElementById('notify-court-blocked').disabled = !enabled;
-        document.getElementById('notify-booking-overridden').disabled = !enabled;
+        notifyOwnBookings.disabled = !enabled;
+        notifyOtherBookings.disabled = !enabled;
+        notifyCourtBlocked.disabled = !enabled;
+        notifyBookingOverridden.disabled = !enabled;
+
+        if (!enabled) {
+            // Save current states before unchecking
+            savedSubOptions.ownBookings = notifyOwnBookings.checked;
+            savedSubOptions.otherBookings = notifyOtherBookings.checked;
+            savedSubOptions.courtBlocked = notifyCourtBlocked.checked;
+            savedSubOptions.bookingOverridden = notifyBookingOverridden.checked;
+            // Uncheck all sub-options
+            notifyOwnBookings.checked = false;
+            notifyOtherBookings.checked = false;
+            notifyCourtBlocked.checked = false;
+            notifyBookingOverridden.checked = false;
+        } else {
+            // Restore saved states
+            notifyOwnBookings.checked = savedSubOptions.ownBookings;
+            notifyOtherBookings.checked = savedSubOptions.otherBookings;
+            notifyCourtBlocked.checked = savedSubOptions.courtBlocked;
+            notifyBookingOverridden.checked = savedSubOptions.bookingOverridden;
+        }
     }
+
+    // Listen for email input changes
+    document.getElementById('member-email').addEventListener('input', updateNotificationSectionState);
 
     // Listen for master toggle changes
     document.getElementById('notifications-enabled').addEventListener('change', updateNotificationOptions);
@@ -236,19 +315,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             originalIsActive = data.is_active;
 
             // Set notification preferences
+            notificationsWereEnabled = data.notifications_enabled;
+            // Save loaded sub-option states
+            savedSubOptions.ownBookings = data.notify_own_bookings;
+            savedSubOptions.otherBookings = data.notify_other_bookings;
+            savedSubOptions.courtBlocked = data.notify_court_blocked;
+            savedSubOptions.bookingOverridden = data.notify_booking_overridden;
             document.getElementById('notifications-enabled').checked = data.notifications_enabled;
             document.getElementById('notify-own-bookings').checked = data.notify_own_bookings;
             document.getElementById('notify-other-bookings').checked = data.notify_other_bookings;
             document.getElementById('notify-court-blocked').checked = data.notify_court_blocked;
             document.getElementById('notify-booking-overridden').checked = data.notify_booking_overridden;
-            updateNotificationOptions();
+            updateNotificationSectionState();
 
             // Update UI for edit mode
             document.getElementById('password-label').textContent = 'Neues Passwort (optional)';
             document.getElementById('member-password').placeholder = 'Leer lassen, um beizubehalten';
             document.getElementById('member-password-confirm').placeholder = 'Leer lassen, um beizubehalten';
             document.getElementById('submit-button').textContent = 'Aktualisieren';
-            notificationSection.classList.remove('hidden');
 
             // Hide loading, show form
             loadingIndicator.classList.add('hidden');
@@ -264,6 +348,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Create mode - password is required
         document.getElementById('member-password').required = true;
         document.getElementById('member-password-confirm').required = true;
+
+        // Set default notification preferences for new members (will be enabled when valid email is entered)
+        document.getElementById('notify-own-bookings').checked = true;
+        document.getElementById('notify-other-bookings').checked = true;
+        document.getElementById('notify-court-blocked').checked = true;
+        document.getElementById('notify-booking-overridden').checked = true;
+        // Check email validity to set initial notification state
+        updateNotificationSectionState();
     }
 
     form.addEventListener('submit', async function(e) {
@@ -282,14 +374,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             fee_paid: document.querySelector('input[name="member-fee-paid"]:checked').value
         };
 
-        // Add notification preferences if in edit mode
-        if (isEditMode) {
-            memberData.notifications_enabled = document.getElementById('notifications-enabled').checked;
-            memberData.notify_own_bookings = document.getElementById('notify-own-bookings').checked;
-            memberData.notify_other_bookings = document.getElementById('notify-other-bookings').checked;
-            memberData.notify_court_blocked = document.getElementById('notify-court-blocked').checked;
-            memberData.notify_booking_overridden = document.getElementById('notify-booking-overridden').checked;
-        }
+        // Add notification preferences
+        memberData.notifications_enabled = document.getElementById('notifications-enabled').checked;
+        memberData.notify_own_bookings = document.getElementById('notify-own-bookings').checked;
+        memberData.notify_other_bookings = document.getElementById('notify-other-bookings').checked;
+        memberData.notify_court_blocked = document.getElementById('notify-court-blocked').checked;
+        memberData.notify_booking_overridden = document.getElementById('notify-booking-overridden').checked;
 
         const password = document.getElementById('member-password').value;
         const passwordConfirm = document.getElementById('member-password-confirm').value;

@@ -65,8 +65,9 @@
         </div>
 
         <!-- Notification Preferences Section -->
-        <div class="md:col-span-2 border-t pt-6 mt-4">
-            <h3 class="text-lg font-semibold mb-4">E-Mail Benachrichtigungen</h3>
+        <div id="notification-section" class="md:col-span-2 border-t pt-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4 mt-4">E-Mail Benachrichtigungen</h3>
+            <p id="notification-email-hint" class="text-sm text-gray-500 mb-4 hidden">Bitte geben Sie eine gültige E-Mail-Adresse ein, um Benachrichtigungen zu aktivieren.</p>
 
             <!-- Master Toggle -->
             <div class="mb-3">
@@ -123,21 +124,91 @@ document.addEventListener('DOMContentLoaded', async function() {
     const notifyOtherBookings = document.getElementById('notify-other-bookings');
     const notifyCourtBlocked = document.getElementById('notify-court-blocked');
     const notifyBookingOverridden = document.getElementById('notify-booking-overridden');
+    const emailHint = document.getElementById('notification-email-hint');
 
-    // Toggle notification options visibility based on master toggle
-    function updateNotificationOptionsVisibility() {
-        if (notificationsEnabled.checked) {
-            notificationOptions.classList.remove('opacity-50', 'pointer-events-none');
+    // Email validation pattern
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    function isValidEmail(email) {
+        return emailPattern.test(email);
+    }
+
+    // Track if notifications were enabled before email became invalid
+    let notificationsWereEnabled = false;
+
+    // Store sub-option states when master toggle is disabled
+    let savedSubOptions = {
+        ownBookings: true,
+        otherBookings: true,
+        courtBlocked: true,
+        bookingOverridden: true
+    };
+
+    // Function to update notification section based on email validity
+    function updateNotificationSectionState() {
+        const emailInput = document.getElementById('profile-email');
+        const hasValidEmail = isValidEmail(emailInput.value);
+
+        if (hasValidEmail) {
+            emailHint.classList.add('hidden');
+            notificationsEnabled.disabled = false;
+            notificationsEnabled.parentElement.classList.remove('opacity-50', 'cursor-not-allowed');
+            notificationsEnabled.parentElement.classList.add('cursor-pointer');
+            // Restore previous state
+            if (notificationsWereEnabled) {
+                notificationsEnabled.checked = true;
+            }
         } else {
-            notificationOptions.classList.add('opacity-50', 'pointer-events-none');
-            // Auto-deselect sub-options when master toggle is disabled
+            emailHint.classList.remove('hidden');
+            // Remember if notifications were enabled before disabling
+            if (notificationsEnabled.checked) {
+                notificationsWereEnabled = true;
+            }
+            notificationsEnabled.disabled = true;
+            notificationsEnabled.checked = false;
+            notificationsEnabled.parentElement.classList.add('opacity-50', 'cursor-not-allowed');
+            notificationsEnabled.parentElement.classList.remove('cursor-pointer');
+        }
+        updateNotificationOptions();
+    }
+
+    // Function to update sub-options state based on master toggle
+    function updateNotificationOptions() {
+        const enabled = notificationsEnabled.checked && !notificationsEnabled.disabled;
+
+        notificationOptions.style.opacity = enabled ? '1' : '0.5';
+        notifyOwnBookings.disabled = !enabled;
+        notifyOtherBookings.disabled = !enabled;
+        notifyCourtBlocked.disabled = !enabled;
+        notifyBookingOverridden.disabled = !enabled;
+
+        if (!enabled) {
+            // Save current states before unchecking
+            if (notifyOwnBookings.checked || notifyOtherBookings.checked || notifyCourtBlocked.checked || notifyBookingOverridden.checked) {
+                savedSubOptions.ownBookings = notifyOwnBookings.checked;
+                savedSubOptions.otherBookings = notifyOtherBookings.checked;
+                savedSubOptions.courtBlocked = notifyCourtBlocked.checked;
+                savedSubOptions.bookingOverridden = notifyBookingOverridden.checked;
+            }
+            // Uncheck all sub-options
             notifyOwnBookings.checked = false;
             notifyOtherBookings.checked = false;
             notifyCourtBlocked.checked = false;
             notifyBookingOverridden.checked = false;
+        } else {
+            // Restore saved states
+            notifyOwnBookings.checked = savedSubOptions.ownBookings;
+            notifyOtherBookings.checked = savedSubOptions.otherBookings;
+            notifyCourtBlocked.checked = savedSubOptions.courtBlocked;
+            notifyBookingOverridden.checked = savedSubOptions.bookingOverridden;
         }
     }
-    notificationsEnabled.addEventListener('change', updateNotificationOptionsVisibility);
+
+    // Listen for email input changes
+    document.getElementById('profile-email').addEventListener('input', updateNotificationSectionState);
+
+    // Listen for master toggle changes
+    notificationsEnabled.addEventListener('change', updateNotificationOptions);
 
     // Fetch profile data from API
     try {
@@ -157,14 +228,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('profile-phone').value = member.phone || '';
 
         // Notification preferences
+        notificationsWereEnabled = member.notifications_enabled ?? true;
+        // Save loaded sub-option states
+        savedSubOptions.ownBookings = member.notify_own_bookings ?? true;
+        savedSubOptions.otherBookings = member.notify_other_bookings ?? true;
+        savedSubOptions.courtBlocked = member.notify_court_blocked ?? true;
+        savedSubOptions.bookingOverridden = member.notify_booking_overridden ?? true;
+
         notificationsEnabled.checked = member.notifications_enabled ?? true;
         notifyOwnBookings.checked = member.notify_own_bookings ?? true;
         notifyOtherBookings.checked = member.notify_other_bookings ?? true;
         notifyCourtBlocked.checked = member.notify_court_blocked ?? true;
         notifyBookingOverridden.checked = member.notify_booking_overridden ?? true;
 
-        // Update visibility based on loaded data
-        updateNotificationOptionsVisibility();
+        // Update state based on email validity
+        updateNotificationSectionState();
 
         // Show form, hide loading
         loadingDiv.classList.add('hidden');
