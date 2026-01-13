@@ -6,6 +6,14 @@ import { formatDateGerman, showSuccess, showError } from './utils.js';
 import { loadAvailability } from './grid.js';
 
 /**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
+/**
  * Load user's upcoming reservations
  */
 export async function loadUserReservations() {
@@ -68,7 +76,8 @@ export async function loadUserReservations() {
 export async function cancelReservationFromDashboard(reservationId, bookedFor, date, time) {
     try {
         const response = await fetch(`/reservations/${reservationId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
         });
         
         const data = await response.json();
@@ -97,7 +106,8 @@ export async function cancelReservationFromDashboard(reservationId, bookedFor, d
 export async function cancelReservation(reservationId) {
     try {
         const response = await fetch(`/reservations/${reservationId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
         });
         
         const data = await response.json();

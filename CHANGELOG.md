@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.0] - 2026-01-13
+
+### Security
+- Added CSRF protection for all form submissions and API requests
+
 ## [3.1.1] - 2026-01-13
 
 ### Fixed

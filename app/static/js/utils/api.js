@@ -4,6 +4,15 @@
  */
 
 /**
+ * Get CSRF token from meta tag
+ * @returns {string|null} CSRF token or null if not found
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
+/**
  * Make an API request with error handling
  * @param {string} url - API endpoint
  * @param {Object} options - Fetch options
@@ -11,11 +20,21 @@
  */
 export async function apiRequest(url, options = {}) {
     try {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+
+        // Add CSRF token for state-changing requests
+        if (options.method && options.method !== 'GET') {
+            const csrfToken = getCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken;
+            }
+        }
+
         const response = await fetch(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
+            headers,
             ...options
         });
         

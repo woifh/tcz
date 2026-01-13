@@ -3,6 +3,14 @@
  * Provides search functionality for finding and adding members to favourites
  */
 
+/**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
 let searchTimeout = null;
 const DEBOUNCE_DELAY = 300; // milliseconds
 
@@ -139,7 +147,10 @@ async function addToFavourites(memberId) {
     try {
         const response = await fetch(`/members/${currentUserId}/favourites`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
             body: JSON.stringify({ favourite_id: memberId })
         });
         

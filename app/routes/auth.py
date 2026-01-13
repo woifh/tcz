@@ -1,7 +1,7 @@
 """Authentication routes."""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, current_user
-# Removed limiter import for local development
+from app import csrf
 from app.models import Member
 from app.utils.validators import validate_email_address, validate_string_length, ValidationError
 from app.constants.messages import ErrorMessages
@@ -49,8 +49,9 @@ def login():
 
 
 @bp.route('/login/api', methods=['POST'])
+@csrf.exempt
 def login_api():
-    """JSON API login endpoint for mobile apps."""
+    """JSON API login endpoint for mobile apps (CSRF exempt for pre-auth)."""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'JSON body required'}), 400

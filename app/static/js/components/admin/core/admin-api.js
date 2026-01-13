@@ -3,6 +3,24 @@
  * All API calls for admin panel functionality
  */
 
+/**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
+/**
+ * Get headers for state-changing requests
+ */
+function getHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+    };
+}
+
 // Block Reasons API
 export const blockReasonsAPI = {
     async load() {
@@ -24,7 +42,7 @@ export const blockReasonsAPI = {
         try {
             const response = await fetch('/admin/block-reasons', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getHeaders(),
                 body: JSON.stringify(reasonData)
             });
             
@@ -39,7 +57,7 @@ export const blockReasonsAPI = {
         try {
             const response = await fetch(`/admin/block-reasons/${reasonId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getHeaders(),
                 body: JSON.stringify(reasonData)
             });
             
@@ -53,7 +71,8 @@ export const blockReasonsAPI = {
     async delete(reasonId) {
         try {
             const response = await fetch(`/admin/block-reasons/${reasonId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCsrfToken() }
             });
             
             const data = await response.json();
@@ -86,7 +105,7 @@ export const blocksAPI = {
         try {
             const response = await fetch('/admin/blocks', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getHeaders(),
                 body: JSON.stringify(blockData)
             });
 
@@ -101,7 +120,7 @@ export const blocksAPI = {
         try {
             const response = await fetch(`/admin/blocks/${batchId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getHeaders(),
                 body: JSON.stringify(blockData)
             });
 
@@ -115,7 +134,8 @@ export const blocksAPI = {
     async delete(batchId) {
         try {
             const response = await fetch(`/admin/blocks/${batchId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCsrfToken() }
             });
 
             const data = await response.json();
@@ -144,7 +164,7 @@ export const blocksAPI = {
         try {
             const response = await fetch('/admin/blocks/conflict-preview', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getHeaders(),
                 body: JSON.stringify(blockData)
             });
             

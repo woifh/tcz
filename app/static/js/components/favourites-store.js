@@ -3,6 +3,14 @@
  * Centralized state management for user's favourite members
  */
 
+/**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
 export function initFavouritesStore() {
     if (typeof window === 'undefined' || !window.Alpine) return;
     
@@ -53,6 +61,7 @@ export function initFavouritesStore() {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
                         },
                         body: JSON.stringify({ member_id: memberId })
                     });
@@ -80,7 +89,8 @@ export function initFavouritesStore() {
                 
                 try {
                     const response = await fetch(`/members/favourites/${favouriteId}`, {
-                        method: 'DELETE'
+                        method: 'DELETE',
+                        headers: { 'X-CSRFToken': getCsrfToken() }
                     });
                     
                     if (response.ok) {

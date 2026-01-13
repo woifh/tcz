@@ -3,6 +3,14 @@
  * Manages court availability grid, date navigation, and user reservations
  */
 
+/**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
 // Track which component instances have been initialized to prevent double init
 const initializedComponents = new WeakSet();
 
@@ -216,11 +224,12 @@ export function dashboard() {
             
             try {
                 const response = await fetch(`/reservations/${reservationId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     // Show success as toast message (not dialog)
                     this.showSuccess('Buchung erfolgreich storniert');

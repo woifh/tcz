@@ -6,6 +6,14 @@
 import { blocksAPI } from './admin-api.js';
 import { showToast, dateUtils } from './admin-utils.js';
 
+/**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
 export class BlocksManager {
     constructor() {
         this.currentBlocks = [];
@@ -309,7 +317,8 @@ export class BlocksManager {
 
         try {
             const response = await fetch(`/admin/blocks/${batchId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCsrfToken() }
             });
 
             const data = await response.json();

@@ -3,6 +3,14 @@
  * Handles booking creation workflow with form validation and API submission
  */
 
+/**
+ * Get CSRF token from meta tag
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
 export function bookingModal() {
     return {
         // State
@@ -153,7 +161,10 @@ export function bookingModal() {
                 // Add member to favourites
                 const response = await fetch(`/members/${currentUserId}/favourites`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
                     body: JSON.stringify({ favourite_id: member.id })
                 });
 
@@ -200,6 +211,7 @@ export function bookingModal() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify(bookingData)
                 });
