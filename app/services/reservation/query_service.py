@@ -2,6 +2,8 @@
 import logging
 from datetime import date as date_class
 
+from sqlalchemy.orm import joinedload
+
 from app import db
 from app.models import Reservation
 from app.services.validation_service import ValidationService
@@ -63,7 +65,11 @@ class ReservationQueryService:
             else:
                 member_filter = Reservation.booked_for_id == member_id
 
-            query = Reservation.query.filter(
+            query = Reservation.query.options(
+                joinedload(Reservation.booked_for),
+                joinedload(Reservation.booked_by),
+                joinedload(Reservation.court)
+            ).filter(
                 member_filter,
                 Reservation.status == 'active',
                 time_filter
@@ -100,7 +106,11 @@ class ReservationQueryService:
                 else:
                     member_filter = Reservation.booked_for_id == member_id
 
-                query = Reservation.query.filter(
+                query = Reservation.query.options(
+                    joinedload(Reservation.booked_for),
+                    joinedload(Reservation.booked_by),
+                    joinedload(Reservation.court)
+                ).filter(
                     member_filter,
                     Reservation.status == 'active',
                     Reservation.date >= today
@@ -298,15 +308,19 @@ class ReservationQueryService:
     @staticmethod
     def get_reservations_by_date(date):
         """
-        Get all reservations for a date.
+        Get all reservations for a date with eager loading of related objects.
 
         Args:
             date: Date to query
 
         Returns:
-            list: List of Reservation objects
+            list: List of Reservation objects with booked_for, booked_by, and court preloaded
         """
-        return Reservation.query.filter_by(
+        return Reservation.query.options(
+            joinedload(Reservation.booked_for),
+            joinedload(Reservation.booked_by),
+            joinedload(Reservation.court)
+        ).filter_by(
             date=date,
             status='active'
         ).order_by(Reservation.start_time).all()

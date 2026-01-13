@@ -1,8 +1,9 @@
 """Member management routes."""
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from app import db
-from app.models import Member
+from app.models import Member, Reservation
 from app.services.member_service import MemberService
 from app.decorators.auth import admin_required, member_or_admin_required
 from app.constants.messages import ErrorMessages, SuccessMessages
@@ -14,29 +15,44 @@ bp = Blueprint('members', __name__, url_prefix='/members')
 @login_required
 @admin_required
 def list_members():
-    """List all members (admin only)."""
-    from app.models import Reservation
+    """List all members (admin only) with booking counts via single query."""
+    # Subquery for regular booking count (not short notice)
+    regular_count_subq = db.session.query(
+        Reservation.booked_for_id,
+        func.count(Reservation.id).label('count')
+    ).filter(
+        Reservation.is_short_notice == False,
+        Reservation.status == 'active'
+    ).group_by(Reservation.booked_for_id).subquery()
 
-    members, error = MemberService.get_all_members(include_inactive=False)
-    if error:
-        flash(error, 'error')
-        return redirect(url_for('dashboard.index'))
+    # Subquery for short notice booking count
+    short_notice_subq = db.session.query(
+        Reservation.booked_for_id,
+        func.count(Reservation.id).label('count')
+    ).filter(
+        Reservation.is_short_notice == True,
+        Reservation.status == 'active'
+    ).group_by(Reservation.booked_for_id).subquery()
 
-    # Add total reservation counts to each member
-    for member in members:
-        # Count total ordinary bookings (not short notice)
-        member.total_booking_count = Reservation.query.filter(
-            Reservation.booked_for_id == member.id,
-            Reservation.is_short_notice == False,
-            Reservation.status == 'active'
-        ).count()
+    # Main query with LEFT JOINs to get members with their booking counts
+    results = db.session.query(
+        Member,
+        func.coalesce(regular_count_subq.c.count, 0).label('total_booking_count'),
+        func.coalesce(short_notice_subq.c.count, 0).label('short_notice_count')
+    ).outerjoin(
+        regular_count_subq, Member.id == regular_count_subq.c.booked_for_id
+    ).outerjoin(
+        short_notice_subq, Member.id == short_notice_subq.c.booked_for_id
+    ).filter(
+        Member.is_active == True
+    ).order_by(Member.lastname, Member.firstname).all()
 
-        # Count total short notice bookings
-        member.short_notice_count = Reservation.query.filter(
-            Reservation.booked_for_id == member.id,
-            Reservation.is_short_notice == True,
-            Reservation.status == 'active'
-        ).count()
+    # Attach counts to member objects for template compatibility
+    members = []
+    for member, total_count, short_notice_count in results:
+        member.total_booking_count = total_count
+        member.short_notice_count = short_notice_count
+        members.append(member)
 
     return render_template('members.html', members=members)
 

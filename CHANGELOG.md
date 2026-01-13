@@ -14,6 +14,9 @@ All notable changes to this project will be documented in this file.
 - Improved spacing in notification settings section
 - Added "Back to overview" link on login page for easier navigation
 
+### Performance
+- Faster loading of members list and court availability pages
+
 ## [3.1.0] - 2026-01-13
 
 ### Added

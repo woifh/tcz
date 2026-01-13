@@ -1,5 +1,6 @@
 """Block service for court blocking."""
 from datetime import date, datetime, time
+from sqlalchemy.orm import joinedload
 from app import db
 from app.models import Block, Reservation, BlockReason, BlockAuditLog
 from app.services.email_service import EmailService
@@ -27,15 +28,18 @@ class BlockService:
     @staticmethod
     def get_blocks_by_date(date):
         """
-        Get all blocks for a specific date.
-        
+        Get all blocks for a specific date with eager loading of related objects.
+
         Args:
             date: Date to query
-            
+
         Returns:
-            list: List of Block objects
+            list: List of Block objects with reason_obj and court preloaded
         """
-        return Block.query.filter_by(date=date).order_by(Block.start_time).all()
+        return Block.query.options(
+            joinedload(Block.reason_obj),
+            joinedload(Block.court)
+        ).filter_by(date=date).order_by(Block.start_time).all()
     
     @staticmethod
     def cancel_conflicting_reservations(block):
