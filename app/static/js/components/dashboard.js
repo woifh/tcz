@@ -27,6 +27,7 @@ export function dashboard() {
         error: null,
         currentUserId: null,
         isAuthenticated: true, // Default to authenticated, will be overridden for anonymous users
+        defaultCellClass: 'border border-gray-300 px-2 py-4 text-center text-xs bg-gray-100', // Default class for cells before data loads
         
         // Lifecycle
         init() {
@@ -59,31 +60,21 @@ export function dashboard() {
         async loadAvailability() {
             this.loading = true;
             this.error = null;
-            
+
             try {
                 const response = await fetch(`/courts/availability?date=${this.selectedDate}`);
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                console.log('Availability data received:', data);
-                
+
                 // Handle both test data format and production format
                 if (data.grid) {
                     this.availability = data;
                     this.courts = data.grid;
-                    
-                    // Debug: Check for short-notice bookings
-                    data.grid.forEach((court, courtIdx) => {
-                        court.slots.forEach((slot, slotIdx) => {
-                            if (slot.status === 'short_notice') {
-                                console.log(`Short-notice booking found: Court ${courtIdx + 1}, Slot ${slotIdx} (${6 + slotIdx}:00)`, slot);
-                            }
-                        });
-                    });
-                    
+
                     // Generate time slots if not already set
                     if (this.timeSlots.length === 0) {
                         this.timeSlots = this.generateTimeSlots();
@@ -92,7 +83,7 @@ export function dashboard() {
                     // Test data format
                     this.availability = data;
                     this.courts = data.slots;
-                    
+
                     if (this.timeSlots.length === 0) {
                         this.timeSlots = this.generateTimeSlots();
                     }
@@ -175,29 +166,44 @@ export function dashboard() {
         },
         
         handleSlotClick(court, time, slot) {
-            console.log('Slot clicked:', { court, time, slot });
-            
             // Don't allow any interactions for anonymous users
             if (!this.isAuthenticated) {
-                console.log('Anonymous user - no slot interactions allowed');
                 return;
             }
-            
+
             // Don't allow clicking on past time slots
             if (this.isSlotInPast(time)) {
-                console.log('Slot is in the past, ignoring click');
                 return;
             }
-            
+
             if (slot.status === 'available') {
-                console.log('Opening booking modal for available slot');
                 this.openBookingModal(court, time);
             } else if ((slot.status === 'reserved' || slot.status === 'short_notice') && this.canCancelSlot(slot)) {
-                console.log('Cancelling reservation');
                 // Handle both test format (reservation) and production format (details)
                 const reservation = slot.reservation || slot.details;
                 const reservationId = reservation.reservation_id || reservation.id;
                 this.cancelReservation(reservationId);
+            }
+        },
+
+        // Optimized slot click handler using pre-computed server data
+        handleSlotClickPrecomputed(courtIndex, timeIndex) {
+            const slot = this.courts[courtIndex]?.slots[timeIndex];
+            if (!slot) return;
+
+            // Use pre-computed flags from server
+            if (slot.isPast) return;
+            if (!this.isAuthenticated) return;
+
+            if (slot.status === 'available') {
+                const time = this.timeSlots[timeIndex];
+                this.openBookingModal(courtIndex + 1, time);
+            } else if (slot.canCancel) {
+                const reservation = slot.details;
+                const reservationId = reservation?.reservation_id || reservation?.id;
+                if (reservationId) {
+                    this.cancelReservation(reservationId);
+                }
             }
         },
         
@@ -244,62 +250,53 @@ export function dashboard() {
             }
         },
         
+        // Legacy method - kept for backwards compatibility but no longer used in template
+        // Server now pre-computes cssClass for each slot
         getSlotClass(slot, time) {
-            let classes = 'border border-gray-300 px-2 py-4 text-center';
-            
-            // Debug logging
-            console.log('getSlotClass called with slot:', slot);
-            
-            // Check if slot is in the past
+            // Use pre-computed class if available
+            if (slot.cssClass) {
+                return slot.cssClass;
+            }
+
+            // Fallback to client-side computation
+            let classes = 'border border-gray-300 px-2 py-4 text-center text-xs';
             const isPast = this.isSlotInPast(time);
-            
+
             if (slot.status === 'available') {
                 if (isPast) {
                     classes += ' bg-gray-200 text-gray-500';
                 } else {
                     classes += ' bg-green-500 text-white';
-                    // Only add interactive styles for authenticated users
                     if (this.isAuthenticated) {
                         classes += ' cursor-pointer hover:opacity-80';
                     }
                 }
             } else if (slot.status === 'short_notice') {
-                // Short notice bookings get orange background
-                classes += ' bg-orange-500 text-white text-xs short-notice-booking';
-                console.log('Short-notice slot detected, applying classes:', classes);
-
-                // Add pointer cursor if user can cancel and not in past (authenticated users only)
+                classes += ' bg-orange-500 text-white';
                 if (!isPast && this.isAuthenticated && this.canCancelSlot(slot)) {
                     classes += ' cursor-pointer hover:opacity-80';
                 } else if (isPast) {
                     classes += ' opacity-75';
                 }
             } else if (slot.status === 'reserved') {
-                // Handle both test format (reservation) and production format (details)
                 const reservation = slot.reservation || slot.details;
-                
-                // Check if short notice (fallback for different data formats)
                 if (reservation && reservation.is_short_notice) {
-                    classes += ' bg-orange-500 text-white text-xs short-notice-booking';
-                    console.log('Reserved slot with short notice detected, applying classes:', classes);
+                    classes += ' bg-orange-500 text-white';
                 } else {
-                    classes += ' bg-red-500 text-white text-xs';
+                    classes += ' bg-red-500 text-white';
                 }
-
-                // Add pointer cursor if user can cancel and not in past (authenticated users only)
                 if (!isPast && this.isAuthenticated && this.canCancelSlot(slot)) {
                     classes += ' cursor-pointer hover:opacity-80';
                 } else if (isPast) {
                     classes += ' opacity-75';
                 }
             } else if (slot.status === 'blocked') {
-                classes += ' bg-gray-400 text-white text-xs min-h-16';
+                classes += ' bg-gray-400 text-white min-h-16';
                 if (isPast) {
                     classes += ' opacity-75';
                 }
             }
-            
-            console.log('Final classes for slot:', classes);
+
             return classes;
         },
         
@@ -395,48 +392,42 @@ export function dashboard() {
             return this.courts[courtIndex].slots[timeIndex] || { status: 'available' };
         },
         
+        // Legacy method - kept for backwards compatibility but no longer used in template
+        // Server now pre-computes content for each slot
         getSlotContent(slot, time) {
+            // Use pre-computed content if available
+            if (slot.content !== undefined) {
+                return slot.content;
+            }
+
+            // Fallback to client-side computation
             if (slot.status === 'available') {
-                if (this.isSlotInPast(time)) {
-                    return 'Vergangen';
-                }
-                return 'Frei';
-            } else if (slot.status === 'short_notice') {
+                return this.isSlotInPast(time) ? 'Vergangen' : 'Frei';
+            }
+
+            if (slot.status === 'short_notice' || slot.status === 'reserved') {
                 const reservation = slot.reservation || slot.details;
                 if (reservation && this.isAuthenticated) {
-                    // Show member details only to authenticated users
-                    // Simplify display for own bookings (don't show redundant "von" info)
                     if (reservation.booked_for_id === reservation.booked_by_id) {
                         return reservation.booked_for;
                     }
                     return `${reservation.booked_for}<br>(von ${reservation.booked_by})`;
                 }
-                return 'Gebucht'; // Anonymous users see generic "Gebucht"
-            } else if (slot.status === 'reserved') {
-                const reservation = slot.reservation || slot.details;
-                if (reservation && this.isAuthenticated) {
-                    // Show member details only to authenticated users
-                    // Simplify display for own bookings (don't show redundant "von" info)
-                    if (reservation.booked_for_id === reservation.booked_by_id) {
-                        return reservation.booked_for;
-                    }
-                    return `${reservation.booked_for}<br>(von ${reservation.booked_by})`;
-                }
-                return 'Gebucht'; // Anonymous users see generic "Gebucht"
-            } else if (slot.status === 'blocked') {
+                return 'Gebucht';
+            }
+
+            if (slot.status === 'blocked') {
                 const blockDetails = slot.details;
-                console.log('Blocked slot details:', blockDetails); // Debug log
                 if (blockDetails && blockDetails.reason) {
                     let content = blockDetails.reason;
                     if (blockDetails.details && blockDetails.details.trim()) {
-                        console.log('Adding details:', blockDetails.details); // Debug log
                         content += `<br><span style="font-size: 0.7em; opacity: 0.9;">${blockDetails.details}</span>`;
                     }
-                    console.log('Final blocked content:', content); // Debug log
                     return content;
                 }
                 return 'Gesperrt';
             }
+
             return '';
         },
         

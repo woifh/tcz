@@ -58,3 +58,8 @@ table tbody tr td.border.border-gray-300.px-2.py-4.text-center.bg-orange-500.tex
     background-color: #f97316 !important;
     color: white !important;
 }
+
+/* Smooth transitions for availability grid cells */
+#availability-grid td {
+    transition: background-color 150ms ease-out, opacity 150ms ease-out;
+}

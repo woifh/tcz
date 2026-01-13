@@ -59,28 +59,29 @@
                 </tr>
             </thead>
             <tbody id="grid-body">
-                <!-- Loading state -->
-                <tr x-show="loading">
+                <!-- Loading state overlay -->
+                <tr x-show="loading && courts.length === 0">
                     <td colspan="7" class="text-center py-8 text-gray-500">Lade Verfügbarkeit...</td>
                 </tr>
-                
+
                 <!-- Error state -->
                 <tr x-show="error && !loading">
                     <td colspan="7" class="text-center py-8 text-red-500" x-text="error"></td>
                 </tr>
-                
-                <!-- Grid data -->
-                <template x-for="time in timeSlots" :key="time">
-                    <tr x-show="!loading && !error">
-                        <td class="border border-gray-300 px-4 py-2 font-semibold" x-text="time"></td>
-                        <template x-for="courtIndex in [0,1,2,3,4,5]" :key="courtIndex">
-                            <td class="border border-gray-300 px-2 py-4 text-center text-xs"
-                                :class="getSlotClass(getSlot(courtIndex, time), time)"
-                                x-html="getSlotContent(getSlot(courtIndex, time), time)">
-                            </td>
-                        </template>
-                    </tr>
-                </template>
+
+                <!-- Grid data - static structure, dynamic content (no DOM recreation) -->
+                {% for time_idx in range(14) %}
+                <tr x-show="!error" :class="{ 'opacity-50': loading }">
+                    <td class="border border-gray-300 px-4 py-2 font-semibold"
+                        x-text="timeSlots[{{ time_idx }}] || '{{ '%02d:00'|format(8 + time_idx) }}'"></td>
+                    {% for court_idx in range(6) %}
+                    <td id="slot-{{ court_idx }}-{{ time_idx }}"
+                        :class="courts[{{ court_idx }}]?.slots[{{ time_idx }}]?.cssClass || defaultCellClass"
+                        x-html="courts[{{ court_idx }}]?.slots[{{ time_idx }}]?.content || 'Frei'">
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>

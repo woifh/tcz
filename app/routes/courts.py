@@ -1,7 +1,7 @@
 """Court and availability routes."""
 from flask import Blueprint, render_template, jsonify, request, current_app
 from flask_login import login_required, current_user
-from datetime import date, time
+from datetime import date, time, datetime
 import logging
 from app import db, limiter
 from app.models import Court, Block
@@ -10,6 +10,112 @@ from app.services.block_service import BlockService
 from app.services.anonymous_filter_service import AnonymousDataFilter
 
 bp = Blueprint('courts', __name__, url_prefix='/courts')
+
+
+def _is_slot_in_past(slot_time, query_date, current_time):
+    """Check if a time slot is in the past."""
+    today = current_time.date()
+
+    if query_date < today:
+        return True
+    if query_date > today:
+        return False
+
+    # Same day - compare hours
+    return slot_time.hour < current_time.hour
+
+
+def _compute_slot_class(slot, is_past, is_authenticated, current_user_id=None):
+    """Pre-compute CSS classes for a slot."""
+    classes = 'border border-gray-300 px-2 py-4 text-center text-xs'
+    status = slot['status']
+
+    if status == 'available':
+        if is_past:
+            classes += ' bg-gray-200 text-gray-500'
+        else:
+            classes += ' bg-green-500 text-white'
+            if is_authenticated:
+                classes += ' cursor-pointer hover:opacity-80'
+    elif status == 'short_notice':
+        classes += ' bg-orange-500 text-white'
+        if is_past:
+            classes += ' opacity-75'
+        elif is_authenticated and _can_cancel_slot(slot, current_user_id):
+            classes += ' cursor-pointer hover:opacity-80'
+    elif status == 'reserved':
+        details = slot.get('details')
+        if details and details.get('is_short_notice'):
+            classes += ' bg-orange-500 text-white'
+        else:
+            classes += ' bg-red-500 text-white'
+        if is_past:
+            classes += ' opacity-75'
+        elif is_authenticated and _can_cancel_slot(slot, current_user_id):
+            classes += ' cursor-pointer hover:opacity-80'
+    elif status == 'blocked':
+        classes += ' bg-gray-400 text-white min-h-16'
+        if is_past:
+            classes += ' opacity-75'
+
+    return classes
+
+
+def _can_cancel_slot(slot, current_user_id):
+    """Check if user can cancel this slot."""
+    if not current_user_id:
+        return False
+
+    status = slot.get('status')
+    if status not in ('reserved', 'short_notice'):
+        return False
+
+    details = slot.get('details')
+    if not details:
+        return False
+
+    # Short notice bookings cannot be cancelled
+    if status == 'short_notice' or details.get('is_short_notice'):
+        return False
+
+    # User can cancel if they booked it or it's booked for them
+    return (
+        details.get('booked_for_id') == current_user_id or
+        details.get('booked_by_id') == current_user_id
+    )
+
+
+def _compute_slot_content(slot, is_past, is_authenticated):
+    """Pre-compute display content for a slot."""
+    status = slot['status']
+
+    if status == 'available':
+        return 'Vergangen' if is_past else 'Frei'
+
+    if status in ('short_notice', 'reserved'):
+        details = slot.get('details')
+        if details and is_authenticated:
+            booked_for = details.get('booked_for', '')
+            booked_by = details.get('booked_by', '')
+            booked_for_id = details.get('booked_for_id')
+            booked_by_id = details.get('booked_by_id')
+
+            if booked_for_id == booked_by_id:
+                return booked_for
+            return f'{booked_for}<br>(von {booked_by})'
+        return 'Gebucht'
+
+    if status == 'blocked':
+        details = slot.get('details')
+        if details and details.get('reason'):
+            content = details['reason']
+            extra = details.get('details', '').strip()
+            if extra:
+                content += f'<br><span style="font-size: 0.7em; opacity: 0.9;">{extra}</span>'
+            return content
+        return 'Gesperrt'
+
+    return ''
 
 # Set up logging for anonymous access patterns
 anonymous_logger = logging.getLogger('anonymous_access')
@@ -121,18 +227,13 @@ def get_availability():
             
             # Check if blocked
             for block in blocks:
-                if (block.court_id == court.id and 
+                if (block.court_id == court.id and
                     block.start_time <= slot_time < block.end_time):
                     slot['status'] = 'blocked'
-                    
-                    # Debug logging
-                    print(f"DEBUG: Block found - ID: {block.id}, Reason: {block.reason_obj.name if block.reason_obj else 'None'}, Details: '{block.details}'")
-                    
                     slot['details'] = {
                         'reason': block.reason_obj.name if block.reason_obj else 'Unbekannt',
                         'details': block.details if block.details else '',
-                        'block_id': block.id,
-                        'debug_test': 'FIELD_ADDED'
+                        'block_id': block.id
                     }
                     break
             
@@ -160,13 +261,9 @@ def get_availability():
                                 'is_active': is_reservation_active,
                                 'booking_status': 'active'
                             }
-                            # Debug logging
-                            print(f"DEBUG: Active reservation {reservation.id} at {slot_time} - is_short_notice: {reservation.is_short_notice}, status: {slot['status']}")
                         else:
                             # Reservation has ended, slot becomes available
                             slot['status'] = 'available'
-                            # Debug logging
-                            print(f"DEBUG: Past reservation {reservation.id} at {slot_time} - no longer active, slot available")
                         break
             
             court_data['slots'].append(slot)
@@ -175,7 +272,26 @@ def get_availability():
     
     # Filter data based on authentication status
     filtered_grid = AnonymousDataFilter.filter_availability_data(grid, is_authenticated)
-    
+
+    # Pre-compute CSS classes and display content for each slot
+    # This eliminates 252 JS function calls per render (84 cells × 3 calls each)
+    current_user_id = current_user.id if is_authenticated else None
+    for court_data in filtered_grid:
+        for slot in court_data['slots']:
+            slot_time = time.fromisoformat(slot['time'])
+            is_past = _is_slot_in_past(slot_time, query_date, current_time)
+
+            slot['cssClass'] = _compute_slot_class(
+                slot, is_past, is_authenticated, current_user_id
+            )
+            slot['content'] = _compute_slot_content(slot, is_past, is_authenticated)
+            slot['isPast'] = is_past
+            slot['canCancel'] = (
+                is_authenticated and
+                not is_past and
+                _can_cancel_slot(slot, current_user_id)
+            )
+
     # Add metadata about real-time updates
     response_data = {
         'date': date_str,
@@ -183,10 +299,11 @@ def get_availability():
         'metadata': {
             'generated_at': current_time.isoformat(),
             'uses_realtime_logic': True,
-            'timezone': 'Europe/Berlin'
+            'timezone': 'Europe/Berlin',
+            'precomputed_rendering': True
         }
     }
-    
+
     return jsonify(response_data)
 
 

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.3.0] - 2026-01-13
+
+### Performance
+- Flicker-free date navigation in court grid (static table structure)
+- Server-side pre-computation of slot styles and content
+- Smooth CSS transitions on slot state changes
+
 ## [3.2.0] - 2026-01-13
 
 ### Security
