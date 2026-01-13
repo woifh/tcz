@@ -49,7 +49,7 @@ export function bookingModal() {
             // Set default booked for to current user
             const bookingForSelect = document.getElementById('booking-for');
             if (bookingForSelect && bookingForSelect.options.length > 0) {
-                this.bookedFor = parseInt(bookingForSelect.options[0].value);
+                this.bookedFor = bookingForSelect.options[0].value;
             }
         },
         

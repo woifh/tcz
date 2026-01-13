@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.1] - 2026-01-13
+
+### Fixed
+- Booking form validation failed due to UUID parsing issue
+
 ## [3.1.0] - 2026-01-13
 
 ### Added
