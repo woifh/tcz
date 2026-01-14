@@ -53,7 +53,74 @@ def jwt_or_session_required(f):
     # Exempt from CSRF - Bearer tokens don't need CSRF, and session auth
     # routes using this decorator are API endpoints that accept JSON
     return csrf.exempt(decorated_function)
-    
+
+
+def jwt_admin_required(f):
+    """JWT-only auth + admin role required. For API endpoints."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Bearer token required'}), 401
+
+        token = auth_header[7:]
+        try:
+            payload = jwt.decode(
+                token,
+                current_app.config['JWT_SECRET_KEY'],
+                algorithms=[current_app.config['JWT_ALGORITHM']]
+            )
+            from app.models import Member
+            member = Member.query.get(payload['user_id'])
+
+            if not member or not member.is_active:
+                return jsonify({'error': 'Invalid token'}), 401
+            if not member.is_admin():
+                return jsonify({'error': 'Admin access required'}), 403
+
+            login_user(member, remember=False)
+            return f(*args, **kwargs)
+
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token'}), 401
+
+    return csrf.exempt(decorated_function)
+
+
+def jwt_teamster_or_admin_required(f):
+    """JWT-only auth + teamster or admin role required. For API endpoints."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Bearer token required'}), 401
+
+        token = auth_header[7:]
+        try:
+            payload = jwt.decode(
+                token,
+                current_app.config['JWT_SECRET_KEY'],
+                algorithms=[current_app.config['JWT_ALGORITHM']]
+            )
+            from app.models import Member
+            member = Member.query.get(payload['user_id'])
+
+            if not member or not member.is_active:
+                return jsonify({'error': 'Invalid token'}), 401
+            if not member.can_manage_blocks():
+                return jsonify({'error': 'Teamster or admin access required'}), 403
+
+            login_user(member, remember=False)
+            return f(*args, **kwargs)
+
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token'}), 401
+
+    return csrf.exempt(decorated_function)
 
 
 def login_required_json(f):

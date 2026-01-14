@@ -152,6 +152,27 @@ class Member(db.Model, UserMixin):
     def __repr__(self):
         return f'<Member {self.name} ({self.email})>'
 
+    def to_dict(self, include_admin_fields=False):
+        """Convert member to dictionary for API responses."""
+        data = {
+            'id': self.id,
+            'firstname': self.firstname,
+            'lastname': self.lastname,
+            'name': self.name,
+            'email': self.email
+        }
+        if include_admin_fields:
+            data.update({
+                'role': self.role,
+                'membership_type': self.membership_type,
+                'is_active': self.is_active,
+                'fee_paid': self.fee_paid,
+                'phone': self.phone,
+                'street': self.street,
+                'city': self.city,
+                'zip_code': self.zip_code
+            })
+        return data
 
 
 class Court(db.Model):
@@ -223,6 +244,20 @@ class Reservation(db.Model):
     def __repr__(self):
         return f'<Reservation Court {self.court_id} on {self.date} at {self.start_time}>'
 
+    def to_dict(self):
+        """Convert reservation to dictionary for API responses."""
+        return {
+            'id': self.id,
+            'court_id': self.court_id,
+            'date': self.date.isoformat(),
+            'start_time': self.start_time.strftime('%H:%M'),
+            'end_time': self.end_time.strftime('%H:%M'),
+            'booked_for_id': self.booked_for_id,
+            'booked_for': self.booked_for.name if self.booked_for else None,
+            'booked_by_id': self.booked_by_id,
+            'status': self.status,
+            'is_short_notice': self.is_short_notice
+        }
 
 
 class BlockReason(db.Model):
@@ -390,6 +425,21 @@ class Block(db.Model):
     def __repr__(self):
         return f'<Block Court {self.court_id} on {self.date} ({self.reason})>'
 
+    def to_dict(self):
+        """Convert block to dictionary for API responses."""
+        return {
+            'id': self.id,
+            'batch_id': self.batch_id,
+            'court_id': self.court_id,
+            'date': self.date.isoformat(),
+            'start_time': self.start_time.strftime('%H:%M'),
+            'end_time': self.end_time.strftime('%H:%M'),
+            'reason': self.reason,
+            'reason_id': self.reason_id,
+            'details': self.details,
+            'created_by': self.created_by.name if self.created_by else None,
+            'created_by_id': self.created_by_id
+        }
 
 
 class Notification(db.Model):

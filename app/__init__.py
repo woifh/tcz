@@ -104,13 +104,15 @@ def create_app(config_name=None):
     # Import and register blueprints
     with app.app_context():
         from app.routes import auth, reservations, members, courts, admin
-        
+        from app.routes import api
+
         app.register_blueprint(auth.bp)
         app.register_blueprint(reservations.bp)
         app.register_blueprint(members.bp)
         app.register_blueprint(courts.bp)
         app.register_blueprint(admin.bp)
-        
+        app.register_blueprint(api.bp)
+
         # Register main dashboard route
         from app.routes import dashboard
         app.register_blueprint(dashboard.bp)

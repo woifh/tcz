@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - 2026-01-14
+
+### Added
+- Complete mobile API for reservations, members, and admin features
+
 ## [3.4.0] - 2026-01-14
 
 ### Added
