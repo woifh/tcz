@@ -191,7 +191,10 @@ def update_batch(batch_id):
         if isinstance(new_court_ids, str):
             new_court_ids = [int(x) for x in new_court_ids.split(',')]
         else:
-            new_court_ids = [int(x) for x in new_court_ids]
+            new_court_ids = [int(x) for x in new_court_ids] if new_court_ids else []
+
+        if not new_court_ids:
+            return jsonify({'error': 'Mindestens ein Platz muss ausgewählt sein'}), 400
 
         # Validate that the date is not in the past
         from app.utils.timezone_utils import get_berlin_date_today
@@ -230,19 +233,13 @@ def update_batch(batch_id):
         # Update blocks for courts that remain selected
         for block in existing_blocks:
             if block.court_id in courts_to_keep:
-                success, error = BlockService.update_single_instance(
-                    block_id=block.id,
-                    date=new_date,
-                    start_time=new_start_time,
-                    end_time=new_end_time,
-                    reason_id=new_reason_id,
-                    details=new_details,
-                    admin_id=current_user.id
-                )
-
-                if error:
-                    db.session.rollback()
-                    return jsonify({'error': f'Fehler beim Aktualisieren von Block {block.id}: {error}'}), 400
+                block.date = new_date
+                block.start_time = new_start_time
+                block.end_time = new_end_time
+                block.reason_id = new_reason_id
+                block.details = new_details
+                # Cancel conflicting reservations for updated blocks
+                BlockService.cancel_conflicting_reservations(block)
 
         # Create new blocks for newly selected courts
         for court_id in courts_to_add:
@@ -265,20 +262,22 @@ def update_batch(batch_id):
         # Commit all changes
         db.session.commit()
 
-        # Log the operation
+        # Get court numbers and reason name for audit log
+        courts = Court.query.filter(Court.id.in_(new_court_ids)).all()
+        court_numbers = sorted([c.number for c in courts])
+        reason = BlockReason.query.get(new_reason_id)
+        reason_name = reason.name if reason else None
+
+        # Log the operation (single batch entry)
         BlockService.log_block_operation(
             operation='update',
             block_data={
                 'batch_id': batch_id,
-                'new_court_ids': new_court_ids,
-                'existing_court_ids': existing_court_ids,
-                'courts_kept': list(courts_to_keep),
-                'courts_deleted': list(courts_to_delete),
-                'courts_added': list(courts_to_add),
                 'date': new_date.isoformat(),
-                'start_time': new_start_time.isoformat(),
-                'end_time': new_end_time.isoformat(),
-                'reason_id': new_reason_id,
+                'start_time': new_start_time.strftime('%H:%M'),
+                'end_time': new_end_time.strftime('%H:%M'),
+                'court_numbers': court_numbers,
+                'reason_name': reason_name,
                 'details': new_details
             },
             admin_id=current_user.id

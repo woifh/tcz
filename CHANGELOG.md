@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - Audit log now shows full details for block operations (date, time, courts, reason)
-- Block batch updates now log once per batch instead of per court
+- Block batch updates now log single entry per batch instead of individual entries per court
 - Member updates now correctly track only actual changes (fixed false change detection for notification settings)
 - Removed redundant "Ausgeführt als: Administrator" from audit log
 
