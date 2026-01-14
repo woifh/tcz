@@ -170,7 +170,12 @@ class Member(db.Model, UserMixin):
                 'phone': self.phone,
                 'street': self.street,
                 'city': self.city,
-                'zip_code': self.zip_code
+                'zip_code': self.zip_code,
+                'notifications_enabled': self.notifications_enabled,
+                'notify_own_bookings': self.notify_own_bookings,
+                'notify_other_bookings': self.notify_other_bookings,
+                'notify_court_blocked': self.notify_court_blocked,
+                'notify_booking_overridden': self.notify_booking_overridden
             })
         return data
 
@@ -431,13 +436,16 @@ class Block(db.Model):
             'id': self.id,
             'batch_id': self.batch_id,
             'court_id': self.court_id,
+            'court_number': self.court.number if self.court else None,
             'date': self.date.isoformat(),
             'start_time': self.start_time.strftime('%H:%M'),
             'end_time': self.end_time.strftime('%H:%M'),
             'reason': self.reason,
             'reason_id': self.reason_id,
+            'reason_name': self.reason_obj.name if self.reason_obj else None,
             'details': self.details,
             'created_by': self.created_by.name if self.created_by else None,
+            'created_by_name': self.created_by.name if self.created_by else None,
             'created_by_id': self.created_by_id
         }
 

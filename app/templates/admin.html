@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function loadPaymentDeadline() {
     const content = document.getElementById('deadline-content');
     try {
-        const response = await fetch('/admin/settings/payment-deadline');
+        const response = await fetch('/api/admin/settings/payment-deadline');
         const data = await response.json();
 
         let html = '';
@@ -192,7 +192,7 @@ async function savePaymentDeadline() {
     }
 
     try {
-        const response = await fetch('/admin/settings/payment-deadline', {
+        const response = await fetch('/api/admin/settings/payment-deadline', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ async function clearPaymentDeadline() {
     }
 
     try {
-        const response = await fetch('/admin/settings/payment-deadline', {
+        const response = await fetch('/api/admin/settings/payment-deadline', {
             method: 'DELETE',
             headers: { 'X-CSRFToken': csrfToken }
         });

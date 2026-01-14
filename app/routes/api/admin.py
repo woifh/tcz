@@ -2,7 +2,8 @@
 API Admin Module
 
 Admin routes for member management, blocks, and settings.
-JWT-only authentication with admin/teamster role requirements.
+Session-only authentication with admin/teamster role requirements.
+These endpoints are NOT accessible via JWT/mobile app.
 """
 
 from datetime import datetime
@@ -14,7 +15,7 @@ from app.models import Member, Block, Court, BlockReason
 from app.services.member_service import MemberService
 from app.services.block_service import BlockService
 from app.services.settings_service import SettingsService
-from app.decorators.auth import jwt_admin_required, jwt_teamster_or_admin_required
+from app.decorators.auth import admin_required, teamster_or_admin_required
 from app.constants.messages import ErrorMessages, SuccessMessages
 from . import bp
 
@@ -22,7 +23,7 @@ from . import bp
 # ----- Member Management Routes (Admin Only) -----
 
 @bp.route('/admin/members/', methods=['GET'])
-@jwt_admin_required
+@admin_required
 def list_members():
     """List all active members."""
     members, error = MemberService.get_all_members(include_inactive=False)
@@ -35,7 +36,7 @@ def list_members():
 
 
 @bp.route('/admin/members/', methods=['POST'])
-@jwt_admin_required
+@admin_required
 def create_member():
     """Create a new member."""
     data = request.get_json()
@@ -69,7 +70,7 @@ def create_member():
 
 
 @bp.route('/admin/members/<id>', methods=['GET'])
-@jwt_admin_required
+@admin_required
 def get_member(id):
     """Get member details."""
     member, error = MemberService.get_member(id)
@@ -81,7 +82,7 @@ def get_member(id):
 
 
 @bp.route('/admin/members/<id>', methods=['PUT'])
-@jwt_admin_required
+@admin_required
 def update_member(id):
     """Update a member."""
     data = request.get_json()
@@ -130,7 +131,7 @@ def update_member(id):
 
 
 @bp.route('/admin/members/<id>', methods=['DELETE'])
-@jwt_admin_required
+@admin_required
 def delete_member(id):
     """Delete a member."""
     force = request.args.get('force', 'false').lower() == 'true'
@@ -151,7 +152,7 @@ def delete_member(id):
 
 
 @bp.route('/admin/members/<id>/deactivate', methods=['POST'])
-@jwt_admin_required
+@admin_required
 def deactivate_member(id):
     """Deactivate a member account."""
     try:
@@ -169,7 +170,7 @@ def deactivate_member(id):
 
 
 @bp.route('/admin/members/<id>/reactivate', methods=['POST'])
-@jwt_admin_required
+@admin_required
 def reactivate_member(id):
     """Reactivate a member account."""
     try:
@@ -189,7 +190,7 @@ def reactivate_member(id):
 # ----- Block Management Routes (Teamster or Admin) -----
 
 @bp.route('/admin/blocks/', methods=['GET'])
-@jwt_teamster_or_admin_required
+@teamster_or_admin_required
 def get_blocks():
     """Get blocks with optional filtering."""
     try:
@@ -224,7 +225,7 @@ def get_blocks():
 
 
 @bp.route('/admin/blocks/', methods=['POST'])
-@jwt_teamster_or_admin_required
+@teamster_or_admin_required
 def create_blocks():
     """Create block(s) for one or multiple courts."""
     data = request.get_json()
@@ -290,7 +291,7 @@ def create_blocks():
 
 
 @bp.route('/admin/blocks/<batch_id>', methods=['GET'])
-@jwt_teamster_or_admin_required
+@teamster_or_admin_required
 def get_batch(batch_id):
     """Get all blocks in a batch."""
     try:
@@ -318,7 +319,7 @@ def get_batch(batch_id):
 
 
 @bp.route('/admin/blocks/<batch_id>', methods=['PUT'])
-@jwt_teamster_or_admin_required
+@teamster_or_admin_required
 def update_batch(batch_id):
     """Update all blocks in a batch."""
     data = request.get_json()
@@ -365,11 +366,12 @@ def update_batch(batch_id):
             if block.court_id in courts_to_delete:
                 db.session.delete(block)
 
-        # Update existing blocks
+        # Update existing blocks (skip individual audit logs)
         for block in existing_blocks:
             if block.court_id in courts_to_keep:
                 success, error = BlockService.update_single_instance(
                     block_id=block.id,
+                    skip_audit_log=True,
                     date=new_date,
                     start_time=new_start_time,
                     end_time=new_end_time,
@@ -399,6 +401,26 @@ def update_batch(batch_id):
 
         db.session.commit()
 
+        # Get court numbers and reason name for batch-level audit log
+        reason = BlockReason.query.get(new_reason_id)
+        reason_name = reason.name if reason else None
+        final_court_numbers = sorted([Court.query.get(cid).number for cid in new_court_ids if Court.query.get(cid)])
+
+        # Log batch update once
+        BlockService.log_block_operation(
+            operation='update',
+            block_data={
+                'batch_id': batch_id,
+                'date': new_date.isoformat(),
+                'start_time': new_start_time.strftime('%H:%M'),
+                'end_time': new_end_time.strftime('%H:%M'),
+                'court_numbers': final_court_numbers,
+                'reason_name': reason_name,
+                'details': new_details
+            },
+            admin_id=current_user.id
+        )
+
         total_blocks = len(courts_to_keep) + len(courts_to_add)
         return jsonify({'message': f'{total_blocks} Sperrungen erfolgreich aktualisiert'})
     except Exception as e:
@@ -407,7 +429,7 @@ def update_batch(batch_id):
 
 
 @bp.route('/admin/blocks/<batch_id>', methods=['DELETE'])
-@jwt_teamster_or_admin_required
+@teamster_or_admin_required
 def delete_batch(batch_id):
     """Delete all blocks in a batch."""
     try:
@@ -433,7 +455,7 @@ def delete_batch(batch_id):
 # ----- Settings Routes (Admin Only) -----
 
 @bp.route('/admin/settings/payment-deadline', methods=['GET'])
-@jwt_admin_required
+@admin_required
 def get_payment_deadline():
     """Get current payment deadline settings."""
     deadline = SettingsService.get_payment_deadline()
@@ -449,7 +471,7 @@ def get_payment_deadline():
 
 
 @bp.route('/admin/settings/payment-deadline', methods=['POST'])
-@jwt_admin_required
+@admin_required
 def set_payment_deadline():
     """Set payment deadline."""
     data = request.get_json()
@@ -480,7 +502,7 @@ def set_payment_deadline():
 
 
 @bp.route('/admin/settings/payment-deadline', methods=['DELETE'])
-@jwt_admin_required
+@admin_required
 def clear_payment_deadline():
     """Clear payment deadline."""
     success, error = SettingsService.clear_payment_deadline(current_user.id)
@@ -488,3 +510,246 @@ def clear_payment_deadline():
     if success:
         return jsonify({'message': SuccessMessages.PAYMENT_DEADLINE_CLEARED})
     return jsonify({'error': error}), 400
+
+
+# ----- Block Reasons Routes -----
+
+@bp.route('/admin/block-reasons', methods=['GET'])
+@teamster_or_admin_required
+def list_block_reasons():
+    """List block reasons based on user role."""
+    from app.services.block_reason_service import BlockReasonService
+
+    try:
+        if current_user.is_admin():
+            reasons = BlockReasonService.get_all_block_reasons()
+        else:
+            reasons = BlockReasonService.get_reasons_for_user(current_user)
+
+        reasons_data = [{
+            'id': r.id,
+            'name': r.name,
+            'is_active': r.is_active,
+            'teamster_usable': r.teamster_usable,
+            'usage_count': BlockReasonService.get_reason_usage_count(r.id),
+            'created_by': r.created_by.name,
+            'created_at': r.created_at.isoformat()
+        } for r in reasons]
+
+        return jsonify({'reasons': reasons_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/admin/block-reasons', methods=['POST'])
+@admin_required
+def create_block_reason():
+    """Create block reason (admin only)."""
+    from app.services.block_reason_service import BlockReasonService
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    name = data.get('name', '').strip()
+    teamster_usable = data.get('teamster_usable', False)
+
+    if isinstance(teamster_usable, str):
+        teamster_usable = teamster_usable.lower() in ('true', '1', 'yes')
+
+    if not name:
+        return jsonify({'error': 'Name ist erforderlich'}), 400
+
+    existing = BlockReason.query.filter_by(name=name).first()
+    if existing:
+        return jsonify({'error': 'Ein Grund mit diesem Namen existiert bereits'}), 400
+
+    reason, error = BlockReasonService.create_block_reason(
+        name=name,
+        admin_id=current_user.id,
+        teamster_usable=teamster_usable
+    )
+
+    if error:
+        return jsonify({'error': error}), 400
+
+    return jsonify({
+        'message': 'Sperrungsgrund erfolgreich erstellt',
+        'reason': {
+            'id': reason.id,
+            'name': reason.name,
+            'is_active': reason.is_active,
+            'teamster_usable': reason.teamster_usable
+        }
+    }), 201
+
+
+@bp.route('/admin/block-reasons/<int:reason_id>', methods=['PUT'])
+@admin_required
+def update_block_reason(reason_id):
+    """Update block reason (admin only)."""
+    from app.services.block_reason_service import BlockReasonService
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    name = data.get('name', '').strip() if data.get('name') else None
+    teamster_usable = data.get('teamster_usable')
+
+    if teamster_usable is not None and isinstance(teamster_usable, str):
+        teamster_usable = teamster_usable.lower() in ('true', '1', 'yes')
+
+    if name is not None and not name:
+        return jsonify({'error': 'Name ist erforderlich'}), 400
+
+    success, error = BlockReasonService.update_block_reason(
+        reason_id=reason_id,
+        name=name,
+        teamster_usable=teamster_usable,
+        admin_id=current_user.id
+    )
+
+    if error:
+        return jsonify({'error': error}), 400
+
+    return jsonify({'message': 'Sperrungsgrund erfolgreich aktualisiert'})
+
+
+@bp.route('/admin/block-reasons/<int:reason_id>', methods=['DELETE'])
+@admin_required
+def delete_block_reason(reason_id):
+    """Delete block reason (admin only)."""
+    from app.services.block_reason_service import BlockReasonService
+
+    success, error_or_message = BlockReasonService.delete_block_reason(reason_id, current_user.id)
+
+    if not success:
+        return jsonify({'error': error_or_message}), 400
+
+    if error_or_message:
+        return jsonify({'message': error_or_message, 'deactivated': True})
+
+    return jsonify({'message': 'Sperrungsgrund erfolgreich gelöscht'})
+
+
+# ----- Conflict Preview Route -----
+
+@bp.route('/admin/blocks/conflict-preview', methods=['POST'])
+@teamster_or_admin_required
+def get_conflict_preview():
+    """Preview conflicts before creating/updating blocks."""
+    from app.models import Reservation
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    court_ids = data.get('court_ids', [])
+    date_str = data.get('date')
+    start_time_str = data.get('start_time')
+    end_time_str = data.get('end_time')
+
+    if not all([court_ids, date_str, start_time_str, end_time_str]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    try:
+        from datetime import datetime
+        block_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        start_time = datetime.strptime(start_time_str, '%H:%M').time()
+        end_time = datetime.strptime(end_time_str, '%H:%M').time()
+    except ValueError:
+        return jsonify({'error': 'Invalid date or time format'}), 400
+
+    conflicts = []
+    for court_id in court_ids:
+        conflicting_reservations = Reservation.query.filter(
+            Reservation.court_id == court_id,
+            Reservation.date == block_date,
+            Reservation.status == 'active',
+            Reservation.start_time >= start_time,
+            Reservation.start_time < end_time
+        ).all()
+
+        for res in conflicting_reservations:
+            conflicts.append({
+                'id': res.id,
+                'court_number': res.court.number if res.court else court_id,
+                'date': res.date.isoformat(),
+                'start_time': res.start_time.strftime('%H:%M'),
+                'end_time': res.end_time.strftime('%H:%M'),
+                'booked_for': res.booked_for.name if res.booked_for else 'Unknown',
+                'booked_by': res.booked_by.name if res.booked_by else 'Unknown'
+            })
+
+    return jsonify({
+        'conflicts': conflicts,
+        'conflict_count': len(conflicts)
+    })
+
+
+# ----- Audit Log & Changelog Routes -----
+
+@bp.route('/admin/blocks/audit-log', methods=['GET'])
+@admin_required
+def get_audit_log():
+    """Get unified audit log."""
+    from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog
+
+    log_type = request.args.get('type')
+    limit = min(int(request.args.get('limit', 100)), 500)
+
+    logs = []
+
+    if log_type in (None, 'block'):
+        block_logs = BlockAuditLog.query.order_by(BlockAuditLog.timestamp.desc()).limit(limit).all()
+        for log in block_logs:
+            logs.append({
+                'timestamp': log.timestamp.isoformat(),
+                'action': log.operation,
+                'user': log.admin.name if log.admin else 'System',
+                'details': str(log.operation_data),
+                'type': 'block'
+            })
+
+    if log_type in (None, 'member'):
+        member_logs = MemberAuditLog.query.order_by(MemberAuditLog.timestamp.desc()).limit(limit).all()
+        for log in member_logs:
+            logs.append({
+                'timestamp': log.timestamp.isoformat(),
+                'action': log.operation,
+                'user': log.performed_by.name if log.performed_by else 'System',
+                'details': str(log.operation_data),
+                'type': 'member'
+            })
+
+    if log_type in (None, 'reason'):
+        reason_logs = ReasonAuditLog.query.order_by(ReasonAuditLog.timestamp.desc()).limit(limit).all()
+        for log in reason_logs:
+            logs.append({
+                'timestamp': log.timestamp.isoformat(),
+                'action': log.operation,
+                'user': log.performed_by.name if log.performed_by else 'System',
+                'details': str(log.operation_data),
+                'type': 'reason'
+            })
+
+    # Sort by timestamp descending
+    logs.sort(key=lambda x: x['timestamp'], reverse=True)
+    logs = logs[:limit]
+
+    return jsonify({'success': True, 'logs': logs})
+
+
+@bp.route('/admin/changelog', methods=['GET'])
+@admin_required
+def get_changelog():
+    """Get changelog entries."""
+    from app.services.changelog_service import ChangelogService
+
+    entries, error = ChangelogService.get_changelog_as_dict()
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'entries': entries})

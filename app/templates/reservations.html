@@ -162,7 +162,7 @@ function reservationsList() {
             this.error = '';
 
             try {
-                const response = await fetch('/reservations/?format=json');
+                const response = await fetch('/api/reservations/');
                 const data = await response.json();
 
                 if (response.ok) {
@@ -188,7 +188,7 @@ function reservationsList() {
             this.cancelling = reservationId;
 
             try {
-                const response = await fetch(`/reservations/${reservationId}`, {
+                const response = await fetch(`/api/reservations/${reservationId}`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': csrfToken }
                 });

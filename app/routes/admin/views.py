@@ -131,27 +131,6 @@ def changelog():
     return render_template('admin/changelog.html')
 
 
-@bp.route('/api/changelog')
-@login_required
-@admin_required
-def get_changelog_api():
-    """API endpoint for changelog data."""
-    from app.services.changelog_service import ChangelogService
-
-    entries, error = ChangelogService.get_changelog_as_dict()
-
-    if error:
-        return jsonify({
-            'success': False,
-            'error': error
-        }), 500
-
-    return jsonify({
-        'success': True,
-        'entries': entries
-    })
-
-
 @bp.route('/settings/payment-deadline', methods=['GET'])
 @login_required
 @admin_required

@@ -89,8 +89,52 @@ def jwt_admin_required(f):
     return csrf.exempt(decorated_function)
 
 
+def session_or_jwt_admin_required(f):
+    """
+    Decorator that accepts either session cookie or JWT Bearer token,
+    and requires admin role. For API endpoints accessible from both web and mobile.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]
+            try:
+                payload = jwt.decode(
+                    token,
+                    current_app.config['JWT_SECRET_KEY'],
+                    algorithms=[current_app.config['JWT_ALGORITHM']]
+                )
+                from app.models import Member
+                member = Member.query.get(payload['user_id'])
+
+                if not member or not member.is_active:
+                    return jsonify({'error': 'Invalid token'}), 401
+                if not member.is_admin():
+                    return jsonify({'error': 'Admin access required'}), 403
+
+                login_user(member, remember=False)
+                return f(*args, **kwargs)
+
+            except jwt.ExpiredSignatureError:
+                return jsonify({'error': 'Token expired'}), 401
+            except jwt.InvalidTokenError:
+                return jsonify({'error': 'Invalid token'}), 401
+
+        # Fall back to session-based auth
+        if current_user.is_authenticated:
+            if not current_user.is_admin():
+                return jsonify({'error': 'Admin access required'}), 403
+            return f(*args, **kwargs)
+
+        return jsonify({'error': 'Authentifizierung erforderlich'}), 401
+
+    return csrf.exempt(decorated_function)
+
+
 def jwt_teamster_or_admin_required(f):
-    """JWT-only auth + teamster or admin role required. For API endpoints."""
+    """JWT-only auth + teamster or admin role required. For mobile API endpoints."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization', '')
@@ -119,6 +163,50 @@ def jwt_teamster_or_admin_required(f):
             return jsonify({'error': 'Token expired'}), 401
         except jwt.InvalidTokenError:
             return jsonify({'error': 'Invalid token'}), 401
+
+    return csrf.exempt(decorated_function)
+
+
+def session_or_jwt_teamster_or_admin_required(f):
+    """
+    Decorator that accepts either session cookie or JWT Bearer token,
+    and requires teamster or admin role. For API endpoints accessible from both web and mobile.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]
+            try:
+                payload = jwt.decode(
+                    token,
+                    current_app.config['JWT_SECRET_KEY'],
+                    algorithms=[current_app.config['JWT_ALGORITHM']]
+                )
+                from app.models import Member
+                member = Member.query.get(payload['user_id'])
+
+                if not member or not member.is_active:
+                    return jsonify({'error': 'Invalid token'}), 401
+                if not member.can_manage_blocks():
+                    return jsonify({'error': 'Teamster or admin access required'}), 403
+
+                login_user(member, remember=False)
+                return f(*args, **kwargs)
+
+            except jwt.ExpiredSignatureError:
+                return jsonify({'error': 'Token expired'}), 401
+            except jwt.InvalidTokenError:
+                return jsonify({'error': 'Invalid token'}), 401
+
+        # Fall back to session-based auth
+        if current_user.is_authenticated:
+            if not current_user.can_manage_blocks():
+                return jsonify({'error': 'Teamster or admin access required'}), 403
+            return f(*args, **kwargs)
+
+        return jsonify({'error': 'Authentifizierung erforderlich'}), 401
 
     return csrf.exempt(decorated_function)
 

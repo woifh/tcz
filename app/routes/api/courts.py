@@ -92,8 +92,13 @@ def _compute_slot_content(slot, is_past):
     if status in ('short_notice', 'reserved'):
         details = slot.get('details')
         if details:
-            booked_for = details.get('booked_for', '')
-            booked_by = details.get('booked_by', '')
+            booked_for = details.get('booked_for')
+            booked_by = details.get('booked_by')
+
+            # If no member names (anonymous user), just show "Gebucht"
+            if not booked_for:
+                return 'Gebucht'
+
             booked_for_id = details.get('booked_for_id')
             booked_by_id = details.get('booked_by_id')
 
@@ -116,9 +121,11 @@ def _compute_slot_content(slot, is_past):
 
 
 @bp.route('/courts/availability', methods=['GET'])
-@jwt_or_session_required
 def get_availability():
     """Get court availability grid for a specific date.
+
+    This endpoint is publicly accessible for viewing availability.
+    Authenticated users see additional details like cancellation options.
 
     Query params:
         date: Date in YYYY-MM-DD format (default: today)
@@ -179,14 +186,21 @@ def get_availability():
 
                         if is_active:
                             slot['status'] = 'short_notice' if reservation.is_short_notice else 'reserved'
-                            slot['details'] = {
-                                'booked_for': f"{reservation.booked_for.firstname} {reservation.booked_for.lastname}",
-                                'booked_for_id': reservation.booked_for_id,
-                                'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
-                                'booked_by_id': reservation.booked_by_id,
-                                'reservation_id': reservation.id,
-                                'is_short_notice': reservation.is_short_notice
-                            }
+                            # Only include member details for authenticated users
+                            if current_user.is_authenticated:
+                                slot['details'] = {
+                                    'booked_for': f"{reservation.booked_for.firstname} {reservation.booked_for.lastname}",
+                                    'booked_for_id': reservation.booked_for_id,
+                                    'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
+                                    'booked_by_id': reservation.booked_by_id,
+                                    'reservation_id': reservation.id,
+                                    'is_short_notice': reservation.is_short_notice
+                                }
+                            else:
+                                # Anonymous users only see that the slot is reserved
+                                slot['details'] = {
+                                    'is_short_notice': reservation.is_short_notice
+                                }
                         break
 
             court_data['slots'].append(slot)
@@ -194,7 +208,7 @@ def get_availability():
         grid.append(court_data)
 
     # Pre-compute CSS classes and content for each slot
-    current_user_id = current_user.id
+    current_user_id = current_user.id if current_user.is_authenticated else None
     for court_data in grid:
         for slot in court_data['slots']:
             slot_time_obj = time.fromisoformat(slot['time'])

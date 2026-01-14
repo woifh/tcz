@@ -112,7 +112,7 @@ export function bookingModal() {
             this.searchHighlightIndex = -1;
 
             try {
-                const response = await fetch(`/members/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`/api/members/search?q=${encodeURIComponent(query)}`);
                 const data = await response.json();
 
                 if (response.ok) {
@@ -159,7 +159,7 @@ export function bookingModal() {
 
             try {
                 // Add member to favourites
-                const response = await fetch(`/members/${currentUserId}/favourites`, {
+                const response = await fetch(`/api/members/${currentUserId}/favourites`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -263,8 +263,8 @@ export function bookingModal() {
                     return;
                 }
                 
-                console.log(`Fetching favourites from: /members/${currentUserId}/favourites`);
-                const response = await fetch(`/members/${currentUserId}/favourites`);
+                console.log(`Fetching favourites from: /api/members/${currentUserId}/favourites`);
+                const response = await fetch(`/api/members/${currentUserId}/favourites`);
                 console.log('Favourites response:', response.status, response.ok);
                 
                 if (response.ok) {

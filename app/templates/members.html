@@ -122,7 +122,7 @@ async function deleteMember(memberId) {
     }
 
     try {
-        const response = await fetch(`/members/${memberId}`, {
+        const response = await fetch(`/api/members/${memberId}`, {
             method: 'DELETE',
             headers: { 'X-CSRFToken': csrfToken }
         });
@@ -137,7 +137,7 @@ async function deleteMember(memberId) {
             if (data.error && data.error.includes('aktive Buchungen')) {
                 if (confirm(data.error + '\n\nMöchten Sie das Mitglied trotzdem löschen? Alle Buchungen werden storniert.')) {
                     // Force delete
-                    const forceResponse = await fetch(`/members/${memberId}?force=true`, {
+                    const forceResponse = await fetch(`/api/members/${memberId}?force=true`, {
                         method: 'DELETE',
                         headers: { 'X-CSRFToken': csrfToken }
                     });

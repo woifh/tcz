@@ -210,7 +210,7 @@ export class BlocksManager {
             const today = dateUtils.getTodayString();
             const nextMonth = dateUtils.getDatePlusDays(30);
 
-            const response = await fetch(`/admin/blocks?date_range_start=${today}&date_range_end=${nextMonth}`);
+            const response = await fetch(`/api/admin/blocks?date_range_start=${today}&date_range_end=${nextMonth}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -316,7 +316,7 @@ export class BlocksManager {
         this.closeBatchDeleteConfirmation();
 
         try {
-            const response = await fetch(`/admin/blocks/${batchId}`, {
+            const response = await fetch(`/api/admin/blocks/${batchId}`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCsrfToken() }
             });
@@ -340,7 +340,7 @@ export class BlocksManager {
      */
     async duplicateBlock(blockId) {
         try {
-            const response = await fetch(`/admin/blocks/${blockId}`);
+            const response = await fetch(`/api/admin/blocks/${blockId}`);
             const data = await response.json();
 
             if (!response.ok || !data.block) {

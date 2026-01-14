@@ -94,12 +94,13 @@ class BlockService:
         
         return conflicting_reservations
     @staticmethod
-    def update_single_instance(block_id, **updates):
+    def update_single_instance(block_id, skip_audit_log=False, **updates):
         """
         Update a single block instance.
 
         Args:
             block_id: ID of the Block to update
+            skip_audit_log: If True, skip audit logging (for batch operations that log separately)
             **updates: Dictionary of fields to update
 
         Returns:
@@ -110,7 +111,7 @@ class BlockService:
             block = Block.query.get(block_id)
             if not block:
                 return False, "Block not found"
-            
+
             # Update the block
             for field, value in updates.items():
                 if hasattr(block, field):
@@ -122,16 +123,25 @@ class BlockService:
 
             db.session.commit()
 
-            # Log the operation
-            BlockService.log_block_operation(
-                operation='update',
-                block_data={
-                    'block_id': block_id,
-                    'updates': updates
-                },
-                admin_id=updates.get('admin_id', block.created_by_id)  # Use provided admin_id or block creator
-            )
-            
+            # Log the operation (unless skipped for batch operations)
+            if not skip_audit_log:
+                court_number = block.court.number if block.court else None
+                reason_name = block.reason_obj.name if block.reason_obj else None
+
+                BlockService.log_block_operation(
+                    operation='update',
+                    block_data={
+                        'block_id': block_id,
+                        'date': block.date.isoformat() if block.date else None,
+                        'start_time': block.start_time.strftime('%H:%M') if block.start_time else None,
+                        'end_time': block.end_time.strftime('%H:%M') if block.end_time else None,
+                        'court_numbers': [court_number] if court_number else [],
+                        'reason_name': reason_name,
+                        'details': block.details
+                    },
+                    admin_id=updates.get('admin_id', block.created_by_id)
+                )
+
             logger.info(f"Updated single block instance {block_id}")
             
             return True, None
@@ -192,16 +202,27 @@ class BlockService:
                 all_cancelled_reservations.extend(cancelled_reservations)
             
             db.session.commit()
-            
+
+            # Get reason name for audit log
+            reason = BlockReason.query.get(reason_id)
+            reason_name = reason.name if reason else None
+
+            # Get court numbers for audit log
+            from app.models import Court
+            courts = Court.query.filter(Court.id.in_(court_ids)).all()
+            court_numbers = sorted([c.number for c in courts])
+
             # Log the operation
             BlockService.log_block_operation(
                 operation='create',
                 block_data={
                     'court_ids': court_ids,
+                    'court_numbers': court_numbers,
                     'date': date.isoformat(),
                     'start_time': start_time.isoformat(),
                     'end_time': end_time.isoformat(),
                     'reason_id': reason_id,
+                    'reason_name': reason_name,
                     'details': details,
                     'blocks_created': len(blocks),
                     'reservations_cancelled': len(all_cancelled_reservations)
@@ -237,26 +258,36 @@ class BlockService:
             
             # Get all blocks with this batch_id
             blocks_to_delete = Block.query.filter_by(batch_id=batch_id).all()
-            
+
             if not blocks_to_delete:
                 return False, "No blocks found with this batch ID"
-            
-            # Get court numbers for the response message
-            court_numbers = [block.court.number for block in blocks_to_delete]
-            
+
+            # Capture details before deletion for audit log
+            first_block = blocks_to_delete[0]
+            court_numbers = sorted([block.court.number for block in blocks_to_delete])
+            block_date = first_block.date.isoformat() if first_block.date else None
+            start_time = first_block.start_time.strftime('%H:%M') if first_block.start_time else None
+            end_time = first_block.end_time.strftime('%H:%M') if first_block.end_time else None
+            reason_name = first_block.reason_obj.name if first_block.reason_obj else None
+            details = first_block.details
+
             # Delete all blocks in the batch
             for block in blocks_to_delete:
                 db.session.delete(block)
-            
+
             db.session.commit()
-            
-            # Log the operation
+
+            # Log the operation with full details
             BlockService.log_block_operation(
                 operation='delete',
                 block_data={
                     'batch_id': batch_id,
-                    'blocks_deleted': len(blocks_to_delete),
-                    'court_numbers': court_numbers
+                    'date': block_date,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'court_numbers': court_numbers,
+                    'reason_name': reason_name,
+                    'details': details
                 },
                 admin_id=admin_id
             )

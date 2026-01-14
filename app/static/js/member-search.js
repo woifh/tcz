@@ -44,7 +44,7 @@ async function searchMembers(query) {
     loadingSpinner.classList.remove('hidden');
     
     try {
-        const url = `/members/search?q=${encodeURIComponent(query)}`;
+        const url = `/api/members/search?q=${encodeURIComponent(query)}`;
         console.log('Fetching:', url);
         const response = await fetch(url);
         const data = await response.json();
@@ -145,7 +145,7 @@ async function addToFavourites(memberId) {
     const currentUserId = window.currentUserId;
     
     try {
-        const response = await fetch(`/members/${currentUserId}/favourites`, {
+        const response = await fetch(`/api/members/${currentUserId}/favourites`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

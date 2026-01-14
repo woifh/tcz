@@ -36,7 +36,7 @@ export function initFavouritesStore() {
                     
                     if (!currentUserId) return;
                     
-                    const response = await fetch(`/members/${currentUserId}/favourites`);
+                    const response = await fetch(`/api/members/${currentUserId}/favourites`);
                     
                     if (response.ok) {
                         const data = await response.json();
@@ -57,7 +57,7 @@ export function initFavouritesStore() {
                 this.error = null;
                 
                 try {
-                    const response = await fetch('/members/favourites', {
+                    const response = await fetch('/api/members/favourites', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ export function initFavouritesStore() {
                 this.error = null;
                 
                 try {
-                    const response = await fetch(`/members/favourites/${favouriteId}`, {
+                    const response = await fetch(`/api/members/favourites/${favouriteId}`, {
                         method: 'DELETE',
                         headers: { 'X-CSRFToken': getCsrfToken() }
                     });

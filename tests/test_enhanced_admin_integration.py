@@ -437,20 +437,8 @@ class TestCalendarViewFunctionality:
                     block = block_list[0]
                     test_blocks.append(block)
 
-            # Create a recurring series for calendar display
-                court_ids=[courts[0].id],
-                start_date=date.today() + timedelta(days=5),
-                end_date=date.today() + timedelta(days=7),
-                start_time=time(14, 0),
-                end_time=time(15, 0),
-                recurrence_pattern='daily',
-                recurrence_days=None,
-                reason_id=reasons[2].id,
-                details='Calendar series',
-                admin_id=test_admin.id,
-                name='Calendar Test '
-            )
-            assert error is None
+            # Note: Recurring series functionality was removed (feature discontinued)
+            # test_blocks list contains all single blocks created above
             
             # Test calendar data retrieval for a date range
             calendar_start = date.today() + timedelta(days=1)
@@ -460,11 +448,8 @@ class TestCalendarViewFunctionality:
                 date_range=(calendar_start, calendar_end)
             )
             
-            # Verify we get both single blocks and series blocks
-            single_blocks = [b for b in calendar_blocks if b.id is None]
-            
-            assert len(single_blocks) > 0
-            assert len(
+            # Verify we get single blocks (series blocks functionality removed)
+            assert len(calendar_blocks) > 0
             
             # Verify blocks have all necessary data for calendar display
             for block in calendar_blocks:
@@ -495,29 +480,7 @@ class TestCalendarViewFunctionality:
             assert error is None
             single_block = single_blocks[0]
 
-            # Create series block with modification
-                court_ids=[court.id],
-                start_date=date.today() + timedelta(days=3),
-                end_date=date.today() + timedelta(days=5),
-                start_time=time(12, 0),
-                end_time=time(13, 0),
-                recurrence_pattern='daily',
-                recurrence_days=None,
-                reason_id=reason.id,
-                details=' championship',
-                admin_id=test_admin.id,
-                name='Championship '
-            )
-            assert error is None
-            
-            # Modify one instance in the series
-            middle_block =
-            success, update_error = BlockService.update_single_instance(
-                middle_block.id,
-                details='Modified instance',
-                admin_id=test_admin.id
-            )
-            assert update_error is None
+            # Note: Series block functionality was removed (feature discontinued)
             
             # Test tooltip data for single block
             tooltip_data_single = {
@@ -587,27 +550,7 @@ class TestCalendarViewFunctionality:
                 block = block_list[0]
                 created_blocks.append((block, expected_color))
             
-            # Create series blocks for striped pattern indicator
-                court_ids=[court.id],
-                start_date=date.today() + timedelta(days=10),
-                end_date=date.today() + timedelta(days=12),
-                start_time=time(15, 0),
-                end_time=time(16, 0),
-                recurrence_pattern='daily',
-                recurrence_days=None,
-                reason_id=BlockReason.query.filter_by(name='Tennis Course').first().id,
-                details='Visual indicator test',
-                admin_id=test_admin.id,
-                name='Visual Test '
-            )
-            assert error is None
-            
-            # Modify one series instance for dotted border indicator
-            success, update_error = BlockService.update_single_instance(
-                details='Modified for visual test',
-                admin_id=test_admin.id
-            )
-            assert update_error is None
+            # Note: Series blocks functionality was removed (feature discontinued)
             
             # Test visual indicator data
             for block, expected_color in created_blocks:
@@ -623,20 +566,4 @@ class TestCalendarViewFunctionality:
                 assert visual_data['is_series'] is False
                 assert visual_data['is_modified'] is False
             
-            # Test series visual indicators
-            for block in
-                updated_block = Block.query.get(block.id)
-                visual_data = {
-                    'is_series': updated_block.id is not None,
-                    'is_modified': updated_block.is_modified,
-                    'name': updated_block.series.name if updated_block.series else None
-                }
-                
-                assert visual_data['is_series'] is True
-                assert visual_data['name'] == 'Visual Test '
-                
-                # Check if this is the modified instance
-                if updated_block.details == 'Modified for visual test':
-                    assert visual_data['is_modified'] is True
-                else:
-                    assert visual_data['is_modified'] is False
+            # Note: Series visual indicators removed (feature discontinued)

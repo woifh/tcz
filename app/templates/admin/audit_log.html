@@ -94,6 +94,220 @@
         return '';
     }
 
+    // Field name translations for human-readable display
+    const fieldLabels = {
+        'firstname': 'Vorname',
+        'lastname': 'Nachname',
+        'email': 'E-Mail',
+        'role': 'Rolle',
+        'membership_type': 'Mitgliedschaft',
+        'fee_paid': 'Beitrag bezahlt',
+        'street': 'Straße',
+        'city': 'Stadt',
+        'zip_code': 'PLZ',
+        'phone': 'Telefon',
+        'notifications_enabled': 'Benachrichtigungen',
+        'notify_own_bookings': 'Eigene Buchungen',
+        'notify_other_bookings': 'Andere Buchungen',
+        'notify_court_blocked': 'Platzsperrungen',
+        'notify_booking_overridden': 'Überschriebene Buchungen',
+        'name': 'Name',
+        'member_name': 'Mitglied',
+        'teamster_usable': 'Für Mannschaftsführer',
+        'performer_role': 'Ausführende Rolle',
+        'date': 'Datum',
+        'start_time': 'Startzeit',
+        'end_time': 'Endzeit',
+        'court_id': 'Platz',
+        'court_ids': 'Plätze',
+        'court_numbers': 'Plätze',
+        'reason_id': 'Sperrungsgrund-ID',
+        'reason_name': 'Sperrungsgrund',
+        'details': 'Details',
+        'is_active': 'Aktiv',
+        'old': 'Vorher',
+        'new': 'Nachher',
+        'changes': 'Änderungen'
+    };
+
+    // Role translations
+    const roleLabels = {
+        'member': 'Mitglied',
+        'teamster': 'Mannschaftsführer',
+        'administrator': 'Administrator',
+        'admin': 'Administrator'
+    };
+
+    // Membership type translations
+    const membershipLabels = {
+        'full': 'Vollmitglied',
+        'sustaining': 'Fördermitglied',
+        'junior': 'Jugendmitglied'
+    };
+
+    function formatValue(key, value) {
+        if (value === null || value === undefined || value === '') return '-';
+        if (typeof value === 'boolean') return value ? 'Ja' : 'Nein';
+        if (value === 'True' || value === 'true') return 'Ja';
+        if (value === 'False' || value === 'false') return 'Nein';
+
+        // Translate roles
+        if (key === 'role' || key === 'performer_role') {
+            return roleLabels[value] || value;
+        }
+
+        // Translate membership types
+        if (key === 'membership_type') {
+            return membershipLabels[value] || value;
+        }
+
+        return value;
+    }
+
+    function formatDetails(detailsStr, logType, action) {
+        if (!detailsStr || detailsStr === '-') return '-';
+
+        try {
+            // Try to parse as Python dict format (single quotes)
+            let details;
+            try {
+                // Convert Python dict format to JSON
+                const jsonStr = detailsStr
+                    .replace(/'/g, '"')
+                    .replace(/True/g, 'true')
+                    .replace(/False/g, 'false')
+                    .replace(/None/g, 'null');
+                details = JSON.parse(jsonStr);
+            } catch {
+                // If parsing fails, return as-is
+                return escapeHtml(detailsStr);
+            }
+
+            const lines = [];
+
+            // Handle 'changes' object for updates
+            if (details.changes) {
+                lines.push('<div class="space-y-1">');
+                // Show member name if present (for member updates)
+                if (details.member_name) {
+                    lines.push(`<div class="font-medium text-gray-900 mb-1">${escapeHtml(details.member_name)}</div>`);
+                }
+                for (const [field, change] of Object.entries(details.changes)) {
+                    const label = fieldLabels[field] || field;
+                    const oldVal = formatValue(field, change.old);
+                    const newVal = formatValue(field, change.new);
+                    lines.push(`<div class="flex items-center gap-2">`);
+                    lines.push(`<span class="font-medium text-gray-700">${escapeHtml(label)}:</span>`);
+                    lines.push(`<span class="text-red-600 line-through">${escapeHtml(oldVal)}</span>`);
+                    lines.push(`<span class="text-gray-400">→</span>`);
+                    lines.push(`<span class="text-green-600">${escapeHtml(newVal)}</span>`);
+                    lines.push(`</div>`);
+                }
+                lines.push('</div>');
+                return lines.join('');
+            }
+
+            // Handle block updates - show current state
+            if (logType === 'block' && action === 'update') {
+                lines.push('<div class="space-y-0.5">');
+                if (details.date) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Datum:</span> ${escapeHtml(details.date)}</div>`);
+                }
+                if (details.start_time && details.end_time) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Zeit:</span> ${escapeHtml(details.start_time)} - ${escapeHtml(details.end_time)}</div>`);
+                }
+                if (details.court_numbers && details.court_numbers.length > 0) {
+                    const courtLabel = details.court_numbers.length === 1 ? 'Platz' : 'Plätze';
+                    lines.push(`<div><span class="font-medium text-gray-700">${courtLabel}:</span> ${escapeHtml(details.court_numbers.join(', '))}</div>`);
+                }
+                if (details.reason_name) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Sperrungsgrund:</span> ${escapeHtml(details.reason_name)}</div>`);
+                }
+                if (details.details) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Details:</span> ${escapeHtml(details.details)}</div>`);
+                }
+                lines.push('</div>');
+                return lines.join('');
+            }
+
+            // Handle create/delete actions - show key fields
+            if (action === 'create' || action === 'delete' || action === 'deactivate' || action === 'reactivate') {
+                lines.push('<div class="space-y-0.5">');
+
+                // For members: show name and email
+                if (logType === 'member') {
+                    if (details.firstname || details.lastname) {
+                        const name = `${details.firstname || ''} ${details.lastname || ''}`.trim();
+                        lines.push(`<div><span class="font-medium text-gray-700">Name:</span> ${escapeHtml(name)}</div>`);
+                    }
+                    if (details.email) {
+                        lines.push(`<div><span class="font-medium text-gray-700">E-Mail:</span> ${escapeHtml(details.email)}</div>`);
+                    }
+                    if (details.role) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Rolle:</span> ${escapeHtml(roleLabels[details.role] || details.role)}</div>`);
+                    }
+                    if (details.membership_type) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Mitgliedschaft:</span> ${escapeHtml(membershipLabels[details.membership_type] || details.membership_type)}</div>`);
+                    }
+                }
+
+                // For block reasons: show name
+                if (logType === 'reason') {
+                    if (details.name) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Name:</span> ${escapeHtml(details.name)}</div>`);
+                    }
+                    if (details.teamster_usable !== undefined) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Für Mannschaftsführer:</span> ${details.teamster_usable ? 'Ja' : 'Nein'}</div>`);
+                    }
+                }
+
+                // For blocks: show date, time, courts, and reason
+                if (logType === 'block') {
+                    if (details.date) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Datum:</span> ${escapeHtml(details.date)}</div>`);
+                    }
+                    if (details.start_time && details.end_time) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Zeit:</span> ${escapeHtml(details.start_time)} - ${escapeHtml(details.end_time)}</div>`);
+                    }
+                    if (details.court_numbers && details.court_numbers.length > 0) {
+                        const courtLabel = details.court_numbers.length === 1 ? 'Platz' : 'Plätze';
+                        lines.push(`<div><span class="font-medium text-gray-700">${courtLabel}:</span> ${escapeHtml(details.court_numbers.join(', '))}</div>`);
+                    } else if (details.court_id) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Platz:</span> ${escapeHtml(details.court_id)}</div>`);
+                    }
+                    if (details.reason_name) {
+                        lines.push(`<div><span class="font-medium text-gray-700">Sperrungsgrund:</span> ${escapeHtml(details.reason_name)}</div>`);
+                    }
+                }
+
+                lines.push('</div>');
+                return lines.join('');
+            }
+
+            // Fallback: format all fields nicely
+            lines.push('<div class="space-y-0.5">');
+            for (const [key, value] of Object.entries(details)) {
+                if (key === 'performer_role') continue; // Skip, shown separately
+                const label = fieldLabels[key] || key;
+                const formattedValue = formatValue(key, value);
+                lines.push(`<div><span class="font-medium text-gray-700">${escapeHtml(label)}:</span> ${escapeHtml(formattedValue)}</div>`);
+            }
+            lines.push('</div>');
+            return lines.join('');
+
+        } catch (e) {
+            console.error('Error formatting details:', e);
+            return escapeHtml(detailsStr);
+        }
+    }
+
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
     function renderLogs() {
         const container = document.getElementById('audit-log-container');
         const filteredLogs = currentFilter
@@ -132,8 +346,8 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             ${log.user || 'System'}
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">
-                                            ${log.details || '-'}
+                                        <td class="px-6 py-4 text-sm text-gray-500 max-w-md">
+                                            ${formatDetails(log.details, log.type, log.action)}
                                         </td>
                                     </tr>
                                 `;
@@ -158,7 +372,7 @@
     // Load audit log on page load
     document.addEventListener('DOMContentLoaded', async function() {
         try {
-            const response = await fetch('/admin/blocks/audit-log');
+            const response = await fetch('/api/admin/blocks/audit-log');
             const data = await response.json();
 
             if (data.success && data.logs) {

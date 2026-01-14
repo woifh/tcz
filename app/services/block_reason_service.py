@@ -1,6 +1,6 @@
 """Block reason service for managing customizable block reasons."""
 from app import db
-from app.models import BlockReason, Block
+from app.models import BlockReason, Block, ReasonAuditLog
 from app.constants.messages import ErrorMessages
 from typing import Tuple, List, Optional
 import logging
@@ -45,6 +45,19 @@ class BlockReasonService:
             )
 
             db.session.add(reason)
+            db.session.flush()  # Get the reason ID
+
+            # Create audit log entry
+            audit_log = ReasonAuditLog(
+                reason_id=reason.id,
+                operation='create',
+                operation_data={
+                    'name': name,
+                    'teamster_usable': teamster_usable
+                },
+                performed_by_id=admin_id
+            )
+            db.session.add(audit_log)
             db.session.commit()
 
             logger.info(f"Block reason created: {name} (teamster_usable={teamster_usable}) by admin {admin_id}")
@@ -77,6 +90,7 @@ class BlockReasonService:
 
             # Track changes for logging
             changes = []
+            audit_changes = {}
 
             # Update name if provided
             if name is not None:
@@ -95,12 +109,27 @@ class BlockReasonService:
                 old_name = reason.name
                 reason.name = name
                 changes.append(f"name: '{old_name}' -> '{name}'")
+                audit_changes['name'] = {'old': old_name, 'new': name}
 
             # Update teamster_usable if provided
             if teamster_usable is not None:
                 old_value = reason.teamster_usable
                 reason.teamster_usable = teamster_usable
                 changes.append(f"teamster_usable: {old_value} -> {teamster_usable}")
+                audit_changes['teamster_usable'] = {'old': old_value, 'new': teamster_usable}
+
+            if changes and admin_id:
+                # Create audit log entry
+                audit_log = ReasonAuditLog(
+                    reason_id=reason_id,
+                    operation='update',
+                    operation_data={
+                        'name': reason.name,
+                        'changes': audit_changes
+                    },
+                    performed_by_id=admin_id
+                )
+                db.session.add(audit_log)
 
             db.session.commit()
 
@@ -137,21 +166,45 @@ class BlockReasonService:
             if usage_count > 0:
                 # Reason is in use - delete future blocks and preserve historical data
                 future_blocks_deleted = BlockReasonService.cleanup_future_blocks_with_reason(reason.name)
-                
+
                 # Mark reason as inactive instead of deleting
                 reason.is_active = False
+
+                # Create audit log entry for deactivation
+                audit_log = ReasonAuditLog(
+                    reason_id=reason_id,
+                    operation='deactivate',
+                    operation_data={
+                        'name': reason.name,
+                        'future_blocks_deleted': future_blocks_deleted
+                    },
+                    performed_by_id=admin_id
+                )
+                db.session.add(audit_log)
                 db.session.commit()
-                
+
                 logger.info(f"Block reason '{reason.name}' marked inactive by admin {admin_id}, "
                            f"{future_blocks_deleted} future blocks deleted")
-                
+
                 return True, f"Sperrungsgrund wurde deaktiviert. {future_blocks_deleted} zukünftige Sperrungen wurden gelöscht. Historische Daten bleiben erhalten."
             else:
                 # Reason is not in use - safe to delete completely
                 reason_name = reason.name
+
+                # Create audit log entry for deletion
+                audit_log = ReasonAuditLog(
+                    reason_id=reason_id,
+                    operation='delete',
+                    operation_data={
+                        'name': reason_name
+                    },
+                    performed_by_id=admin_id
+                )
+                db.session.add(audit_log)
+
                 db.session.delete(reason)
                 db.session.commit()
-                
+
                 logger.info(f"Block reason '{reason_name}' deleted by admin {admin_id}")
                 return True, None
             

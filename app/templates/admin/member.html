@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (isEditMode) {
         // Fetch member data via API
         try {
-            const response = await fetch(`/members/${memberId}`);
+            const response = await fetch(`/api/members/${memberId}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (isEditMode) {
                 // Update existing member
-                response = await fetch(`/members/${memberId}`, {
+                response = await fetch(`/api/members/${memberId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     showToast('Passwort ist erforderlich', 'error');
                     return;
                 }
-                response = await fetch('/members/', {
+                response = await fetch('/api/members/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 if (currentStatus === 'inactive' && originalIsActive) {
                     // Deactivate the member
-                    const deactivateResponse = await fetch(`/members/${memberId}/deactivate`, {
+                    const deactivateResponse = await fetch(`/api/members/${memberId}/deactivate`, {
                         method: 'POST',
                         headers: { 'X-CSRFToken': csrfToken }
                     });
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 } else if (currentStatus === 'active' && !originalIsActive) {
                     // Reactivate the member
-                    const reactivateResponse = await fetch(`/members/${memberId}/reactivate`, {
+                    const reactivateResponse = await fetch(`/api/members/${memberId}/reactivate`, {
                         method: 'POST',
                         headers: { 'X-CSRFToken': csrfToken }
                     });

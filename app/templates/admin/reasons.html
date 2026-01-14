@@ -748,7 +748,7 @@ function reasonsManager() {
                 this.loading = true;
                 this.error = null;
                 
-                const response = await fetch('/admin/block-reasons', {
+                const response = await fetch('/api/admin/block-reasons', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1015,7 +1015,7 @@ function reasonsManager() {
                     return;
                 }
                 
-                const response = await fetch(`/admin/block-reasons/${this.editingReason.id}`, {
+                const response = await fetch(`/api/admin/block-reasons/${this.editingReason.id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1121,7 +1121,7 @@ function reasonsManager() {
                 this.deleteForm.submitting = true;
                 this.deleteForm.errors.general = null;
                 
-                const response = await fetch(`/admin/block-reasons/${this.deletingReason.id}`, {
+                const response = await fetch(`/api/admin/block-reasons/${this.deletingReason.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1363,7 +1363,7 @@ function reasonsManager() {
                     return;
                 }
                 
-                const response = await fetch('/admin/block-reasons', {
+                const response = await fetch('/api/admin/block-reasons', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

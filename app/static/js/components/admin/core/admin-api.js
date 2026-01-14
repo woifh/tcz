@@ -25,7 +25,7 @@ function getHeaders() {
 export const blockReasonsAPI = {
     async load() {
         try {
-            const response = await fetch('/admin/block-reasons');
+            const response = await fetch('/api/admin/block-reasons');
             const data = await response.json();
             
             if (response.ok) {
@@ -40,7 +40,7 @@ export const blockReasonsAPI = {
 
     async create(reasonData) {
         try {
-            const response = await fetch('/admin/block-reasons', {
+            const response = await fetch('/api/admin/block-reasons', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(reasonData)
@@ -55,7 +55,7 @@ export const blockReasonsAPI = {
 
     async update(reasonId, reasonData) {
         try {
-            const response = await fetch(`/admin/block-reasons/${reasonId}`, {
+            const response = await fetch(`/api/admin/block-reasons/${reasonId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify(reasonData)
@@ -70,7 +70,7 @@ export const blockReasonsAPI = {
 
     async delete(reasonId) {
         try {
-            const response = await fetch(`/admin/block-reasons/${reasonId}`, {
+            const response = await fetch(`/api/admin/block-reasons/${reasonId}`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCsrfToken() }
             });
@@ -88,7 +88,7 @@ export const blocksAPI = {
     async load(params = {}) {
         try {
             const queryParams = new URLSearchParams(params);
-            const response = await fetch(`/admin/blocks?${queryParams.toString()}`);
+            const response = await fetch(`/api/admin/blocks?${queryParams.toString()}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -103,7 +103,7 @@ export const blocksAPI = {
 
     async create(blockData) {
         try {
-            const response = await fetch('/admin/blocks', {
+            const response = await fetch('/api/admin/blocks', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(blockData)
@@ -118,7 +118,7 @@ export const blocksAPI = {
 
     async update(batchId, blockData) {
         try {
-            const response = await fetch(`/admin/blocks/${batchId}`, {
+            const response = await fetch(`/api/admin/blocks/${batchId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify(blockData)
@@ -133,7 +133,7 @@ export const blocksAPI = {
 
     async delete(batchId) {
         try {
-            const response = await fetch(`/admin/blocks/${batchId}`, {
+            const response = await fetch(`/api/admin/blocks/${batchId}`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCsrfToken() }
             });
@@ -147,7 +147,7 @@ export const blocksAPI = {
 
     async get(batchId) {
         try {
-            const response = await fetch(`/admin/blocks/${batchId}`);
+            const response = await fetch(`/api/admin/blocks/${batchId}`);
             const data = await response.json();
 
             if (response.ok) {
@@ -162,7 +162,7 @@ export const blocksAPI = {
 
     async getConflictPreview(blockData) {
         try {
-            const response = await fetch('/admin/blocks/conflict-preview', {
+            const response = await fetch('/api/admin/blocks/conflict-preview', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(blockData)
@@ -177,7 +177,7 @@ export const blocksAPI = {
 
     async loadAuditLog() {
         try {
-            const response = await fetch('/admin/blocks/audit-log');
+            const response = await fetch('/api/admin/blocks/audit-log');
             const data = await response.json();
             
             if (response.ok) {

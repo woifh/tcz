@@ -48,7 +48,7 @@ function memberSearch(userId) {
             this.highlightIndex = -1;
             
             try {
-                const response = await fetch(`/members/search?q=${encodeURIComponent(searchQuery)}`);
+                const response = await fetch(`/api/members/search?q=${encodeURIComponent(searchQuery)}`);
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -87,7 +87,7 @@ function memberSearch(userId) {
             this.error = '';
 
             try {
-                const response = await fetch(`/members/${this.currentUserId}/favourites`, {
+                const response = await fetch(`/api/members/${this.currentUserId}/favourites`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -347,7 +347,7 @@ document.addEventListener('alpine:init', () => {
             this.error = '';
             
             try {
-                const response = await fetch(`/members/${this.currentUserId}/favourites`);
+                const response = await fetch(`/api/members/${this.currentUserId}/favourites`);
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -365,7 +365,7 @@ document.addEventListener('alpine:init', () => {
         
         async remove(favouriteId) {
             try {
-                const response = await fetch(`/members/${this.currentUserId}/favourites/${favouriteId}`, {
+                const response = await fetch(`/api/members/${this.currentUserId}/favourites/${favouriteId}`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': csrfToken }
                 });
