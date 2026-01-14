@@ -6,18 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Block edit: updated blocks no longer disappear when date is changed beyond original 30-day view range
+- Admin endpoints now use session-only authentication (not accessible via mobile JWT)
+- Block reason create/update/delete operations now properly logged in audit log
+- Member notification preferences now included in API responses for proper form population
+- Notification settings now properly saved when creating new members (previously ignored and defaulted to true)
 
 ### Improved
 - Audit log now shows full details for block operations (date, time, courts, reason)
 - Block batch updates now log single entry per batch instead of individual entries per court
 - Member updates now correctly track only actual changes (fixed false change detection for notification settings)
 - Removed redundant "Ausgeführt als: Administrator" from audit log
-
-### Fixed
-- Admin endpoints now use session-only authentication (not accessible via mobile JWT)
-- Block reason create/update/delete operations now properly logged in audit log
-- Member notification preferences now included in API responses for proper form population
-- Notification settings now properly saved when creating new members (previously ignored and defaulted to true)
 
 ## [3.5.0] - 2026-01-14
 
