@@ -25,7 +25,7 @@ class ChangelogService:
     )
 
     # Regex patterns for parsing
-    VERSION_PATTERN = re.compile(r'^## \[(\d+\.\d+\.\d+(?:-\w+)?)\] - (\d{4}-\d{2}-\d{2})$')
+    VERSION_PATTERN = re.compile(r'^## \[(\d+\.\d+(?:\.\d+)?(?:-\w+)?)\] - (\d{4}-\d{2}-\d{2})$')
     CATEGORY_PATTERN = re.compile(r'^### (.+)$')
     CHANGE_PATTERN = re.compile(r'^- (.+)$')
 
