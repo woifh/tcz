@@ -70,24 +70,27 @@ export function dashboard() {
 
                 const data = await response.json();
 
-                // Handle both test data format and production format
-                if (data.grid) {
+                // Generate time slots if not already set
+                if (this.timeSlots.length === 0) {
+                    this.timeSlots = this.generateTimeSlots();
+                }
+
+                // Handle sparse format (new) - has 'courts' with 'occupied' arrays
+                if (data.courts && data.courts[0]?.occupied !== undefined) {
+                    this.availability = data;
+                    this.courts = this.transformSparseResponse(data);
+                }
+                // Handle legacy full format - has 'grid' with 'slots' arrays
+                else if (data.grid) {
                     this.availability = data;
                     this.courts = data.grid;
-
-                    // Generate time slots if not already set
-                    if (this.timeSlots.length === 0) {
-                        this.timeSlots = this.generateTimeSlots();
-                    }
-                } else if (data.slots) {
-                    // Test data format
+                }
+                // Handle test data format
+                else if (data.slots) {
                     this.availability = data;
                     this.courts = data.slots;
-
-                    if (this.timeSlots.length === 0) {
-                        this.timeSlots = this.generateTimeSlots();
-                    }
-                } else if (data.error) {
+                }
+                else if (data.error) {
                     this.error = data.error;
                 }
             } catch (err) {
@@ -96,6 +99,72 @@ export function dashboard() {
             } finally {
                 this.loading = false;
             }
+        },
+
+        /**
+         * Transform sparse API response to dense grid format for template compatibility.
+         * Sparse format only includes occupied slots; this fills in available slots.
+         */
+        transformSparseResponse(data) {
+            const currentHour = data.current_hour || new Date().getHours();
+
+            return data.courts.map(court => {
+                // Build lookup map for occupied slots
+                const occupiedMap = {};
+                for (const slot of court.occupied) {
+                    occupiedMap[slot.time] = slot;
+                }
+
+                // Generate full slots array
+                const slots = this.timeSlots.map(time => {
+                    const occupied = occupiedMap[time];
+
+                    if (occupied) {
+                        // Occupied slot - compute CSS and content
+                        return {
+                            time: occupied.time,
+                            status: occupied.status,
+                            details: occupied.details,
+                            cssClass: this.getSlotClass(occupied, time),
+                            content: this.getSlotContent(occupied, time),
+                            isPast: this.isSlotInPast(time),
+                            canCancel: this.canCancelSlot(occupied)
+                        };
+                    } else {
+                        // Available slot - generate default
+                        const isPast = this.isSlotInPast(time);
+                        return {
+                            time,
+                            status: 'available',
+                            details: null,
+                            cssClass: this.getAvailableSlotClass(isPast),
+                            content: isPast ? 'Vergangen' : 'Frei',
+                            isPast,
+                            canCancel: false
+                        };
+                    }
+                });
+
+                return {
+                    court_id: court.court_id,
+                    court_number: court.court_number,
+                    slots
+                };
+            });
+        },
+
+        /**
+         * Get CSS classes for an available slot.
+         */
+        getAvailableSlotClass(isPast) {
+            const base = 'border border-gray-300 px-2 py-4 text-center text-xs';
+            if (isPast) {
+                return `${base} bg-gray-200 text-gray-500`;
+            }
+            if (this.isAuthenticated) {
+                return `${base} bg-green-500 text-white cursor-pointer hover:opacity-80`;
+            }
+            return `${base} bg-green-500 text-white`;
         },
 
         async refreshAvailability() {
@@ -107,8 +176,13 @@ export function dashboard() {
                 }
                 const data = await response.json();
 
-                // Handle production format with grid
-                const newCourts = data.grid || data.slots || [];
+                // Transform sparse format or use legacy format
+                let newCourts;
+                if (data.courts && data.courts[0]?.occupied !== undefined) {
+                    newCourts = this.transformSparseResponse(data);
+                } else {
+                    newCourts = data.grid || data.slots || [];
+                }
 
                 // Update only changed slots, preserving table structure
                 newCourts.forEach((newCourt, courtIndex) => {
@@ -250,15 +324,17 @@ export function dashboard() {
             }
         },
         
-        // Legacy method - kept for backwards compatibility but no longer used in template
-        // Server now pre-computes cssClass for each slot
+        /**
+         * Compute CSS classes for a slot based on status and time.
+         * Used when transforming sparse API responses.
+         */
         getSlotClass(slot, time) {
-            // Use pre-computed class if available
+            // Use pre-computed class if available (legacy format)
             if (slot.cssClass) {
                 return slot.cssClass;
             }
 
-            // Fallback to client-side computation
+            // Compute classes from status
             let classes = 'border border-gray-300 px-2 py-4 text-center text-xs';
             const isPast = this.isSlotInPast(time);
 
@@ -392,15 +468,17 @@ export function dashboard() {
             return this.courts[courtIndex].slots[timeIndex] || { status: 'available' };
         },
         
-        // Legacy method - kept for backwards compatibility but no longer used in template
-        // Server now pre-computes content for each slot
+        /**
+         * Compute display content for a slot based on status and details.
+         * Used when transforming sparse API responses.
+         */
         getSlotContent(slot, time) {
-            // Use pre-computed content if available
+            // Use pre-computed content if available (legacy format)
             if (slot.content !== undefined) {
                 return slot.content;
             }
 
-            // Fallback to client-side computation
+            // Compute content from status
             if (slot.status === 'available') {
                 return this.isSlotInPast(time) ? 'Vergangen' : 'Frei';
             }

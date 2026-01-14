@@ -15,120 +15,34 @@ from app.decorators.auth import jwt_or_session_required
 from . import bp
 
 
-def _is_slot_in_past(slot_time, query_date, current_time):
-    """Check if a time slot is in the past."""
-    today = current_time.date()
-    if query_date < today:
-        return True
-    if query_date > today:
-        return False
-    return slot_time.hour < current_time.hour
-
-
-def _can_cancel_slot(slot, current_user_id):
-    """Check if user can cancel this slot."""
-    if not current_user_id:
-        return False
-
-    status = slot.get('status')
-    if status not in ('reserved', 'short_notice'):
-        return False
-
-    details = slot.get('details')
-    if not details:
-        return False
-
-    # Short notice bookings cannot be cancelled
-    if status == 'short_notice' or details.get('is_short_notice'):
-        return False
-
-    return (
-        details.get('booked_for_id') == current_user_id or
-        details.get('booked_by_id') == current_user_id
-    )
-
-
-def _compute_slot_class(slot, is_past, current_user_id=None):
-    """Pre-compute CSS classes for a slot."""
-    classes = 'border border-gray-300 px-2 py-4 text-center text-xs'
-    status = slot['status']
-
-    if status == 'available':
-        if is_past:
-            classes += ' bg-gray-200 text-gray-500'
-        else:
-            classes += ' bg-green-500 text-white cursor-pointer hover:opacity-80'
-    elif status == 'short_notice':
-        classes += ' bg-orange-500 text-white'
-        if is_past:
-            classes += ' opacity-75'
-        elif _can_cancel_slot(slot, current_user_id):
-            classes += ' cursor-pointer hover:opacity-80'
-    elif status == 'reserved':
-        details = slot.get('details')
-        if details and details.get('is_short_notice'):
-            classes += ' bg-orange-500 text-white'
-        else:
-            classes += ' bg-red-500 text-white'
-        if is_past:
-            classes += ' opacity-75'
-        elif _can_cancel_slot(slot, current_user_id):
-            classes += ' cursor-pointer hover:opacity-80'
-    elif status == 'blocked':
-        classes += ' bg-gray-400 text-white min-h-16'
-        if is_past:
-            classes += ' opacity-75'
-
-    return classes
-
-
-def _compute_slot_content(slot, is_past):
-    """Pre-compute display content for a slot."""
-    status = slot['status']
-
-    if status == 'available':
-        return 'Vergangen' if is_past else 'Frei'
-
-    if status in ('short_notice', 'reserved'):
-        details = slot.get('details')
-        if details:
-            booked_for = details.get('booked_for')
-            booked_by = details.get('booked_by')
-
-            # If no member names (anonymous user), just show "Gebucht"
-            if not booked_for:
-                return 'Gebucht'
-
-            booked_for_id = details.get('booked_for_id')
-            booked_by_id = details.get('booked_by_id')
-
-            if booked_for_id == booked_by_id:
-                return booked_for
-            return f'{booked_for}<br>(von {booked_by})'
-        return 'Gebucht'
-
-    if status == 'blocked':
-        details = slot.get('details')
-        if details and details.get('reason'):
-            content = details['reason']
-            extra = details.get('details', '').strip()
-            if extra:
-                content += f'<br><span style="font-size: 0.7em; opacity: 0.9;">{extra}</span>'
-            return content
-        return 'Gesperrt'
-
-    return ''
-
-
 @bp.route('/courts/availability', methods=['GET'])
 def get_availability():
-    """Get court availability grid for a specific date.
+    """Get court availability for a specific date (sparse format).
+
+    Returns only occupied slots (reservations and blocks) to minimize
+    bandwidth. Available slots are implied by absence from the response.
+    Client computes CSS classes and content from status/details.
 
     This endpoint is publicly accessible for viewing availability.
-    Authenticated users see additional details like cancellation options.
+    Authenticated users see additional details like member names.
 
     Query params:
         date: Date in YYYY-MM-DD format (default: today)
+
+    Response format:
+        {
+            "date": "YYYY-MM-DD",
+            "current_hour": 10,
+            "courts": [
+                {
+                    "court_id": 1,
+                    "court_number": 1,
+                    "occupied": [
+                        {"time": "09:00", "status": "reserved", "details": {...}}
+                    ]
+                }
+            ]
+        }
     """
     from app.utils.timezone_utils import get_current_berlin_time
 
@@ -143,85 +57,84 @@ def get_availability():
     reservations = ReservationService.get_reservations_by_date(query_date)
     blocks = BlockService.get_blocks_by_date(query_date)
 
-    # Build time slots (08:00 to 22:00)
-    time_slots = [time(hour, 0) for hour in range(8, 22)]
+    # Build lookup maps for O(1) access
+    # Key: (court_id, hour) -> reservation or block
+    reservation_map = {}
+    for reservation in reservations:
+        if reservation.status == 'active':
+            is_active = ReservationService.is_reservation_currently_active(
+                reservation, current_time
+            )
+            if is_active:
+                key = (reservation.court_id, reservation.start_time.hour)
+                reservation_map[key] = reservation
 
-    grid = []
+    block_map = {}
+    for block in blocks:
+        # Blocks can span multiple hours
+        for hour in range(block.start_time.hour, block.end_time.hour):
+            key = (block.court_id, hour)
+            block_map[key] = block
+
+    # Build sparse response - only include occupied slots
+    courts_data = []
     for court in courts:
         court_data = {
             'court_id': court.id,
             'court_number': court.number,
-            'slots': []
+            'occupied': []
         }
 
-        for slot_time in time_slots:
-            slot = {
-                'time': slot_time.strftime('%H:%M'),
-                'status': 'available',
-                'details': None
-            }
+        # Check each hour slot (8-21)
+        for hour in range(8, 22):
+            slot_time = time(hour, 0)
+            key = (court.id, hour)
 
-            # Check if blocked
-            for block in blocks:
-                if (block.court_id == court.id and
-                    block.start_time <= slot_time < block.end_time):
-                    slot['status'] = 'blocked'
-                    slot['details'] = {
+            # Check for block first (blocks take priority)
+            if key in block_map:
+                block = block_map[key]
+                court_data['occupied'].append({
+                    'time': slot_time.strftime('%H:%M'),
+                    'status': 'blocked',
+                    'details': {
                         'reason': block.reason_obj.name if block.reason_obj else 'Unbekannt',
                         'details': block.details if block.details else '',
                         'block_id': block.id
                     }
-                    break
+                })
+            # Check for reservation
+            elif key in reservation_map:
+                reservation = reservation_map[key]
+                slot_data = {
+                    'time': slot_time.strftime('%H:%M'),
+                    'status': 'short_notice' if reservation.is_short_notice else 'reserved',
+                    'details': None
+                }
 
-            # Check if reserved (only if not blocked)
-            if slot['status'] == 'available':
-                for reservation in reservations:
-                    if (reservation.court_id == court.id and
-                        reservation.start_time == slot_time and
-                        reservation.status == 'active'):
+                # Only include member details for authenticated users
+                if current_user.is_authenticated:
+                    slot_data['details'] = {
+                        'booked_for': f"{reservation.booked_for.firstname} {reservation.booked_for.lastname}",
+                        'booked_for_id': reservation.booked_for_id,
+                        'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
+                        'booked_by_id': reservation.booked_by_id,
+                        'reservation_id': reservation.id,
+                        'is_short_notice': reservation.is_short_notice
+                    }
+                else:
+                    # Anonymous users see slot is reserved but without member names
+                    # Normalize short_notice to 'reserved' for anonymous users
+                    slot_data['status'] = 'reserved'
+                    slot_data['details'] = None
 
-                        is_active = ReservationService.is_reservation_currently_active(
-                            reservation, current_time
-                        )
+                court_data['occupied'].append(slot_data)
 
-                        if is_active:
-                            slot['status'] = 'short_notice' if reservation.is_short_notice else 'reserved'
-                            # Only include member details for authenticated users
-                            if current_user.is_authenticated:
-                                slot['details'] = {
-                                    'booked_for': f"{reservation.booked_for.firstname} {reservation.booked_for.lastname}",
-                                    'booked_for_id': reservation.booked_for_id,
-                                    'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
-                                    'booked_by_id': reservation.booked_by_id,
-                                    'reservation_id': reservation.id,
-                                    'is_short_notice': reservation.is_short_notice
-                                }
-                            else:
-                                # Anonymous users only see that the slot is reserved
-                                slot['details'] = {
-                                    'is_short_notice': reservation.is_short_notice
-                                }
-                        break
-
-            court_data['slots'].append(slot)
-
-        grid.append(court_data)
-
-    # Pre-compute CSS classes and content for each slot
-    current_user_id = current_user.id if current_user.is_authenticated else None
-    for court_data in grid:
-        for slot in court_data['slots']:
-            slot_time_obj = time.fromisoformat(slot['time'])
-            is_past = _is_slot_in_past(slot_time_obj, query_date, current_time)
-
-            slot['cssClass'] = _compute_slot_class(slot, is_past, current_user_id)
-            slot['content'] = _compute_slot_content(slot, is_past)
-            slot['isPast'] = is_past
-            slot['canCancel'] = not is_past and _can_cancel_slot(slot, current_user_id)
+        courts_data.append(court_data)
 
     return jsonify({
         'date': date_str,
-        'grid': grid,
+        'current_hour': current_time.hour,
+        'courts': courts_data,
         'metadata': {
             'generated_at': current_time.isoformat(),
             'timezone': 'Europe/Berlin'
