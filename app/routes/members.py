@@ -155,7 +155,12 @@ def create_member():
             city=city,
             zip_code=zip_code,
             phone=phone,
-            admin_id=current_user.id
+            admin_id=current_user.id,
+            notifications_enabled=bool(data.get('notifications_enabled', True)),
+            notify_own_bookings=bool(data.get('notify_own_bookings', True)),
+            notify_other_bookings=bool(data.get('notify_other_bookings', True)),
+            notify_court_blocked=bool(data.get('notify_court_blocked', True)),
+            notify_booking_overridden=bool(data.get('notify_booking_overridden', True))
         )
 
         if error:

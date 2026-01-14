@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Admin endpoints now use session-only authentication (not accessible via mobile JWT)
 - Block reason create/update/delete operations now properly logged in audit log
 - Member notification preferences now included in API responses for proper form population
+- Notification settings now properly saved when creating new members (previously ignored and defaulted to true)
 
 ## [3.5.0] - 2026-01-14
 

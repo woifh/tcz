@@ -34,7 +34,10 @@ class MemberService:
 
     @staticmethod
     def create_member(firstname, lastname, email, password, role='member', membership_type='full',
-                      street=None, city=None, zip_code=None, phone=None, admin_id=None):
+                      street=None, city=None, zip_code=None, phone=None, admin_id=None,
+                      notifications_enabled=True, notify_own_bookings=True,
+                      notify_other_bookings=True, notify_court_blocked=True,
+                      notify_booking_overridden=True):
         """
         Create a new member with validation.
 
@@ -50,6 +53,11 @@ class MemberService:
             zip_code: ZIP/postal code (optional)
             phone: Phone number (optional)
             admin_id: ID of administrator creating the member
+            notifications_enabled: Enable notifications (default: True)
+            notify_own_bookings: Notify on own bookings (default: True)
+            notify_other_bookings: Notify on other bookings (default: True)
+            notify_court_blocked: Notify on court blocked (default: True)
+            notify_booking_overridden: Notify on booking overridden (default: True)
 
         Returns:
             tuple: (Member object or None, error message or None)
@@ -105,7 +113,12 @@ class MemberService:
                 street=street.strip() if street else None,
                 city=city.strip() if city else None,
                 zip_code=zip_code.strip() if zip_code else None,
-                phone=phone.strip() if phone else None
+                phone=phone.strip() if phone else None,
+                notifications_enabled=notifications_enabled,
+                notify_own_bookings=notify_own_bookings,
+                notify_other_bookings=notify_other_bookings,
+                notify_court_blocked=notify_court_blocked,
+                notify_booking_overridden=notify_booking_overridden
             )
             member.set_password(password)
 
