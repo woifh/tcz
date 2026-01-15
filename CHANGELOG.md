@@ -2,15 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.9] - 2026-01-15
-
-### Fixed
-- Active reservations page now displays bookings correctly
-
 ## [3.8] - 2026-01-15
 
 ### Performance
 - Members list now loads faster via background API request
+- Active reservations page now displays bookings correctly
 
 ### Fixed
 - Consistent API endpoint paths across all pages
@@ -19,7 +15,7 @@ All notable changes to this project will be documented in this file.
 
 ## [3.7] - 2026-01-14
 
-### Performance
+### Performancewhich 
 - Court availability overview loads significantly faster (up to 95% less data transfer)
 
 ### Fixed
