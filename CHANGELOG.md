@@ -6,12 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Performance
 - Members list now loads faster via background API request
-- Active reservations page now displays bookings correctly
 
 ### Fixed
 - Consistent API endpoint paths across all pages
 - Delete block confirmation no longer makes unnecessary server requests
 - Mobile app now shows member names in court availability view
+- Active reservations page now displays bookings correctly
 
 ## [3.7] - 2026-01-14
 
