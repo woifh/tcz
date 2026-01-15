@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Performance
 - Members list now loads faster via background API request
 
+### Fixed
+- Consistent API endpoint paths across all pages
+
 ## [3.7] - 2026-01-14
 
 ### Performance
