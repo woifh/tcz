@@ -2,8 +2,198 @@
 
 {% block title %}Mitglieder - Tennisclub{% endblock %}
 
+{% block extra_js %}
+<script>
+function membersList() {
+    return {
+        members: [],
+        filteredMembers: [],
+        loading: true,
+        error: '',
+        filterQuery: '',
+        currentSort: { column: null, direction: 'asc' },
+
+        async init() {
+            await this.loadMembers();
+        },
+
+        async loadMembers() {
+            this.loading = true;
+            this.error = '';
+
+            try {
+                const response = await fetch('/api/members/');
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.members = data.members;
+                    this.filteredMembers = [...this.members];
+                } else {
+                    this.error = data.error || 'Fehler beim Laden der Mitglieder';
+                }
+            } catch (error) {
+                console.error('Error loading members:', error);
+                this.error = 'Netzwerkfehler beim Laden der Mitglieder';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        filterMembers() {
+            const query = this.filterQuery.toLowerCase().trim();
+            if (!query) {
+                this.filteredMembers = [...this.members];
+            } else {
+                this.filteredMembers = this.members.filter(member =>
+                    member.name.toLowerCase().includes(query)
+                );
+            }
+            // Reapply current sort if any
+            if (this.currentSort.column) {
+                this.sortBy(this.currentSort.column, this.currentSort.direction, false);
+            }
+        },
+
+        sortBy(column, direction = null, toggle = true) {
+            // Determine direction
+            if (toggle && this.currentSort.column === column) {
+                direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else if (direction === null) {
+                direction = 'asc';
+            }
+
+            this.currentSort = { column, direction };
+
+            this.filteredMembers.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (column) {
+                    case 'name':
+                        aVal = a.name || '';
+                        bVal = b.name || '';
+                        return direction === 'asc'
+                            ? aVal.localeCompare(bVal, 'de')
+                            : bVal.localeCompare(aVal, 'de');
+
+                    case 'role':
+                        const rolePriority = { 'administrator': 3, 'teamster': 2, 'member': 1 };
+                        aVal = rolePriority[a.role] || 0;
+                        bVal = rolePriority[b.role] || 0;
+                        return direction === 'asc' ? aVal - bVal : bVal - aVal;
+
+                    case 'membership':
+                        const membershipPriority = { 'full': 2, 'sustaining': 1 };
+                        aVal = membershipPriority[a.membership_type] || 0;
+                        bVal = membershipPriority[b.membership_type] || 0;
+                        return direction === 'asc' ? aVal - bVal : bVal - aVal;
+
+                    case 'payment':
+                        aVal = a.fee_paid ? 1 : 0;
+                        bVal = b.fee_paid ? 1 : 0;
+                        return direction === 'asc' ? aVal - bVal : bVal - aVal;
+
+                    case 'bookings':
+                        aVal = a.total_booking_count || 0;
+                        bVal = b.total_booking_count || 0;
+                        return direction === 'asc' ? aVal - bVal : bVal - aVal;
+
+                    case 'created':
+                        aVal = new Date(a.created_at || 0);
+                        bVal = new Date(b.created_at || 0);
+                        return direction === 'asc' ? aVal - bVal : bVal - aVal;
+
+                    default:
+                        return 0;
+                }
+            });
+        },
+
+        getSortIcon(column) {
+            if (this.currentSort.column !== column) {
+                return 'default';
+            }
+            return this.currentSort.direction;
+        },
+
+        formatRole(role) {
+            const roles = {
+                'administrator': 'Administrator',
+                'teamster': 'Mannschaftsführer',
+                'member': 'Mitglied'
+            };
+            return roles[role] || role;
+        },
+
+        getRoleClass(role) {
+            const classes = {
+                'administrator': 'text-yellow-600',
+                'teamster': 'text-blue-600',
+                'member': 'text-gray-600'
+            };
+            return classes[role] || 'text-gray-600';
+        },
+
+        formatMembership(type) {
+            return type === 'full' ? 'Vollmitglied' : 'Fördermitglied';
+        },
+
+        getMembershipClass(type) {
+            return type === 'full' ? 'text-green-600' : 'text-blue-600';
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        },
+
+        async deleteMember(memberId) {
+            if (!confirm('Möchten Sie dieses Mitglied wirklich löschen?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/members/${memberId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': csrfToken }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('Mitglied erfolgreich gelöscht!');
+                    await this.loadMembers();
+                } else {
+                    if (data.error && data.error.includes('aktive Buchungen')) {
+                        if (confirm(data.error + '\n\nMöchten Sie das Mitglied trotzdem löschen? Alle Buchungen werden storniert.')) {
+                            const forceResponse = await fetch(`/api/members/${memberId}?force=true`, {
+                                method: 'DELETE',
+                                headers: { 'X-CSRFToken': csrfToken }
+                            });
+                            const forceData = await forceResponse.json();
+
+                            if (forceResponse.ok) {
+                                showToast('Mitglied und alle Buchungen erfolgreich gelöscht!');
+                                await this.loadMembers();
+                            } else {
+                                showToast(forceData.error || 'Unbekannter Fehler', 'error');
+                            }
+                        }
+                    } else {
+                        showToast(data.error || 'Unbekannter Fehler', 'error');
+                    }
+                }
+            } catch (error) {
+                showToast('Fehler beim Löschen des Mitglieds', 'error');
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<div class="bg-white rounded-lg shadow-md p-6">
+<div class="bg-white rounded-lg shadow-md p-6" x-data="membersList()">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Mitglieder</h2>
         {% if current_user.is_admin() %}
@@ -17,7 +207,8 @@
         <div class="relative flex-1 sm:flex-initial">
             <input
                 type="text"
-                id="member-filter"
+                x-model="filterQuery"
+                @input="filterMembers()"
                 placeholder="Mitglieder durchsuchen..."
                 class="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent focus:outline-none"
                 aria-label="Mitglieder durchsuchen"
@@ -26,261 +217,201 @@
         </div>
     </div>
 
-    <div class="overflow-x-auto">
-        <table id="members-table" class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="name">
-                        <span class="flex items-center gap-1">Name <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="role">
-                        <span class="flex items-center gap-1">Rolle <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="membership">
-                        <span class="flex items-center gap-1">Mitgliedschaft <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="payment">
-                        <span class="flex items-center gap-1">Beitrag <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="bookings">
-                        <span class="flex items-center gap-1">Buchungen <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" data-sort="created">
-                        <span class="flex items-center gap-1">Erstellt am <svg class="sort-icon w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></span>
-                    </th>
-                    {% if current_user.is_admin() %}
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for member in members %}
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap">{{ member.name }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="{% if member.role == 'administrator' %}text-yellow-600{% elif member.role == 'teamster' %}text-blue-600{% else %}text-gray-600{% endif %}">
-                            {{ 'Administrator' if member.role == 'administrator' else 'Mannschaftsführer' if member.role == 'teamster' else 'Mitglied' }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="{% if member.membership_type == 'full' %}text-green-600{% else %}text-blue-600{% endif %}">
-                            {{ 'Vollmitglied' if member.membership_type == 'full' else 'Fördermitglied' }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        {% if member.fee_paid %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <span class="material-icons text-xs mr-1">check_circle</span>
-                            Bezahlt
-                        </span>
-                        {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <span class="material-icons text-xs mr-1">warning</span>
-                            Offen
-                        </span>
+    <!-- Loading State -->
+    <template x-if="loading">
+        <div class="flex justify-center items-center py-12">
+            <svg class="animate-spin h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="ml-3 text-gray-600">Lade Mitglieder...</span>
+        </div>
+    </template>
+
+    <!-- Error State -->
+    <template x-if="!loading && error">
+        <div class="text-center py-12">
+            <p class="text-red-600" x-text="error"></p>
+            <button @click="loadMembers()" class="mt-4 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                Erneut versuchen
+            </button>
+        </div>
+    </template>
+
+    <!-- Members Table -->
+    <template x-if="!loading && !error">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th @click="sortBy('name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                            <span class="flex items-center gap-1">
+                                Name
+                                <svg class="w-4 h-4" :class="getSortIcon('name') !== 'default' ? 'text-gray-700' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <template x-if="getSortIcon('name') === 'default'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </template>
+                                    <template x-if="getSortIcon('name') === 'asc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                    </template>
+                                    <template x-if="getSortIcon('name') === 'desc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </template>
+                                </svg>
+                            </span>
+                        </th>
+                        <th @click="sortBy('role')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                            <span class="flex items-center gap-1">
+                                Rolle
+                                <svg class="w-4 h-4" :class="getSortIcon('role') !== 'default' ? 'text-gray-700' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <template x-if="getSortIcon('role') === 'default'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </template>
+                                    <template x-if="getSortIcon('role') === 'asc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                    </template>
+                                    <template x-if="getSortIcon('role') === 'desc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </template>
+                                </svg>
+                            </span>
+                        </th>
+                        <th @click="sortBy('membership')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                            <span class="flex items-center gap-1">
+                                Mitgliedschaft
+                                <svg class="w-4 h-4" :class="getSortIcon('membership') !== 'default' ? 'text-gray-700' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <template x-if="getSortIcon('membership') === 'default'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </template>
+                                    <template x-if="getSortIcon('membership') === 'asc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                    </template>
+                                    <template x-if="getSortIcon('membership') === 'desc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </template>
+                                </svg>
+                            </span>
+                        </th>
+                        <th @click="sortBy('payment')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                            <span class="flex items-center gap-1">
+                                Beitrag
+                                <svg class="w-4 h-4" :class="getSortIcon('payment') !== 'default' ? 'text-gray-700' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <template x-if="getSortIcon('payment') === 'default'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </template>
+                                    <template x-if="getSortIcon('payment') === 'asc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                    </template>
+                                    <template x-if="getSortIcon('payment') === 'desc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </template>
+                                </svg>
+                            </span>
+                        </th>
+                        <th @click="sortBy('bookings')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                            <span class="flex items-center gap-1">
+                                Buchungen
+                                <svg class="w-4 h-4" :class="getSortIcon('bookings') !== 'default' ? 'text-gray-700' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <template x-if="getSortIcon('bookings') === 'default'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </template>
+                                    <template x-if="getSortIcon('bookings') === 'asc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                    </template>
+                                    <template x-if="getSortIcon('bookings') === 'desc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </template>
+                                </svg>
+                            </span>
+                        </th>
+                        <th @click="sortBy('created')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                            <span class="flex items-center gap-1">
+                                Erstellt am
+                                <svg class="w-4 h-4" :class="getSortIcon('created') !== 'default' ? 'text-gray-700' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <template x-if="getSortIcon('created') === 'default'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </template>
+                                    <template x-if="getSortIcon('created') === 'asc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                    </template>
+                                    <template x-if="getSortIcon('created') === 'desc'">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </template>
+                                </svg>
+                            </span>
+                        </th>
+                        {% if current_user.is_admin() %}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
                         {% endif %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                            <div class="text-gray-500">{{ member.total_booking_count|default(0) }} Buchungen</div>
-                            <div class="text-gray-500">{{ member.short_notice_count|default(0) }} Kurzfristig</div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-600">
-                        {{ member.created_at.strftime('%d.%m.%Y') }}
-                    </td>
-                    {% if current_user.is_admin() %}
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center gap-2">
-                            <a href="/admin/member/{{ member.id }}" class="text-blue-600 hover:text-blue-900 p-1" title="Bearbeiten">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                            </a>
-                            {% if member.id != current_user.id %}
-                            <button onclick="deleteMember('{{ member.id }}')" class="text-red-600 hover:text-red-900 p-1" title="Löschen">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="member in filteredMembers" :key="member.id">
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap" x-text="member.name"></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span :class="getRoleClass(member.role)" x-text="formatRole(member.role)"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span :class="getMembershipClass(member.membership_type)" x-text="formatMembership(member.membership_type)"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <template x-if="member.fee_paid">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span class="material-icons text-xs mr-1">check_circle</span>
+                                        Bezahlt
+                                    </span>
+                                </template>
+                                <template x-if="!member.fee_paid">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <span class="material-icons text-xs mr-1">warning</span>
+                                        Offen
+                                    </span>
+                                </template>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm">
+                                    <div class="text-gray-500"><span x-text="member.total_booking_count || 0"></span> Buchungen</div>
+                                    <div class="text-gray-500"><span x-text="member.short_notice_count || 0"></span> Kurzfristig</div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-600" x-text="formatDate(member.created_at)"></td>
+                            {% if current_user.is_admin() %}
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <a :href="'/admin/member/' + member.id" class="text-blue-600 hover:text-blue-900 p-1" title="Bearbeiten">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </a>
+                                    <template x-if="member.id !== '{{ current_user.id }}'">
+                                        <button @click="deleteMember(member.id)" class="text-red-600 hover:text-red-900 p-1" title="Löschen">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
                             {% endif %}
-                        </div>
-                    </td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
 
+            <!-- Empty State -->
+            <template x-if="filteredMembers.length === 0 && members.length > 0">
+                <div class="text-center py-8 text-gray-500">
+                    Keine Mitglieder gefunden für "<span x-text="filterQuery"></span>"
+                </div>
+            </template>
+
+            <template x-if="members.length === 0">
+                <div class="text-center py-8 text-gray-500">
+                    Keine Mitglieder vorhanden.
+                </div>
+            </template>
+        </div>
+    </template>
 </div>
-
-<script>
-async function deleteMember(memberId) {
-    if (!confirm('Möchten Sie dieses Mitglied wirklich löschen?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/members/${memberId}`, {
-            method: 'DELETE',
-            headers: { 'X-CSRFToken': csrfToken }
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showToast('Mitglied erfolgreich gelöscht!');
-            setTimeout(() => window.location.reload(), 500);
-        } else {
-            // If deletion failed due to active reservations, ask if they want to force delete
-            if (data.error && data.error.includes('aktive Buchungen')) {
-                if (confirm(data.error + '\n\nMöchten Sie das Mitglied trotzdem löschen? Alle Buchungen werden storniert.')) {
-                    // Force delete
-                    const forceResponse = await fetch(`/api/members/${memberId}?force=true`, {
-                        method: 'DELETE',
-                        headers: { 'X-CSRFToken': csrfToken }
-                    });
-                    const forceData = await forceResponse.json();
-
-                    if (forceResponse.ok) {
-                        showToast('Mitglied und alle Buchungen erfolgreich gelöscht!');
-                        setTimeout(() => window.location.reload(), 500);
-                    } else {
-                        showToast(forceData.error || 'Unbekannter Fehler', 'error');
-                    }
-                }
-            } else {
-                showToast(data.error || 'Unbekannter Fehler', 'error');
-            }
-        }
-    } catch (error) {
-        showToast('Fehler beim Löschen des Mitglieds', 'error');
-    }
-}
-
-// Quick filter functionality
-(function() {
-    const filterInput = document.getElementById('member-filter');
-    const table = document.getElementById('members-table');
-    if (!filterInput || !table) return;
-
-    filterInput.addEventListener('input', () => {
-        const filter = filterInput.value.toLowerCase().trim();
-        const rows = table.querySelectorAll('tbody tr');
-
-        rows.forEach(row => {
-            const name = row.cells[0]?.textContent.toLowerCase() || '';
-            const matches = name.includes(filter);
-            row.style.display = matches ? '' : 'none';
-        });
-    });
-})();
-
-// Table sorting functionality
-(function() {
-    const table = document.getElementById('members-table');
-    if (!table) return;
-
-    const headers = table.querySelectorAll('th[data-sort]');
-    let currentSort = { column: null, direction: 'asc' };
-
-    // SVG paths for different states
-    const defaultIcon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>';
-    const ascIcon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>';
-    const descIcon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>';
-
-    headers.forEach(header => {
-        header.addEventListener('click', () => {
-            const column = header.dataset.sort;
-            const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
-
-            sortTable(column, direction);
-            currentSort = { column, direction };
-
-            // Update sort icons
-            headers.forEach(h => {
-                const icon = h.querySelector('.sort-icon');
-                if (h === header) {
-                    icon.innerHTML = direction === 'asc' ? ascIcon : descIcon;
-                    icon.classList.remove('text-gray-400');
-                    icon.classList.add('text-gray-700');
-                } else {
-                    icon.innerHTML = defaultIcon;
-                    icon.classList.remove('text-gray-700');
-                    icon.classList.add('text-gray-400');
-                }
-            });
-        });
-    });
-
-    function sortTable(column, direction) {
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-
-        const columnIndex = {
-            'name': 0,
-            'role': 1,
-            'membership': 2,
-            'payment': 3,
-            'bookings': 4,
-            'created': 5
-        }[column];
-
-        rows.sort((a, b) => {
-            let aVal = a.cells[columnIndex]?.textContent.trim() || '';
-            let bVal = b.cells[columnIndex]?.textContent.trim() || '';
-
-            // Handle date sorting (DD.MM.YYYY format)
-            if (column === 'created') {
-                const parseDate = (str) => {
-                    const parts = str.split('.');
-                    return new Date(parts[2], parts[1] - 1, parts[0]);
-                };
-                aVal = parseDate(aVal);
-                bVal = parseDate(bVal);
-                return direction === 'asc' ? aVal - bVal : bVal - aVal;
-            }
-
-            // Handle numeric sorting for bookings (extract number from "X Buchungen")
-            if (column === 'bookings') {
-                aVal = parseInt(aVal.match(/\d+/)?.[0]) || 0;
-                bVal = parseInt(bVal.match(/\d+/)?.[0]) || 0;
-                return direction === 'asc' ? aVal - bVal : bVal - aVal;
-            }
-
-            // Handle role sorting (by priority: administrator > teamster > member)
-            if (column === 'role') {
-                const rolePriority = { 'Administrator': 3, 'Mannschaftsführer': 2, 'Mitglied': 1 };
-                aVal = rolePriority[aVal] || 0;
-                bVal = rolePriority[bVal] || 0;
-                return direction === 'asc' ? aVal - bVal : bVal - aVal;
-            }
-
-            // Handle membership sorting (Vollmitglied > Fördermitglied)
-            if (column === 'membership') {
-                const membershipPriority = { 'Vollmitglied': 2, 'Fördermitglied': 1 };
-                aVal = membershipPriority[aVal] || 0;
-                bVal = membershipPriority[bVal] || 0;
-                return direction === 'asc' ? aVal - bVal : bVal - aVal;
-            }
-
-            // Handle payment sorting (Bezahlt > Offen)
-            if (column === 'payment') {
-                const paymentPriority = { 'Bezahlt': 2, 'Offen': 1 };
-                aVal = paymentPriority[aVal] || 0;
-                bVal = paymentPriority[bVal] || 0;
-                return direction === 'asc' ? aVal - bVal : bVal - aVal;
-            }
-
-            // Default string sorting
-            return direction === 'asc'
-                ? aVal.localeCompare(bVal, 'de')
-                : bVal.localeCompare(aVal, 'de');
-        });
-
-        rows.forEach(row => tbody.appendChild(row));
-    }
-})();
-</script>
 {% endblock %}

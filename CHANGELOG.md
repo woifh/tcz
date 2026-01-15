@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.8] - 2026-01-15
+
+### Performance
+- Members list now loads faster via background API request
+
 ## [3.7] - 2026-01-14
 
 ### Performance

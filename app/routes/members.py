@@ -1,12 +1,11 @@
 """Member management routes."""
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
-from sqlalchemy import func
 from app import db
-from app.models import Member, Reservation
+from app.models import Member
 from app.services.member_service import MemberService
 from app.decorators.auth import admin_required, member_or_admin_required, jwt_or_session_required
-from app.constants.messages import ErrorMessages, SuccessMessages
+from app.constants.messages import SuccessMessages
 
 bp = Blueprint('members', __name__, url_prefix='/members')
 
@@ -15,46 +14,8 @@ bp = Blueprint('members', __name__, url_prefix='/members')
 @login_required
 @admin_required
 def list_members():
-    """List all members (admin only) with booking counts via single query."""
-    # Subquery for regular booking count (not short notice)
-    regular_count_subq = db.session.query(
-        Reservation.booked_for_id,
-        func.count(Reservation.id).label('count')
-    ).filter(
-        Reservation.is_short_notice == False,
-        Reservation.status == 'active'
-    ).group_by(Reservation.booked_for_id).subquery()
-
-    # Subquery for short notice booking count
-    short_notice_subq = db.session.query(
-        Reservation.booked_for_id,
-        func.count(Reservation.id).label('count')
-    ).filter(
-        Reservation.is_short_notice == True,
-        Reservation.status == 'active'
-    ).group_by(Reservation.booked_for_id).subquery()
-
-    # Main query with LEFT JOINs to get members with their booking counts
-    results = db.session.query(
-        Member,
-        func.coalesce(regular_count_subq.c.count, 0).label('total_booking_count'),
-        func.coalesce(short_notice_subq.c.count, 0).label('short_notice_count')
-    ).outerjoin(
-        regular_count_subq, Member.id == regular_count_subq.c.booked_for_id
-    ).outerjoin(
-        short_notice_subq, Member.id == short_notice_subq.c.booked_for_id
-    ).filter(
-        Member.is_active == True
-    ).order_by(Member.lastname, Member.firstname).all()
-
-    # Attach counts to member objects for template compatibility
-    members = []
-    for member, total_count, short_notice_count in results:
-        member.total_booking_count = total_count
-        member.short_notice_count = short_notice_count
-        members.append(member)
-
-    return render_template('members.html', members=members)
+    """List all members page (admin only). Data loaded via API."""
+    return render_template('members.html')
 
 
 @bp.route('/all', methods=['GET'])
