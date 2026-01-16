@@ -1,17 +1,13 @@
 """
 Admin Audit Module
 
-Contains unified audit log functionality for admin operations.
+Contains audit log formatting helpers used by API routes.
+The actual route handler is in app/routes/api/admin.py.
 """
 
 from datetime import datetime
-from flask import request, jsonify
-from flask_login import login_required, current_user
 
-from app.decorators import admin_required
-from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog, ReservationAuditLog, Member, BlockReason, Court
-from app import db
-from . import bp
+from app.models import Member, BlockReason, Court
 
 
 def format_block_details(operation, data):
@@ -322,98 +318,3 @@ def format_reservation_details(operation, data, reservation_id):
         return f"Buchung storniert: {court_name}, {date} {start_time}{booked_for_name}{admin_text}{reason_text}"
 
     return f"Buchung {reservation_id}"
-
-
-@bp.route('/blocks/audit-log', methods=['GET'])
-@login_required
-@admin_required
-def get_audit_log():
-    """Get unified audit log combining block, member, reason, and reservation operations (admin only)."""
-    try:
-        # Get filter parameters
-        log_type = request.args.get('type')  # 'block', 'member', 'reason', 'reservation', or None for all
-        limit = min(int(request.args.get('limit', 100)), 500)  # Max 500 entries
-
-        logs = []
-
-        # Query BlockAuditLog if not filtered to other types only
-        if log_type in (None, 'block'):
-            block_logs = BlockAuditLog.query.order_by(BlockAuditLog.timestamp.desc()).limit(limit).all()
-            for log in block_logs:
-                # Block logs are always admin actions
-                performer_role = log.admin.role if log.admin else 'system'
-                logs.append({
-                    'timestamp': log.timestamp.isoformat(),
-                    'action': log.operation,
-                    'user': log.admin.name if log.admin else 'System',
-                    'details': format_block_details(log.operation, log.operation_data),
-                    'type': 'block',
-                    'performer_role': performer_role
-                })
-
-        # Query MemberAuditLog if not filtered to other types only
-        if log_type in (None, 'member'):
-            member_logs = MemberAuditLog.query.order_by(MemberAuditLog.timestamp.desc()).limit(limit).all()
-            for log in member_logs:
-                # Get performer role from operation_data or from the performer
-                performer_role = 'system'
-                if log.operation_data and 'performer_role' in log.operation_data:
-                    performer_role = log.operation_data['performer_role']
-                elif log.performed_by:
-                    performer_role = log.performed_by.role
-                logs.append({
-                    'timestamp': log.timestamp.isoformat(),
-                    'action': log.operation,
-                    'user': log.performed_by.name if log.performed_by else 'System',
-                    'details': format_member_details(log.operation, log.operation_data, log.member_id),
-                    'type': 'member',
-                    'performer_role': performer_role
-                })
-
-        # Query ReasonAuditLog if not filtered to other types only
-        if log_type in (None, 'reason'):
-            reason_logs = ReasonAuditLog.query.order_by(ReasonAuditLog.timestamp.desc()).limit(limit).all()
-            for log in reason_logs:
-                # Reason logs are always admin actions
-                performer_role = log.performed_by.role if log.performed_by else 'system'
-                logs.append({
-                    'timestamp': log.timestamp.isoformat(),
-                    'action': log.operation,
-                    'user': log.performed_by.name if log.performed_by else 'System',
-                    'details': format_reason_details(log.operation, log.operation_data, log.reason_id),
-                    'type': 'reason',
-                    'performer_role': performer_role
-                })
-
-        # Query ReservationAuditLog if not filtered to other types only
-        if log_type in (None, 'reservation'):
-            reservation_logs = ReservationAuditLog.query.order_by(ReservationAuditLog.timestamp.desc()).limit(limit).all()
-            for log in reservation_logs:
-                # Get performer role from operation_data or from the performer
-                performer_role = 'member'
-                if log.operation_data and 'performer_role' in log.operation_data:
-                    performer_role = log.operation_data['performer_role']
-                elif log.performed_by:
-                    performer_role = log.performed_by.role
-                logs.append({
-                    'timestamp': log.timestamp.isoformat(),
-                    'action': log.operation,
-                    'user': log.performed_by.name if log.performed_by else 'System',
-                    'details': format_reservation_details(log.operation, log.operation_data, log.reservation_id),
-                    'type': 'reservation',
-                    'performer_role': performer_role
-                })
-
-        # Sort combined logs by timestamp descending
-        logs.sort(key=lambda x: x['timestamp'], reverse=True)
-
-        # Apply limit to combined result
-        logs = logs[:limit]
-
-        return jsonify({
-            'success': True,
-            'logs': logs
-        }), 200
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500

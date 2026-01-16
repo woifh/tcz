@@ -298,50 +298,6 @@ def create_reservation():
         return redirect(url_for('dashboard.index'))
 
 
-@bp.route('/<int:id>', methods=['PUT'])
-@login_required
-def update_reservation(id):
-    """Update a reservation."""
-    try:
-        reservation = Reservation.query.get_or_404(id)
-        
-        # Check authorization: only booked_for or booked_by can modify
-        if (reservation.booked_for_id != current_user.id and 
-            reservation.booked_by_id != current_user.id):
-            return jsonify({'error': 'Sie haben keine Berechtigung für diese Aktion'}), 403
-        
-        data = request.get_json() if request.is_json else request.form
-        
-        # Prepare update data
-        updates = {}
-        if 'court_id' in data:
-            updates['court_id'] = int(data['court_id'])
-        if 'date' in data:
-            updates['date'] = datetime.strptime(data['date'], '%Y-%m-%d').date()
-        if 'start_time' in data:
-            updates['start_time'] = datetime.strptime(data['start_time'], '%H:%M').time()
-        
-        # Update reservation
-        updated_reservation, error = ReservationService.update_reservation(id, **updates)
-        
-        if error:
-            return jsonify({'error': error}), 400
-        
-        return jsonify({
-            'message': 'Buchung erfolgreich aktualisiert',
-            'reservation': {
-                'id': updated_reservation.id,
-                'court_id': updated_reservation.court_id,
-                'date': updated_reservation.date.isoformat(),
-                'start_time': updated_reservation.start_time.strftime('%H:%M'),
-                'end_time': updated_reservation.end_time.strftime('%H:%M')
-            }
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 @bp.route('/<int:id>', methods=['DELETE'])
 @jwt_or_session_required
 def delete_reservation(id):
@@ -363,30 +319,3 @@ def delete_reservation(id):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-@bp.route('/<int:id>/cancel', methods=['POST'])
-@login_required
-def cancel_reservation_form(id):
-    """Cancel a reservation (form submission)."""
-    try:
-        reservation = Reservation.query.get_or_404(id)
-
-        # Check authorization: only booked_for or booked_by can cancel
-        if (reservation.booked_for_id != current_user.id and
-            reservation.booked_by_id != current_user.id):
-            flash('Sie haben keine Berechtigung für diese Aktion', 'error')
-            return redirect(url_for('reservations.list_reservations')), 403
-
-        success, error = ReservationService.cancel_reservation(id, cancelled_by_id=current_user.id)
-        
-        if error:
-            flash(error, 'error')
-        else:
-            flash('Buchung erfolgreich storniert', 'success')
-        
-        return redirect(url_for('reservations.list_reservations'))
-        
-    except Exception as e:
-        flash(str(e), 'error')
-        return redirect(url_for('reservations.list_reservations'))

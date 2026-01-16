@@ -131,76 +131,8 @@ def changelog():
     return render_template('admin/changelog.html')
 
 
-@bp.route('/settings/payment-deadline', methods=['GET'])
-@login_required
-@admin_required
-def get_payment_deadline():
-    """Get current payment deadline settings."""
-    from app.services.settings_service import SettingsService
-
-    deadline = SettingsService.get_payment_deadline()
-    days_until = SettingsService.days_until_deadline()
-    unpaid_count = SettingsService.get_unpaid_member_count()
-
-    return jsonify({
-        'deadline': deadline.isoformat() if deadline else None,
-        'days_until': days_until,
-        'unpaid_count': unpaid_count,
-        'is_past': SettingsService.is_past_payment_deadline()
-    })
-
-
-@bp.route('/settings/payment-deadline', methods=['POST'])
-@login_required
-@admin_required
-def set_payment_deadline():
-    """Set or clear payment deadline."""
-    from datetime import datetime
-    from app.services.settings_service import SettingsService
-    from app.constants.messages import ErrorMessages, SuccessMessages
-
-    data = request.get_json() if request.is_json else request.form
-
-    deadline_str = data.get('deadline')
-
-    # If no deadline provided, clear it
-    if not deadline_str:
-        success, error = SettingsService.clear_payment_deadline(current_user.id)
-        if success:
-            return jsonify({'message': SuccessMessages.PAYMENT_DEADLINE_CLEARED}), 200
-        return jsonify({'error': error}), 400
-
-    # Parse and set the deadline
-    try:
-        deadline_date = datetime.strptime(deadline_str, '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({'error': ErrorMessages.PAYMENT_DEADLINE_INVALID_DATE}), 400
-
-    success, error = SettingsService.set_payment_deadline(deadline_date, current_user.id)
-
-    if success:
-        return jsonify({
-            'message': SuccessMessages.PAYMENT_DEADLINE_SET,
-            'deadline': deadline_date.isoformat()
-        }), 200
-
-    return jsonify({'error': error}), 400
-
-
-@bp.route('/settings/payment-deadline', methods=['DELETE'])
-@login_required
-@admin_required
-def clear_payment_deadline():
-    """Clear payment deadline."""
-    from app.services.settings_service import SettingsService
-    from app.constants.messages import SuccessMessages
-
-    success, error = SettingsService.clear_payment_deadline(current_user.id)
-
-    if success:
-        return jsonify({'message': SuccessMessages.PAYMENT_DEADLINE_CLEARED}), 200
-
-    return jsonify({'error': error}), 400
+# Note: Payment deadline API routes are in app/routes/api/admin.py
+# under /api/admin/settings/payment-deadline
 
 
 @bp.route('/import-members', methods=['POST'])

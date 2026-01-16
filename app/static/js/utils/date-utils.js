@@ -1,7 +1,29 @@
 /**
  * Date utility functions
  * Handles date formatting and calculations
+ *
+ * IMPORTANT: All date functions use Europe/Berlin timezone to ensure
+ * consistency with the backend and correct behavior around midnight.
  */
+
+const BERLIN_TIMEZONE = 'Europe/Berlin';
+
+/**
+ * Get current date/time in Berlin timezone as a Date-like object with ISO string
+ * @returns {string} ISO date string (YYYY-MM-DD) in Berlin timezone
+ */
+export function getBerlinDateString() {
+    return new Date().toLocaleDateString('sv-SE', { timeZone: BERLIN_TIMEZONE });
+}
+
+/**
+ * Convert a Date object to ISO date string (YYYY-MM-DD) in Berlin timezone
+ * @param {Date} date - Date object
+ * @returns {string} ISO date string (YYYY-MM-DD)
+ */
+export function toBerlinDateString(date) {
+    return date.toLocaleDateString('sv-SE', { timeZone: BERLIN_TIMEZONE });
+}
 
 /**
  * Format ISO date to German format (DD.MM.YYYY)
@@ -55,17 +77,17 @@ export function getTimeRange(startTime) {
  * @returns {string} New ISO date string
  */
 export function addDays(isoDate, days) {
-    const date = new Date(isoDate);
+    const date = new Date(isoDate + 'T12:00:00'); // Use noon to avoid DST edge cases
     date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
+    return toBerlinDateString(date);
 }
 
 /**
- * Get today's date in ISO format
+ * Get today's date in ISO format (Berlin timezone)
  * @returns {string} Today's date (YYYY-MM-DD)
  */
 export function getToday() {
-    return new Date().toISOString().split('T')[0];
+    return getBerlinDateString();
 }
 
 /**

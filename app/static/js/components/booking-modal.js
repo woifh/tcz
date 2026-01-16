@@ -3,6 +3,8 @@
  * Handles booking creation workflow with form validation and API submission
  */
 
+import { getToday } from '../utils/date-utils.js';
+
 /**
  * Get CSRF token from meta tag
  */
@@ -50,7 +52,7 @@ export function bookingModal() {
             this.court = courtNumber;
             this.courtName = `Platz ${courtNumber}`;
             this.time = time;
-            this.date = date || new Date().toISOString().split('T')[0];
+            this.date = date || getToday();
             this.error = null;
             this.show = true;
             

@@ -3,6 +3,8 @@
  * Manages court availability grid, date navigation, and user reservations
  */
 
+import { getToday, toBerlinDateString } from '../utils/date-utils.js';
+
 /**
  * Get CSRF token from meta tag
  */
@@ -17,7 +19,7 @@ const initializedComponents = new WeakSet();
 export function dashboard() {
     return {
         // State
-        selectedDate: new Date().toISOString().split('T')[0],
+        selectedDate: getToday(),
         courts: [],
         timeSlots: [],
         availability: {},
@@ -228,14 +230,14 @@ export function dashboard() {
         },
         
         changeDate(offset) {
-            const date = new Date(this.selectedDate);
+            const date = new Date(this.selectedDate + 'T12:00:00'); // Use noon to avoid DST issues
             date.setDate(date.getDate() + offset);
-            this.selectedDate = date.toISOString().split('T')[0];
+            this.selectedDate = toBerlinDateString(date);
             this.loadAvailability();
         },
-        
+
         goToToday() {
-            this.selectedDate = new Date().toISOString().split('T')[0];
+            this.selectedDate = getToday();
             this.loadAvailability();
         },
         
@@ -406,26 +408,30 @@ export function dashboard() {
         },
         
         isSlotInPast(time) {
-            const now = new Date();
-            const today = now.toISOString().split('T')[0];
-            
+            const today = getToday();
+
             // If selected date is before today, all slots are in the past
             if (this.selectedDate < today) {
                 return true;
             }
-            
+
             // If selected date is after today, no slots are in the past
             if (this.selectedDate > today) {
                 return false;
             }
-            
+
             // If selected date is today, check the time
-            const currentHour = now.getHours();
-            const [slotHour, slotMinute] = time.split(':').map(Number);
-            
+            // Get current hour in Berlin timezone
+            const berlinHour = parseInt(new Date().toLocaleTimeString('de-DE', {
+                timeZone: 'Europe/Berlin',
+                hour: '2-digit',
+                hour12: false
+            }), 10);
+            const [slotHour] = time.split(':').map(Number);
+
             // Slot is in the past only if it's before current hour
             // Current hour is still bookable as short notice booking
-            return slotHour < currentHour;
+            return slotHour < berlinHour;
         },
         
         generateTimeSlots() {

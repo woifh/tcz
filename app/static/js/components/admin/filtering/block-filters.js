@@ -7,6 +7,7 @@ import { blocksAPI } from '../core/admin-api.js';
 import { showToast, dataUtils, storageUtils } from '../core/admin-utils.js';
 import { stateManager } from '../core/admin-state.js';
 import { CONFIG } from '../core/admin-constants.js';
+import { getToday, toBerlinDateString } from '../../../utils/date-utils.js';
 
 export class BlockFilters {
     constructor() {
@@ -187,39 +188,39 @@ export class BlockFilters {
     applyDatePreset(preset) {
         const today = new Date();
         let startDate, endDate;
-        
+
         switch (preset) {
             case 'today':
-                startDate = endDate = today.toISOString().split('T')[0];
+                startDate = endDate = getToday();
                 break;
             case 'tomorrow':
                 const tomorrow = new Date(today);
                 tomorrow.setDate(tomorrow.getDate() + 1);
-                startDate = endDate = tomorrow.toISOString().split('T')[0];
+                startDate = endDate = toBerlinDateString(tomorrow);
                 break;
             case 'this-week':
                 const startOfWeek = new Date(today);
                 startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
                 const endOfWeek = new Date(startOfWeek);
                 endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
-                startDate = startOfWeek.toISOString().split('T')[0];
-                endDate = endOfWeek.toISOString().split('T')[0];
+                startDate = toBerlinDateString(startOfWeek);
+                endDate = toBerlinDateString(endOfWeek);
                 break;
             case 'next-week':
                 const nextWeekStart = new Date(today);
                 nextWeekStart.setDate(today.getDate() + (8 - today.getDay())); // Next Monday
                 const nextWeekEnd = new Date(nextWeekStart);
                 nextWeekEnd.setDate(nextWeekStart.getDate() + 6); // Next Sunday
-                startDate = nextWeekStart.toISOString().split('T')[0];
-                endDate = nextWeekEnd.toISOString().split('T')[0];
+                startDate = toBerlinDateString(nextWeekStart);
+                endDate = toBerlinDateString(nextWeekEnd);
                 break;
             case 'this-month':
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+                startDate = toBerlinDateString(new Date(today.getFullYear(), today.getMonth(), 1));
+                endDate = toBerlinDateString(new Date(today.getFullYear(), today.getMonth() + 1, 0));
                 break;
             case 'next-month':
-                startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split('T')[0];
-                endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0];
+                startDate = toBerlinDateString(new Date(today.getFullYear(), today.getMonth() + 1, 1));
+                endDate = toBerlinDateString(new Date(today.getFullYear(), today.getMonth() + 2, 0));
                 break;
         }
         

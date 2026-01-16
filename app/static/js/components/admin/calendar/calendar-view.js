@@ -6,6 +6,7 @@
 import { blocksAPI } from '../core/admin-api.js';
 import { showToast, dateUtils } from '../core/admin-utils.js';
 import { stateManager } from '../core/admin-state.js';
+import { getToday, toBerlinDateString } from '../../../utils/date-utils.js';
 
 export class CalendarView {
     constructor() {
@@ -74,25 +75,25 @@ export class CalendarView {
     getCalendarStartDate() {
         const date = new Date(this.currentDate);
         date.setDate(1); // First day of month
-        
+
         // Go back to the first Monday of the calendar view
         const dayOfWeek = date.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
         date.setDate(date.getDate() - daysToSubtract);
-        
-        return date.toISOString().split('T')[0];
+
+        return toBerlinDateString(date);
     }
 
     getCalendarEndDate() {
         const date = new Date(this.currentDate);
         date.setMonth(date.getMonth() + 1, 0); // Last day of month
-        
+
         // Go forward to the last Sunday of the calendar view
         const dayOfWeek = date.getDay();
         const daysToAdd = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
         date.setDate(date.getDate() + daysToAdd);
-        
-        return date.toISOString().split('T')[0];
+
+        return toBerlinDateString(date);
     }
 
     renderCalendar() {
@@ -131,7 +132,7 @@ export class CalendarView {
     generateCalendarHtml(blocksByDate) {
         const startDate = new Date(this.getCalendarStartDate());
         const endDate = new Date(this.getCalendarEndDate());
-        const today = new Date().toISOString().split('T')[0];
+        const today = getToday();
         const currentMonth = this.currentDate.getMonth();
         
         let html = `
@@ -148,9 +149,9 @@ export class CalendarView {
         `;
         
         const current = new Date(startDate);
-        
+
         while (current <= endDate) {
-            const dateStr = current.toISOString().split('T')[0];
+            const dateStr = toBerlinDateString(current);
             const dayBlocks = blocksByDate[dateStr] || [];
             const isToday = dateStr === today;
             const isCurrentMonth = current.getMonth() === currentMonth;

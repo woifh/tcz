@@ -3,6 +3,8 @@
  * Common utility functions used across admin components
  */
 
+import { getToday, toBerlinDateString } from '../../../utils/date-utils.js';
+
 // Toast notification system
 export function showToast(message, type = 'info', duration = 5000) {
     // Remove existing toasts
@@ -54,13 +56,13 @@ export const dateUtils = {
     },
     
     getTodayString() {
-        return new Date().toISOString().split('T')[0];
+        return getToday();
     },
-    
+
     getDatePlusDays(days) {
         const date = new Date();
         date.setDate(date.getDate() + days);
-        return date.toISOString().split('T')[0];
+        return toBerlinDateString(date);
     },
     
     isValidTimeRange(startTime, endTime) {

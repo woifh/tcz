@@ -1,9 +1,11 @@
 """
 API Admin Module
 
-Admin routes for member management, blocks, and settings.
+Admin routes for blocks, settings, and block reasons.
 Session-only authentication with admin/teamster role requirements.
 These endpoints are NOT accessible via JWT/mobile app.
+
+Note: Member management routes are in app/routes/api/members.py under /api/members/
 """
 
 from datetime import datetime
@@ -11,185 +13,12 @@ from flask import request, jsonify
 from flask_login import current_user
 
 from app import db
-from app.models import Member, Block, Court, BlockReason
-from app.services.member_service import MemberService
+from app.models import Block, Court, BlockReason, ReasonAuditLog
 from app.services.block_service import BlockService
 from app.services.settings_service import SettingsService
 from app.decorators.auth import admin_required, teamster_or_admin_required
 from app.constants.messages import ErrorMessages, SuccessMessages
 from . import bp
-
-
-# ----- Member Management Routes (Admin Only) -----
-
-@bp.route('/admin/members/', methods=['GET'])
-@admin_required
-def list_members():
-    """List all active members."""
-    members, error = MemberService.get_all_members(include_inactive=False)
-    if error:
-        return jsonify({'error': error}), 500
-
-    return jsonify({
-        'members': [m.to_dict(include_admin_fields=True) for m in members]
-    })
-
-
-@bp.route('/admin/members/', methods=['POST'])
-@admin_required
-def create_member():
-    """Create a new member."""
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'JSON body required'}), 400
-
-    try:
-        member, error = MemberService.create_member(
-            firstname=data.get('firstname'),
-            lastname=data.get('lastname'),
-            email=data.get('email'),
-            password=data.get('password'),
-            role=data.get('role', 'member'),
-            membership_type=data.get('membership_type', 'full'),
-            street=data.get('street'),
-            city=data.get('city'),
-            zip_code=data.get('zip_code'),
-            phone=data.get('phone'),
-            admin_id=current_user.id,
-            notifications_enabled=bool(data.get('notifications_enabled', True)),
-            notify_own_bookings=bool(data.get('notify_own_bookings', True)),
-            notify_other_bookings=bool(data.get('notify_other_bookings', True)),
-            notify_court_blocked=bool(data.get('notify_court_blocked', True)),
-            notify_booking_overridden=bool(data.get('notify_booking_overridden', True))
-        )
-
-        if error:
-            return jsonify({'error': error}), 400
-
-        return jsonify({
-            'message': SuccessMessages.MEMBER_CREATED,
-            'member': member.to_dict(include_admin_fields=True)
-        }), 201
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@bp.route('/admin/members/<id>', methods=['GET'])
-@admin_required
-def get_member(id):
-    """Get member details."""
-    member, error = MemberService.get_member(id)
-
-    if error:
-        return jsonify({'error': error}), 404
-
-    return jsonify(member.to_dict(include_admin_fields=True))
-
-
-@bp.route('/admin/members/<id>', methods=['PUT'])
-@admin_required
-def update_member(id):
-    """Update a member."""
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'JSON body required'}), 400
-
-    try:
-        updates = {}
-        allowed_fields = [
-            'firstname', 'lastname', 'email', 'password', 'role',
-            'membership_type', 'fee_paid', 'street', 'city', 'zip_code', 'phone',
-            'notifications_enabled', 'notify_own_bookings', 'notify_other_bookings',
-            'notify_court_blocked', 'notify_booking_overridden'
-        ]
-
-        for field in allowed_fields:
-            if field in data:
-                value = data[field]
-                if field == 'fee_paid':
-                    if isinstance(value, str):
-                        updates[field] = value.lower() in ('true', '1', 'yes')
-                    else:
-                        updates[field] = bool(value)
-                elif field.startswith('notif'):
-                    updates[field] = bool(value)
-                elif field == 'password' and value:
-                    updates[field] = value
-                elif field != 'password':
-                    updates[field] = value
-
-        member, error = MemberService.update_member(
-            member_id=id,
-            updates=updates,
-            admin_id=current_user.id
-        )
-
-        if error:
-            return jsonify({'error': error}), 400
-
-        return jsonify({
-            'message': SuccessMessages.MEMBER_UPDATED,
-            'member': member.to_dict(include_admin_fields=True)
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@bp.route('/admin/members/<id>', methods=['DELETE'])
-@admin_required
-def delete_member(id):
-    """Delete a member."""
-    force = request.args.get('force', 'false').lower() == 'true'
-
-    try:
-        success, error = MemberService.delete_member(
-            member_id=id,
-            admin_id=current_user.id,
-            force=force
-        )
-
-        if not success:
-            return jsonify({'error': error}), 400
-
-        return jsonify({'message': SuccessMessages.MEMBER_DELETED})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@bp.route('/admin/members/<id>/deactivate', methods=['POST'])
-@admin_required
-def deactivate_member(id):
-    """Deactivate a member account."""
-    try:
-        success, error = MemberService.deactivate_member(
-            member_id=id,
-            admin_id=current_user.id
-        )
-
-        if not success:
-            return jsonify({'error': error}), 400
-
-        return jsonify({'message': SuccessMessages.MEMBER_DEACTIVATED})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@bp.route('/admin/members/<id>/reactivate', methods=['POST'])
-@admin_required
-def reactivate_member(id):
-    """Reactivate a member account."""
-    try:
-        success, error = MemberService.reactivate_member(
-            member_id=id,
-            admin_id=current_user.id
-        )
-
-        if not success:
-            return jsonify({'error': error}), 400
-
-        return jsonify({'message': SuccessMessages.MEMBER_REACTIVATED})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 # ----- Block Management Routes (Teamster or Admin) -----
@@ -519,6 +348,22 @@ def clear_payment_deadline():
 
 # ----- Block Reasons Routes -----
 
+def log_reason_operation(operation, reason_id, operation_data, performed_by_id):
+    """Log a reason operation for audit purposes."""
+    try:
+        audit_log = ReasonAuditLog(
+            operation=operation,
+            reason_id=reason_id,
+            operation_data=operation_data,
+            performed_by_id=performed_by_id
+        )
+        db.session.add(audit_log)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Failed to log reason operation: {e}")
+
+
 @bp.route('/admin/block-reasons', methods=['GET'])
 @teamster_or_admin_required
 def list_block_reasons():
@@ -579,6 +424,16 @@ def create_block_reason():
     if error:
         return jsonify({'error': error}), 400
 
+    log_reason_operation(
+        operation='create',
+        reason_id=reason.id,
+        operation_data={
+            'name': reason.name,
+            'teamster_usable': reason.teamster_usable
+        },
+        performed_by_id=current_user.id
+    )
+
     return jsonify({
         'message': 'Sperrungsgrund erfolgreich erstellt',
         'reason': {
@@ -609,6 +464,13 @@ def update_block_reason(reason_id):
     if name is not None and not name:
         return jsonify({'error': 'Name ist erforderlich'}), 400
 
+    # Get old values for audit log
+    reason = BlockReason.query.get(reason_id)
+    old_values = {
+        'name': reason.name if reason else None,
+        'teamster_usable': reason.teamster_usable if reason else None
+    } if reason else {}
+
     success, error = BlockReasonService.update_block_reason(
         reason_id=reason_id,
         name=name,
@@ -619,6 +481,21 @@ def update_block_reason(reason_id):
     if error:
         return jsonify({'error': error}), 400
 
+    # Log the operation with changes
+    changes = {}
+    if name is not None and name != old_values.get('name'):
+        changes['name'] = {'old': old_values.get('name'), 'new': name}
+    if teamster_usable is not None and teamster_usable != old_values.get('teamster_usable'):
+        changes['teamster_usable'] = {'old': old_values.get('teamster_usable'), 'new': teamster_usable}
+
+    if changes:
+        log_reason_operation(
+            operation='update',
+            reason_id=reason_id,
+            operation_data={'changes': changes, 'name': name or old_values.get('name')},
+            performed_by_id=current_user.id
+        )
+
     return jsonify({'message': 'Sperrungsgrund erfolgreich aktualisiert'})
 
 
@@ -628,14 +505,31 @@ def delete_block_reason(reason_id):
     """Delete block reason (admin only)."""
     from app.services.block_reason_service import BlockReasonService
 
+    # Get reason name before deletion for audit log
+    reason = BlockReason.query.get(reason_id)
+    reason_name = reason.name if reason else 'Unbekannt'
+
     success, error_or_message = BlockReasonService.delete_block_reason(reason_id, current_user.id)
 
     if not success:
         return jsonify({'error': error_or_message}), 400
 
+    # If there's a message, it means the reason was deactivated instead of deleted
     if error_or_message:
+        log_reason_operation(
+            operation='deactivate',
+            reason_id=reason_id,
+            operation_data={'name': reason_name},
+            performed_by_id=current_user.id
+        )
         return jsonify({'message': error_or_message, 'deactivated': True})
 
+    log_reason_operation(
+        operation='delete',
+        reason_id=reason_id,
+        operation_data={'name': reason_name},
+        performed_by_id=current_user.id
+    )
     return jsonify({'message': 'Sperrungsgrund erfolgreich gelöscht'})
 
 
@@ -644,7 +538,6 @@ def delete_block_reason(reason_id):
 def reactivate_block_reason(reason_id):
     """Reactivate an inactive block reason (admin only)."""
     from app.services.block_reason_service import BlockReasonService
-    from app.models import BlockReason
 
     reason = BlockReason.query.get(reason_id)
     if not reason:
@@ -654,6 +547,13 @@ def reactivate_block_reason(reason_id):
 
     if not success:
         return jsonify({'error': error}), 400
+
+    log_reason_operation(
+        operation='reactivate',
+        reason_id=reason_id,
+        operation_data={'name': reason.name},
+        performed_by_id=current_user.id
+    )
 
     return jsonify({
         'message': 'Sperrungsgrund erfolgreich reaktiviert',
@@ -671,7 +571,6 @@ def reactivate_block_reason(reason_id):
 def permanently_delete_block_reason(reason_id):
     """Permanently delete a block reason (admin only)."""
     from app.services.block_reason_service import BlockReasonService
-    from app.models import BlockReason
 
     reason = BlockReason.query.get(reason_id)
     if not reason:
@@ -682,6 +581,13 @@ def permanently_delete_block_reason(reason_id):
 
     if not success:
         return jsonify({'error': error}), 400
+
+    log_reason_operation(
+        operation='permanent_delete',
+        reason_id=reason_id,
+        operation_data={'name': reason_name},
+        performed_by_id=current_user.id
+    )
 
     return jsonify({
         'message': f"Sperrungsgrund '{reason_name}' wurde endgültig gelöscht",

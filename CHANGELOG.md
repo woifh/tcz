@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.11] - 2026-01-17
+
+### Fixed
+- Dashboard now shows correct date after midnight in Berlin timezone
+
 ## [3.10] - 2026-01-16
 
 ### Added
