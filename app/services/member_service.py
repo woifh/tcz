@@ -13,6 +13,7 @@ from app.utils.validators import (
     validate_choice,
     ValidationError
 )
+from app.utils.serializers import serialize_for_json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,13 +25,7 @@ class MemberService:
     @staticmethod
     def _serialize_for_json(value):
         """Convert date/time objects (including nested structures) to JSON-safe strings."""
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, dict):
-            return {k: MemberService._serialize_for_json(v) for k, v in value.items()}
-        if isinstance(value, (list, tuple)):
-            return [MemberService._serialize_for_json(v) for v in value]
-        return value
+        return serialize_for_json(value)
 
     @staticmethod
     def create_member(firstname, lastname, email, password, role='member', membership_type='full',

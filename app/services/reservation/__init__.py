@@ -16,6 +16,10 @@ from app.services.reservation.query_service import ReservationQueryService
 from app.services.reservation.creation_service import ReservationCreationService
 from app.services.reservation.cancellation_service import ReservationCancellationService
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ReservationService:
     """
@@ -115,9 +119,55 @@ class ReservationService:
     # ============================================================================
 
     @staticmethod
-    def cancel_reservation(reservation_id, reason=None):
+    def cancel_reservation(reservation_id, reason=None, cancelled_by_id=None):
         """Cancel a reservation."""
-        return ReservationCancellationService.cancel_reservation(reservation_id, reason)
+        return ReservationCancellationService.cancel_reservation(reservation_id, reason, cancelled_by_id)
+
+    # ============================================================================
+    # Audit Logging
+    # ============================================================================
+
+    @staticmethod
+    def log_reservation_operation(operation, reservation_id, operation_data, performed_by_id=None):
+        """
+        Log a reservation operation for audit purposes.
+
+        Args:
+            operation: Type of operation ('create', 'cancel')
+            reservation_id: ID of the reservation being operated on
+            operation_data: Dictionary containing operation details
+            performed_by_id: ID of user performing the operation
+        """
+        from app import db
+        from app.models import ReservationAuditLog, Member
+        from app.utils.serializers import serialize_for_json
+
+        try:
+            if operation_data is None:
+                operation_data = {}
+
+            if performed_by_id:
+                performer = Member.query.get(performed_by_id)
+                if performer:
+                    operation_data['performer_role'] = performer.role
+
+            safe_data = serialize_for_json(operation_data) if operation_data else None
+
+            audit_log = ReservationAuditLog(
+                reservation_id=str(reservation_id) if reservation_id else None,
+                operation=operation,
+                operation_data=safe_data,
+                performed_by_id=performed_by_id
+            )
+
+            db.session.add(audit_log)
+            db.session.commit()
+
+            logger.info(f"Reservation operation logged: {operation} on reservation {reservation_id} by {performed_by_id or 'system'}")
+
+        except Exception as e:
+            logger.error(f"Failed to log reservation operation: {str(e)}")
+            # Don't fail the main operation if logging fails
 
 
 # Export all services for direct use

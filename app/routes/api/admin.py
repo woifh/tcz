@@ -699,7 +699,8 @@ def get_conflict_preview():
 @admin_required
 def get_audit_log():
     """Get unified audit log."""
-    from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog
+    from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog, ReservationAuditLog, Court
+    from app.routes.admin.audit import format_block_details, format_member_details, format_reason_details, format_reservation_details
 
     log_type = request.args.get('type')
     limit = min(int(request.args.get('limit', 100)), 500)
@@ -709,34 +710,61 @@ def get_audit_log():
     if log_type in (None, 'block'):
         block_logs = BlockAuditLog.query.order_by(BlockAuditLog.timestamp.desc()).limit(limit).all()
         for log in block_logs:
+            performer_role = log.admin.role if log.admin else 'system'
             logs.append({
                 'timestamp': log.timestamp.isoformat(),
                 'action': log.operation,
                 'user': log.admin.name if log.admin else 'System',
-                'details': str(log.operation_data),
-                'type': 'block'
+                'details': format_block_details(log.operation, log.operation_data),
+                'type': 'block',
+                'performer_role': performer_role
             })
 
     if log_type in (None, 'member'):
         member_logs = MemberAuditLog.query.order_by(MemberAuditLog.timestamp.desc()).limit(limit).all()
         for log in member_logs:
+            performer_role = 'system'
+            if log.operation_data and 'performer_role' in log.operation_data:
+                performer_role = log.operation_data['performer_role']
+            elif log.performed_by:
+                performer_role = log.performed_by.role
             logs.append({
                 'timestamp': log.timestamp.isoformat(),
                 'action': log.operation,
                 'user': log.performed_by.name if log.performed_by else 'System',
-                'details': str(log.operation_data),
-                'type': 'member'
+                'details': format_member_details(log.operation, log.operation_data, log.member_id),
+                'type': 'member',
+                'performer_role': performer_role
             })
 
     if log_type in (None, 'reason'):
         reason_logs = ReasonAuditLog.query.order_by(ReasonAuditLog.timestamp.desc()).limit(limit).all()
         for log in reason_logs:
+            performer_role = log.performed_by.role if log.performed_by else 'system'
             logs.append({
                 'timestamp': log.timestamp.isoformat(),
                 'action': log.operation,
                 'user': log.performed_by.name if log.performed_by else 'System',
-                'details': str(log.operation_data),
-                'type': 'reason'
+                'details': format_reason_details(log.operation, log.operation_data, log.reason_id),
+                'type': 'reason',
+                'performer_role': performer_role
+            })
+
+    if log_type in (None, 'reservation'):
+        reservation_logs = ReservationAuditLog.query.order_by(ReservationAuditLog.timestamp.desc()).limit(limit).all()
+        for log in reservation_logs:
+            performer_role = 'member'
+            if log.operation_data and 'performer_role' in log.operation_data:
+                performer_role = log.operation_data['performer_role']
+            elif log.performed_by:
+                performer_role = log.performed_by.role
+            logs.append({
+                'timestamp': log.timestamp.isoformat(),
+                'action': log.operation,
+                'user': log.performed_by.name if log.performed_by else 'System',
+                'details': format_reservation_details(log.operation, log.operation_data, log.reservation_id),
+                'type': 'reservation',
+                'performer_role': performer_role
             })
 
     # Sort by timestamp descending

@@ -8,13 +8,16 @@
         <h2 class="text-2xl font-bold">Audit-Protokoll</h2>
     </div>
 
-    <p class="text-gray-600 mb-6">Verlauf aller administrativen Operationen (Sperrungen, Mitglieder, Sperrungsgründe).</p>
+    <p class="text-gray-600 mb-6">Verlauf aller administrativen Operationen (Buchungen, Sperrungen, Mitglieder, Sperrungsgründe).</p>
 
     <!-- Type Filter Buttons -->
     <div class="flex flex-wrap gap-2 mb-4">
         <span class="text-sm text-gray-500 font-medium self-center mr-2">Typ:</span>
         <button id="filter-all" class="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
             Alle
+        </button>
+        <button id="filter-reservation" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">
+            Buchungen
         </button>
         <button id="filter-block" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">
             Sperrungen
@@ -44,6 +47,37 @@
         </button>
     </div>
 
+    <!-- Search Filter -->
+    <div class="mb-6">
+        <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1">
+                <label for="search-input" class="sr-only">Suche</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="text" id="search-input" placeholder="Suche nach Benutzer, Details..."
+                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <input type="date" id="date-from"
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       title="Von Datum">
+                <input type="date" id="date-to"
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       title="Bis Datum">
+                <button id="clear-filters" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg" title="Filter zurücksetzen">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Audit Log Container -->
     <div id="audit-log-container" class="bg-white border border-gray-200 rounded-lg">
         <div class="p-8 text-center text-gray-500">
@@ -57,9 +91,13 @@
     let currentTypeFilter = null;
     let currentActorFilter = null;
     let allLogs = [];
+    let searchQuery = '';
+    let dateFrom = null;
+    let dateTo = null;
 
     // Type filter button handlers
     document.getElementById('filter-all').addEventListener('click', () => setTypeFilter(null));
+    document.getElementById('filter-reservation').addEventListener('click', () => setTypeFilter('reservation'));
     document.getElementById('filter-block').addEventListener('click', () => setTypeFilter('block'));
     document.getElementById('filter-member').addEventListener('click', () => setTypeFilter('member'));
     document.getElementById('filter-reason').addEventListener('click', () => setTypeFilter('reason'));
@@ -69,6 +107,41 @@
     document.getElementById('actor-admin').addEventListener('click', () => setActorFilter('admin'));
     document.getElementById('actor-member').addEventListener('click', () => setActorFilter('member'));
     document.getElementById('actor-system').addEventListener('click', () => setActorFilter('system'));
+
+    // Search input handler with debounce
+    let searchTimeout = null;
+    document.getElementById('search-input').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderLogs();
+        }, 300);
+    });
+
+    // Date filter handlers
+    document.getElementById('date-from').addEventListener('change', (e) => {
+        dateFrom = e.target.value ? new Date(e.target.value) : null;
+        renderLogs();
+    });
+
+    document.getElementById('date-to').addEventListener('change', (e) => {
+        dateTo = e.target.value ? new Date(e.target.value + 'T23:59:59') : null;
+        renderLogs();
+    });
+
+    // Clear filters handler
+    document.getElementById('clear-filters').addEventListener('click', () => {
+        searchQuery = '';
+        dateFrom = null;
+        dateTo = null;
+        currentTypeFilter = null;
+        currentActorFilter = null;
+        document.getElementById('search-input').value = '';
+        document.getElementById('date-from').value = '';
+        document.getElementById('date-to').value = '';
+        updateFilterButtons();
+        renderLogs();
+    });
 
     function setTypeFilter(type) {
         currentTypeFilter = type;
@@ -86,6 +159,7 @@
         // Type filter buttons
         const typeButtons = {
             'filter-all': null,
+            'filter-reservation': 'reservation',
             'filter-block': 'block',
             'filter-member': 'member',
             'filter-reason': 'reason'
@@ -123,6 +197,7 @@
             'create': { label: 'Erstellt', class: 'bg-green-100 text-green-800' },
             'update': { label: 'Aktualisiert', class: 'bg-blue-100 text-blue-800' },
             'delete': { label: 'Gelöscht', class: 'bg-red-100 text-red-800' },
+            'cancel': { label: 'Storniert', class: 'bg-red-100 text-red-800' },
             'role_change': { label: 'Rolle', class: 'bg-purple-100 text-purple-800' },
             'membership_change': { label: 'Mitgliedschaft', class: 'bg-indigo-100 text-indigo-800' },
             'payment_update': { label: 'Beitrag', class: 'bg-yellow-100 text-yellow-800' },
@@ -137,7 +212,9 @@
     }
 
     function getTypeBadge(type) {
-        if (type === 'block') {
+        if (type === 'reservation') {
+            return '<span class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-600">Buchung</span>';
+        } else if (type === 'block') {
             return '<span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">Sperrung</span>';
         } else if (type === 'member') {
             return '<span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">Mitglied</span>';
@@ -385,6 +462,30 @@
             });
         }
 
+        // Apply text search filter
+        if (searchQuery) {
+            filteredLogs = filteredLogs.filter(log => {
+                const user = (log.user || '').toLowerCase();
+                const details = (log.details || '').toLowerCase();
+                const action = (log.action || '').toLowerCase();
+                const type = (log.type || '').toLowerCase();
+                return user.includes(searchQuery) ||
+                       details.includes(searchQuery) ||
+                       action.includes(searchQuery) ||
+                       type.includes(searchQuery);
+            });
+        }
+
+        // Apply date range filter
+        if (dateFrom || dateTo) {
+            filteredLogs = filteredLogs.filter(log => {
+                const logDate = new Date(log.timestamp + 'Z');
+                if (dateFrom && logDate < dateFrom) return false;
+                if (dateTo && logDate > dateTo) return false;
+                return true;
+            });
+        }
+
         if (filteredLogs.length > 0) {
             container.innerHTML = `
                 <div class="overflow-x-auto">
@@ -404,7 +505,7 @@
                                 return `
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            ${new Date(log.timestamp).toLocaleString('de-DE')}
+                                            ${new Date(log.timestamp + 'Z').toLocaleString('de-DE')}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             ${getTypeBadge(log.type)}
@@ -428,10 +529,11 @@
                 </div>
             `;
         } else {
+            const hasFilters = currentTypeFilter || currentActorFilter || searchQuery || dateFrom || dateTo;
             container.innerHTML = `
                 <div class="p-8 text-center text-gray-500">
-                    <p class="text-lg font-medium">Keine Einträge gefunden</p>
-                    <p class="text-sm mt-1">Es wurden noch keine administrativen Operationen durchgeführt.</p>
+                    <p class="text-lg font-medium">${hasFilters ? 'Keine passenden Einträge' : 'Keine Einträge gefunden'}</p>
+                    <p class="text-sm mt-1">${hasFilters ? 'Versuchen Sie andere Filterkriterien.' : 'Es wurden noch keine administrativen Operationen durchgeführt.'}</p>
                 </div>
             `;
         }

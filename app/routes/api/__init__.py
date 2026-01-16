@@ -126,7 +126,7 @@ def delete_reservation(id):
             reservation.booked_by_id != current_user.id):
             return jsonify({'error': 'Sie haben keine Berechtigung für diese Aktion'}), 403
 
-        success, error = ReservationService.cancel_reservation(id)
+        success, error = ReservationService.cancel_reservation(id, cancelled_by_id=current_user.id)
 
         if error:
             return jsonify({'error': error}), 400

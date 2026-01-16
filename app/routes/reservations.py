@@ -354,13 +354,13 @@ def delete_reservation(id):
             reservation.booked_by_id != current_user.id):
             return jsonify({'error': 'Sie haben keine Berechtigung für diese Aktion'}), 403
         
-        success, error = ReservationService.cancel_reservation(id)
-        
+        success, error = ReservationService.cancel_reservation(id, cancelled_by_id=current_user.id)
+
         if error:
             return jsonify({'error': error}), 400
-        
+
         return jsonify({'message': 'Buchung erfolgreich storniert'}), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -371,14 +371,14 @@ def cancel_reservation_form(id):
     """Cancel a reservation (form submission)."""
     try:
         reservation = Reservation.query.get_or_404(id)
-        
+
         # Check authorization: only booked_for or booked_by can cancel
-        if (reservation.booked_for_id != current_user.id and 
+        if (reservation.booked_for_id != current_user.id and
             reservation.booked_by_id != current_user.id):
             flash('Sie haben keine Berechtigung für diese Aktion', 'error')
             return redirect(url_for('reservations.list_reservations')), 403
-        
-        success, error = ReservationService.cancel_reservation(id)
+
+        success, error = ReservationService.cancel_reservation(id, cancelled_by_id=current_user.id)
         
         if error:
             flash(error, 'error')

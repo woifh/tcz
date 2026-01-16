@@ -14,7 +14,7 @@ class ReservationCancellationService:
     """Service for cancelling reservations."""
 
     @staticmethod
-    def cancel_reservation(reservation_id, reason=None):
+    def cancel_reservation(reservation_id, reason=None, cancelled_by_id=None):
         """
         Cancel a reservation.
         Uses enhanced validation that prevents cancellation within 15 minutes of start time,
@@ -23,6 +23,7 @@ class ReservationCancellationService:
         Args:
             reservation_id: ID of the reservation
             reason: Optional cancellation reason
+            cancelled_by_id: ID of member cancelling the reservation (for audit trail)
 
         Returns:
             tuple: (success boolean, error message or None)
@@ -43,6 +44,22 @@ class ReservationCancellationService:
 
             # Send email notifications
             EmailService.send_booking_cancelled(reservation, reason)
+
+            # Log audit trail
+            from app.services.reservation import ReservationService
+            ReservationService.log_reservation_operation(
+                operation='cancel',
+                reservation_id=reservation.id,
+                operation_data={
+                    'court_id': reservation.court_id,
+                    'date': str(reservation.date),
+                    'start_time': str(reservation.start_time),
+                    'reason': reason,
+                    'booked_for_id': reservation.booked_for_id,
+                    'cancelled_by_admin': cancelled_by_id and cancelled_by_id != reservation.booked_for_id
+                },
+                performed_by_id=cancelled_by_id or reservation.booked_for_id
+            )
 
             return True, None
         except Exception as e:

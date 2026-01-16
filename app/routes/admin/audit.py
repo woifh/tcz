@@ -9,7 +9,7 @@ from flask import request, jsonify
 from flask_login import login_required, current_user
 
 from app.decorators import admin_required
-from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog, Member, BlockReason
+from app.models import BlockAuditLog, MemberAuditLog, ReasonAuditLog, ReservationAuditLog, Member, BlockReason, Court
 from app import db
 from . import bp
 
@@ -252,14 +252,74 @@ def format_reason_details(operation, data, reason_id=None):
     return '-'
 
 
+def format_reservation_details(operation, data, reservation_id):
+    """Format reservation audit log details into human-readable text."""
+    if not data:
+        return f"Buchung {reservation_id}"
+
+    date = data.get('date', '')
+    start_time = data.get('start_time', '')
+    court_id = data.get('court_id')
+
+    # Format date from ISO to German format
+    if date:
+        try:
+            dt = datetime.fromisoformat(date)
+            date = dt.strftime('%d.%m.%Y')
+        except (ValueError, TypeError):
+            pass
+
+    # Format time
+    if start_time:
+        try:
+            if isinstance(start_time, str) and ':' in start_time:
+                start_time = start_time[:5]  # Get HH:MM
+        except (ValueError, TypeError):
+            pass
+
+    # Get court name (Court model has 'number' attribute, not 'name')
+    court_name = f"Platz {court_id}"
+    if court_id:
+        court = Court.query.get(court_id)
+        if court:
+            court_name = f"Platz {court.number}"
+
+    # Get member name for booked_for
+    booked_for_id = data.get('booked_for_id')
+    booked_for_name = ''
+    if booked_for_id:
+        member = Member.query.get(booked_for_id)
+        if member:
+            booked_for_name = f" für {member.name}"
+
+    if operation == 'create':
+        short_notice = " (kurzfristig)" if data.get('is_short_notice') else ""
+        return f"Buchung erstellt: {court_name}, {date} {start_time}{booked_for_name}{short_notice}"
+
+    if operation == 'cancel':
+        reason = data.get('reason', '')
+        cancelled_by_admin = data.get('cancelled_by_admin', False)
+        cancelled_by_block = data.get('cancelled_by_block', False)
+        if cancelled_by_block:
+            admin_text = " (durch Sperrung)"
+        elif cancelled_by_admin:
+            admin_text = " (durch Admin)"
+        else:
+            admin_text = ""
+        reason_text = f" - {reason}" if reason else ""
+        return f"Buchung storniert: {court_name}, {date} {start_time}{booked_for_name}{admin_text}{reason_text}"
+
+    return f"Buchung {reservation_id}"
+
+
 @bp.route('/blocks/audit-log', methods=['GET'])
 @login_required
 @admin_required
 def get_audit_log():
-    """Get unified audit log combining block, member, and reason operations (admin only)."""
+    """Get unified audit log combining block, member, reason, and reservation operations (admin only)."""
     try:
         # Get filter parameters
-        log_type = request.args.get('type')  # 'block', 'member', 'reason', or None for all
+        log_type = request.args.get('type')  # 'block', 'member', 'reason', 'reservation', or None for all
         limit = min(int(request.args.get('limit', 100)), 500)  # Max 500 entries
 
         logs = []
@@ -310,6 +370,25 @@ def get_audit_log():
                     'user': log.performed_by.name if log.performed_by else 'System',
                     'details': format_reason_details(log.operation, log.operation_data, log.reason_id),
                     'type': 'reason',
+                    'performer_role': performer_role
+                })
+
+        # Query ReservationAuditLog if not filtered to other types only
+        if log_type in (None, 'reservation'):
+            reservation_logs = ReservationAuditLog.query.order_by(ReservationAuditLog.timestamp.desc()).limit(limit).all()
+            for log in reservation_logs:
+                # Get performer role from operation_data or from the performer
+                performer_role = 'member'
+                if log.operation_data and 'performer_role' in log.operation_data:
+                    performer_role = log.operation_data['performer_role']
+                elif log.performed_by:
+                    performer_role = log.performed_by.role
+                logs.append({
+                    'timestamp': log.timestamp.isoformat(),
+                    'action': log.operation,
+                    'user': log.performed_by.name if log.performed_by else 'System',
+                    'details': format_reservation_details(log.operation, log.operation_data, log.reservation_id),
+                    'type': 'reservation',
                     'performer_role': performer_role
                 })
 

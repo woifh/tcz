@@ -100,6 +100,22 @@ class ReservationCreationService:
                     logger.warning(f"Email notification failed: {email_error}")
                     # Don't fail the reservation creation if email fails
 
+                # Log audit trail
+                from app.services.reservation import ReservationService
+                ReservationService.log_reservation_operation(
+                    operation='create',
+                    reservation_id=reservation.id,
+                    operation_data={
+                        'court_id': court_id,
+                        'date': str(date),
+                        'start_time': str(start_time),
+                        'end_time': str(end_time),
+                        'booked_for_id': booked_for_id,
+                        'is_short_notice': is_short_notice
+                    },
+                    performed_by_id=booked_by_id
+                )
+
                 return reservation, None
 
             except Exception as db_error:

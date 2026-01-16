@@ -113,6 +113,7 @@ Hosted on PythonAnywhere. Reload after changes:
   - Create a meaningful commit message
   - Push to GitHub
   - Create and push a git tag matching the changelog version (format: vX.Y.0, e.g., v3.9.0 for changelog version 3.9)
+  - **Version sync rule**: CHANGELOG.md version and git tag MUST always match (e.g., changelog 3.10 → tag v3.10.0)
 
 ## German Language
 

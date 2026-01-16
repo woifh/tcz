@@ -5,6 +5,7 @@ from app import db
 from app.models import Block, Reservation, BlockReason, BlockAuditLog
 from app.services.email_service import EmailService
 from app.constants.messages import ErrorMessages
+from app.utils.serializers import serialize_for_json
 import logging
 import uuid
 
@@ -17,13 +18,7 @@ class BlockService:
     @staticmethod
     def _serialize_for_json(value):
         """Convert date/time objects (including nested structures) to JSON-safe strings."""
-        if isinstance(value, (datetime, date, time)):
-            return value.isoformat()
-        if isinstance(value, dict):
-            return {k: BlockService._serialize_for_json(v) for k, v in value.items()}
-        if isinstance(value, (list, tuple)):
-            return [BlockService._serialize_for_json(v) for v in value]
-        return value
+        return serialize_for_json(value)
 
     @staticmethod
     def get_blocks_by_date(date):
@@ -85,13 +80,31 @@ class BlockService:
         for reservation in conflicting_reservations:
             reservation.status = 'cancelled'
             reservation.reason = cancellation_reason
-            
+
+            # Log to ReservationAuditLog
+            from app.services.reservation import ReservationService
+            ReservationService.log_reservation_operation(
+                operation='cancel',
+                reservation_id=reservation.id,
+                operation_data={
+                    'court_id': reservation.court_id,
+                    'date': str(reservation.date),
+                    'start_time': str(reservation.start_time),
+                    'reason': cancellation_reason,
+                    'booked_for_id': reservation.booked_for_id,
+                    'cancelled_by_admin': True,
+                    'cancelled_by_block': True,
+                    'block_id': block.id
+                },
+                performed_by_id=block.created_by_id
+            )
+
             # Send email notifications with block reason
             try:
                 EmailService.send_booking_cancelled(reservation, cancellation_reason)
             except Exception as e:
                 logger.error(f"Failed to send cancellation email for reservation {reservation.id}: {str(e)}")
-        
+
         return conflicting_reservations
     @staticmethod
     def update_single_instance(block_id, skip_audit_log=False, **updates):

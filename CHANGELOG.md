@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.10] - 2026-01-16
+
+### Added
+- Reservations (create/cancel) now tracked in audit log
+- New "Buchungen" filter in audit log
+- Audit log tracks bookings cancelled by admin blocks
+- Audit log search: filter by member name, details, and date range
+
+### Fixed
+- Audit log timestamps now display in user's local timezone
+
 ## [3.9] - 2026-01-15
 
 ### Added
