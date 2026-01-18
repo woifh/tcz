@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Three-state payment display: Paid / Confirmation pending / Open
 - Clearer booking error messages when payment confirmation is pending
+- Audit log now shows payment confirmation actions with proper labels
 
 ## [3.12] - 2026-01-18
 

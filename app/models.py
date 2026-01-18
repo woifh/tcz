@@ -374,7 +374,7 @@ class MemberAuditLog(db.Model):
     def __init__(self, **kwargs):
         """Initialize audit log with validation."""
         super(MemberAuditLog, self).__init__(**kwargs)
-        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate', 'membership_change', 'payment_update', 'payment_confirmation_request', 'payment_confirmation_reject', 'add_favourite', 'remove_favourite', 'csv_import', 'annual_fee_reset']
+        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate', 'membership_change', 'payment_update', 'payment_confirmation', 'payment_confirmation_request', 'payment_confirmation_reject', 'add_favourite', 'remove_favourite', 'csv_import', 'annual_fee_reset']
         if self.operation and self.operation not in valid_operations:
             raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
 

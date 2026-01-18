@@ -156,7 +156,7 @@ Run from project root: `./scripts/deploy/pythonanywhere.sh`
 
 ## Important Rules
 
-- **NEVER push to GitHub without explicit user request** - always wait for the user to ask before pushing commits
+- **NEVER push to GitHub without explicit user request** - always wait for the user to ask before pushing commits. This is NON-NEGOTIABLE. Do not commit or push under any circumstances unless the user explicitly says "push" or "commit".
 - **When pushing to GitHub**:
   - Ask the user whether to increase major or minor version
   - Add a short, non-technical changelog entry to CHANGELOG.md (version format: major.minor)
