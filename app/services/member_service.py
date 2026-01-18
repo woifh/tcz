@@ -295,6 +295,10 @@ class MemberService:
                         from datetime import date
                         member.fee_paid_date = date.today()
                         member.fee_paid_by_id = admin_id
+                        # Reset payment confirmation request when marking as paid
+                        if member.payment_confirmation_requested:
+                            member.payment_confirmation_requested = False
+                            member.payment_confirmation_requested_at = None
                     else:
                         member.fee_paid_date = None
                         member.fee_paid_by_id = None
@@ -843,11 +847,13 @@ class MemberService:
                 logger.info("No members with paid status to reset")
                 return 0, None
 
-            # Reset all payment statuses
+            # Reset all payment statuses and confirmation requests
             Member.query.update({
                 'fee_paid': False,
                 'fee_paid_date': None,
-                'fee_paid_by_id': None
+                'fee_paid_by_id': None,
+                'payment_confirmation_requested': False,
+                'payment_confirmation_requested_at': None
             }, synchronize_session=False)
 
             db.session.commit()
@@ -871,3 +877,115 @@ class MemberService:
             db.session.rollback()
             logger.error(f"Failed to reset payment status: {str(e)}")
             return 0, f"Fehler beim Zurücksetzen der Beitragszahlungen: {str(e)}"
+
+    @staticmethod
+    def request_payment_confirmation(member_id):
+        """
+        Request payment confirmation by a member.
+        Sets the payment_confirmation_requested flag to True.
+
+        Args:
+            member_id: ID of the member requesting confirmation
+
+        Returns:
+            tuple: (success: bool, error_message: str | None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return False, ErrorMessages.MEMBER_NOT_FOUND
+
+            if member.fee_paid:
+                return False, "Beitrag ist bereits als bezahlt markiert"
+
+            if member.payment_confirmation_requested:
+                return False, "Zahlungsbestätigung wurde bereits angefordert"
+
+            member.payment_confirmation_requested = True
+            member.payment_confirmation_requested_at = datetime.utcnow()
+
+            db.session.flush()
+
+            # Log the operation
+            MemberService.log_member_operation(
+                operation='payment_confirmation_request',
+                member_id=member_id,
+                operation_data={
+                    'member_name': member.name,
+                    'requested_at': member.payment_confirmation_requested_at.isoformat()
+                },
+                performed_by_id=member_id
+            )
+
+            db.session.commit()
+
+            logger.info(f"Payment confirmation requested by member {member_id}")
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to request payment confirmation for member {member_id}: {str(e)}")
+            return False, f"Fehler bei der Zahlungsbestätigung: {str(e)}"
+
+    @staticmethod
+    def reject_payment_confirmation(member_id, admin_id):
+        """
+        Reject a payment confirmation request (admin only).
+        Resets the payment_confirmation_requested flag to False.
+
+        Args:
+            member_id: ID of the member whose confirmation is rejected
+            admin_id: ID of the admin rejecting the confirmation
+
+        Returns:
+            tuple: (success: bool, error_message: str | None)
+        """
+        try:
+            member = Member.query.get(member_id)
+            if not member:
+                return False, ErrorMessages.MEMBER_NOT_FOUND
+
+            if not member.payment_confirmation_requested:
+                return False, "Keine ausstehende Zahlungsbestätigung vorhanden"
+
+            original_requested_at = member.payment_confirmation_requested_at
+
+            member.payment_confirmation_requested = False
+            member.payment_confirmation_requested_at = None
+
+            db.session.flush()
+
+            # Log the operation
+            MemberService.log_member_operation(
+                operation='payment_confirmation_reject',
+                member_id=member_id,
+                operation_data={
+                    'member_name': member.name,
+                    'originally_requested_at': original_requested_at.isoformat() if original_requested_at else None
+                },
+                performed_by_id=admin_id
+            )
+
+            db.session.commit()
+
+            logger.info(f"Payment confirmation rejected for member {member_id} by admin {admin_id}")
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to reject payment confirmation for member {member_id}: {str(e)}")
+            return False, f"Fehler beim Ablehnen der Zahlungsbestätigung: {str(e)}"
+
+    @staticmethod
+    def get_members_with_pending_confirmations():
+        """
+        Get all members with pending payment confirmations.
+
+        Returns:
+            list: List of Member objects with pending confirmations
+        """
+        return Member.query.filter(
+            Member.payment_confirmation_requested == True,
+            Member.fee_paid == False,
+            Member.is_active == True
+        ).order_by(Member.payment_confirmation_requested_at.desc()).all()

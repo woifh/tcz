@@ -41,6 +41,9 @@ class Member(db.Model, UserMixin):
     fee_paid = db.Column(db.Boolean, nullable=False, default=False)
     fee_paid_date = db.Column(db.Date, nullable=True)
     fee_paid_by_id = db.Column(db.String(36), db.ForeignKey('member.id'), nullable=True)
+    # Payment confirmation request tracking (member self-reports payment for admin verification)
+    payment_confirmation_requested = db.Column(db.Boolean, nullable=False, default=False)
+    payment_confirmation_requested_at = db.Column(db.DateTime, nullable=True)
 
     # Address fields
     street = db.Column(db.String(100), nullable=True)
@@ -149,6 +152,19 @@ class Member(db.Model, UserMixin):
         from app.services.settings_service import SettingsService
         return SettingsService.is_past_payment_deadline()
 
+    def has_pending_payment_confirmation(self):
+        """Check if member has a pending payment confirmation request."""
+        return not self.fee_paid and self.payment_confirmation_requested
+
+    def should_show_payment_reminder(self):
+        """Check if payment reminder banner should be shown.
+
+        Returns False if fee is already paid or member has requested confirmation.
+        """
+        if self.fee_paid:
+            return False
+        return not self.payment_confirmation_requested
+
     def __repr__(self):
         return f'<Member {self.name} ({self.email})>'
 
@@ -167,6 +183,8 @@ class Member(db.Model, UserMixin):
                 'membership_type': self.membership_type,
                 'is_active': self.is_active,
                 'fee_paid': self.fee_paid,
+                'payment_confirmation_requested': self.payment_confirmation_requested,
+                'payment_confirmation_requested_at': self.payment_confirmation_requested_at.isoformat() if self.payment_confirmation_requested_at else None,
                 'phone': self.phone,
                 'street': self.street,
                 'city': self.city,
@@ -356,7 +374,7 @@ class MemberAuditLog(db.Model):
     def __init__(self, **kwargs):
         """Initialize audit log with validation."""
         super(MemberAuditLog, self).__init__(**kwargs)
-        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate', 'membership_change', 'payment_update', 'add_favourite', 'remove_favourite', 'csv_import', 'annual_fee_reset']
+        valid_operations = ['create', 'update', 'delete', 'role_change', 'deactivate', 'reactivate', 'membership_change', 'payment_update', 'payment_confirmation_request', 'payment_confirmation_reject', 'add_favourite', 'remove_favourite', 'csv_import', 'annual_fee_reset']
         if self.operation and self.operation not in valid_operations:
             raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
 

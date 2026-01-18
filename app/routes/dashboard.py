@@ -26,17 +26,20 @@ def dashboard():
     payment_deadline = None
     days_until_deadline = None
     is_past_deadline = False
+    payment_confirmation_requested = False
 
     if current_user.has_unpaid_fee():
         payment_deadline = SettingsService.get_payment_deadline()
         days_until_deadline = SettingsService.days_until_deadline()
         is_past_deadline = SettingsService.is_past_payment_deadline()
+        payment_confirmation_requested = current_user.payment_confirmation_requested
 
     return render_template(
         'dashboard.html',
         payment_deadline=payment_deadline,
         days_until_deadline=days_until_deadline,
-        is_past_deadline=is_past_deadline
+        is_past_deadline=is_past_deadline,
+        payment_confirmation_requested=payment_confirmation_requested
     )
 
 
@@ -190,3 +193,20 @@ def version():
             'error': str(e),
             'deployment_check': 'failed'
         }), 500
+
+
+@bp.route('/changelog')
+def changelog():
+    """Changelog endpoint for mobile app."""
+    try:
+        changelog_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'CHANGELOG.md')
+
+        if os.path.exists(changelog_path):
+            with open(changelog_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return jsonify({'changelog': content})
+        else:
+            return jsonify({'error': 'Changelog not found'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

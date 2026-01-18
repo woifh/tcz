@@ -114,6 +114,25 @@
         </div>
         <div>
             <label class="block text-gray-700 font-semibold mb-2">Beitrag</label>
+
+            <!-- Pending confirmation indicator (shown when member has requested confirmation) -->
+            <div id="pending-confirmation-section" class="hidden mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="material-icons text-orange-600 mr-2">pending</span>
+                        <div>
+                            <p class="text-orange-800 font-medium text-sm">Zahlungsbestätigung ausstehend</p>
+                            <p class="text-orange-600 text-xs" id="confirmation-requested-at"></p>
+                        </div>
+                    </div>
+                    <button type="button"
+                            onclick="rejectPaymentConfirmation()"
+                            class="bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded transition-colors">
+                        Ablehnen
+                    </button>
+                </div>
+            </div>
+
             <div class="flex items-center gap-4 mt-2">
                 <label class="flex items-center">
                     <input type="radio" name="member-fee-paid" value="true" id="member-fee-paid" class="mr-2">
@@ -124,6 +143,7 @@
                     <span class="text-sm text-red-600">Offen</span>
                 </label>
             </div>
+            <p class="text-xs text-gray-500 mt-1">Bei Auswahl von "Bezahlt" wird eine ausstehende Bestätigung automatisch akzeptiert.</p>
         </div>
 
         <!-- Notification Preferences Section -->
@@ -306,6 +326,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                 document.getElementById('member-fee-unpaid').checked = true;
             }
 
+            // Show pending confirmation section if applicable
+            if (data.payment_confirmation_requested) {
+                const pendingSection = document.getElementById('pending-confirmation-section');
+                pendingSection.classList.remove('hidden');
+
+                const requestedAt = document.getElementById('confirmation-requested-at');
+                if (data.payment_confirmation_requested_at) {
+                    const date = new Date(data.payment_confirmation_requested_at);
+                    requestedAt.textContent = `Angefordert am: ${date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+                }
+            }
+
             // Set status radio
             if (data.is_active) {
                 document.getElementById('member-active').checked = true;
@@ -471,5 +503,36 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 });
+
+// Function to reject payment confirmation
+async function rejectPaymentConfirmation() {
+    if (!confirm('Möchten Sie die Zahlungsbestätigung wirklich ablehnen? Das Mitglied wird erneut aufgefordert, den Beitrag zu bezahlen.')) {
+        return;
+    }
+
+    const memberId = document.getElementById('member-form').dataset.memberId;
+
+    try {
+        const response = await fetch(`/api/admin/members/${memberId}/reject-payment-confirmation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast('Zahlungsbestätigung wurde abgelehnt');
+            // Hide the pending section
+            document.getElementById('pending-confirmation-section').classList.add('hidden');
+        } else {
+            showToast(data.error || 'Fehler beim Ablehnen', 'error');
+        }
+    } catch (error) {
+        showToast('Fehler beim Ablehnen der Zahlungsbestätigung', 'error');
+    }
+}
 </script>
 {% endblock %}

@@ -24,48 +24,83 @@
         border-right: none;
     }
 </style>
-<!-- Payment Reminder Banner -->
+<!-- Payment Status Banners -->
 {% if current_user.has_unpaid_fee() %}
-    {% if is_past_deadline %}
+    {% if payment_confirmation_requested %}
+    <!-- Payment confirmation pending review -->
+    <div class="mb-4 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+        <div class="flex items-center">
+            <span class="material-icons text-blue-600 mr-3">hourglass_empty</span>
+            <div>
+                <p class="text-blue-800 font-semibold">Zahlungsbestätigung wird geprüft</p>
+                <p class="text-blue-700 text-sm">Ihre Zahlungsbestätigung wird derzeit vom Vorstand überprüft.</p>
+                {% if is_past_deadline %}
+                <p class="text-blue-600 text-xs mt-1">Buchungen sind bis zur Bestätigung weiterhin gesperrt.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% elif is_past_deadline %}
     <!-- Booking restricted - deadline passed -->
     <div class="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-        <div class="flex items-center">
-            <span class="material-icons text-red-600 mr-3">block</span>
-            <div>
-                <p class="text-red-800 font-semibold">Buchungen gesperrt</p>
-                <p class="text-red-700 text-sm">Die Zahlungsfrist ist abgelaufen. Bitte bezahlen Sie Ihren Mitgliedsbeitrag, um wieder buchen zu können.</p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="material-icons text-red-600 mr-3">block</span>
+                <div>
+                    <p class="text-red-800 font-semibold">Buchungen gesperrt</p>
+                    <p class="text-red-700 text-sm">Die Zahlungsfrist ist abgelaufen. Bitte bezahlen Sie Ihren Mitgliedsbeitrag, um wieder buchen zu können.</p>
+                </div>
             </div>
+            <button onclick="confirmPayment()"
+                    class="ml-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition-colors flex items-center gap-2 whitespace-nowrap">
+                <span class="material-icons text-sm">check_circle</span>
+                Zahlung bestätigen
+            </button>
         </div>
     </div>
     {% elif payment_deadline %}
     <!-- Deadline set but not passed - show countdown -->
     <div class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-        <div class="flex items-center">
-            <span class="material-icons text-yellow-600 mr-3">schedule</span>
-            <div>
-                <p class="text-yellow-800 font-semibold">Mitgliedsbeitrag offen</p>
-                <p class="text-yellow-700 text-sm">
-                    {% if days_until_deadline == 0 %}
-                    Zahlungsfrist: <strong>Heute</strong> ({{ payment_deadline.strftime('%d.%m.%Y') }})
-                    {% elif days_until_deadline == 1 %}
-                    Noch <strong>1 Tag</strong> bis zur Zahlungsfrist am {{ payment_deadline.strftime('%d.%m.%Y') }}
-                    {% else %}
-                    Noch <strong>{{ days_until_deadline }} Tage</strong> bis zur Zahlungsfrist am {{ payment_deadline.strftime('%d.%m.%Y') }}
-                    {% endif %}
-                </p>
-                <p class="text-yellow-600 text-xs mt-1">Bitte kontaktieren Sie den Vorstand, um Ihren Beitrag zu bezahlen.</p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="material-icons text-yellow-600 mr-3">schedule</span>
+                <div>
+                    <p class="text-yellow-800 font-semibold">Mitgliedsbeitrag offen</p>
+                    <p class="text-yellow-700 text-sm">
+                        {% if days_until_deadline == 0 %}
+                        Zahlungsfrist: <strong>Heute</strong> ({{ payment_deadline.strftime('%d.%m.%Y') }})
+                        {% elif days_until_deadline == 1 %}
+                        Noch <strong>1 Tag</strong> bis zur Zahlungsfrist am {{ payment_deadline.strftime('%d.%m.%Y') }}
+                        {% else %}
+                        Noch <strong>{{ days_until_deadline }} Tage</strong> bis zur Zahlungsfrist am {{ payment_deadline.strftime('%d.%m.%Y') }}
+                        {% endif %}
+                    </p>
+                    <p class="text-yellow-600 text-xs mt-1">Bitte kontaktieren Sie den Vorstand, um Ihren Beitrag zu bezahlen.</p>
+                </div>
             </div>
+            <button onclick="confirmPayment()"
+                    class="ml-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition-colors flex items-center gap-2 whitespace-nowrap">
+                <span class="material-icons text-sm">check_circle</span>
+                Zahlung bestätigen
+            </button>
         </div>
     </div>
     {% else %}
     <!-- No deadline set - just reminder -->
     <div class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-        <div class="flex items-center">
-            <span class="material-icons text-yellow-600 mr-3">warning</span>
-            <div>
-                <p class="text-yellow-800 font-semibold">Mitgliedsbeitrag offen</p>
-                <p class="text-yellow-700 text-sm">Ihr Mitgliedsbeitrag ist noch nicht bezahlt. Bitte kontaktieren Sie den Vorstand.</p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="material-icons text-yellow-600 mr-3">warning</span>
+                <div>
+                    <p class="text-yellow-800 font-semibold">Mitgliedsbeitrag offen</p>
+                    <p class="text-yellow-700 text-sm">Ihr Mitgliedsbeitrag ist noch nicht bezahlt. Bitte kontaktieren Sie den Vorstand.</p>
+                </div>
             </div>
+            <button onclick="confirmPayment()"
+                    class="ml-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition-colors flex items-center gap-2 whitespace-nowrap">
+                <span class="material-icons text-sm">check_circle</span>
+                Zahlung bestätigen
+            </button>
         </div>
     </div>
     {% endif %}
@@ -384,6 +419,35 @@
 </div>
 
 <script>
+// Payment confirmation function
+async function confirmPayment() {
+    if (!confirm('Haben Sie Ihren Mitgliedsbeitrag bereits bezahlt? Mit dieser Bestätigung informieren Sie den Vorstand, dass Ihre Zahlung erfolgt ist.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/members/me/confirm-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast('Zahlungsbestätigung wurde angefordert');
+            // Reload page to show updated banner
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Fehler bei der Zahlungsbestätigung', 'error');
+        }
+    } catch (error) {
+        showToast('Fehler bei der Zahlungsbestätigung', 'error');
+    }
+}
+
 // Booking modal event handlers - now handled by Alpine.js components
 document.addEventListener('DOMContentLoaded', () => {
     // Close modal on escape key

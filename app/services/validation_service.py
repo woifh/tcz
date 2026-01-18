@@ -292,6 +292,9 @@ class ValidationService:
 
             # Check if member is restricted due to unpaid fee past deadline
             if member.is_payment_restricted():
+                # Use different message if member has pending confirmation
+                if member.has_pending_payment_confirmation():
+                    return False, ErrorMessages.PAYMENT_CONFIRMATION_PENDING
                 return False, ErrorMessages.PAYMENT_DEADLINE_PASSED
 
             # Validate not in the past (with special handling for short notice bookings)

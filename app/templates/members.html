@@ -11,6 +11,7 @@ function membersList() {
         loading: true,
         error: '',
         filterQuery: '',
+        showPendingOnly: false,
         currentSort: { column: null, direction: 'asc' },
 
         async init() {
@@ -27,7 +28,7 @@ function membersList() {
 
                 if (response.ok) {
                     this.members = data.members;
-                    this.filteredMembers = [...this.members];
+                    this.filterMembers();
                 } else {
                     this.error = data.error || 'Fehler beim Laden der Mitglieder';
                 }
@@ -39,15 +40,33 @@ function membersList() {
             }
         },
 
+        togglePendingFilter() {
+            this.showPendingOnly = !this.showPendingOnly;
+            this.filterMembers();
+        },
+
+        getPendingCount() {
+            return this.members.filter(m => m.payment_confirmation_requested && !m.fee_paid).length;
+        },
+
         filterMembers() {
+            let results = [...this.members];
+
+            // Apply pending filter first
+            if (this.showPendingOnly) {
+                results = results.filter(member => member.payment_confirmation_requested && !member.fee_paid);
+            }
+
+            // Then apply search filter
             const query = this.filterQuery.toLowerCase().trim();
-            if (!query) {
-                this.filteredMembers = [...this.members];
-            } else {
-                this.filteredMembers = this.members.filter(member =>
+            if (query) {
+                results = results.filter(member =>
                     member.name.toLowerCase().includes(query)
                 );
             }
+
+            this.filteredMembers = results;
+
             // Reapply current sort if any
             if (this.currentSort.column) {
                 this.sortBy(this.currentSort.column, this.currentSort.direction, false);
@@ -196,11 +215,23 @@ function membersList() {
 <div class="bg-white rounded-lg shadow-md p-6" x-data="membersList()">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Mitglieder</h2>
-        {% if current_user.is_admin() %}
-        <a href="/admin/member" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
-            Neues Mitglied
-        </a>
-        {% endif %}
+        <div class="flex items-center gap-2">
+            {% if current_user.is_admin() %}
+            <button @click="togglePendingFilter()"
+                    :class="showPendingOnly ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
+                    class="py-2 px-4 rounded transition-colors flex items-center gap-2">
+                <span class="material-icons text-sm">pending_actions</span>
+                <span class="hidden sm:inline">Ausstehende Bestätigungen</span>
+                <span x-show="getPendingCount() > 0"
+                      class="ml-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                      :class="showPendingOnly ? 'bg-white text-orange-600' : 'bg-orange-600 text-white'"
+                      x-text="getPendingCount()"></span>
+            </button>
+            <a href="/admin/member" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                Neues Mitglied
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="mb-4">
@@ -362,7 +393,13 @@ function membersList() {
                                         Bezahlt
                                     </span>
                                 </template>
-                                <template x-if="!member.fee_paid">
+                                <template x-if="!member.fee_paid && member.payment_confirmation_requested">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                        <span class="material-icons text-xs mr-1">pending</span>
+                                        Prüfung ausstehend
+                                    </span>
+                                </template>
+                                <template x-if="!member.fee_paid && !member.payment_confirmation_requested">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                         <span class="material-icons text-xs mr-1">warning</span>
                                         Offen

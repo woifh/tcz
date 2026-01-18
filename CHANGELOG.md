@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.13] - 2026-01-18
+
+### Added
+- Members can now confirm their payment via dashboard button
+- Payment confirmations appear in admin member list with filter option
+- Admins see badge count for pending confirmations in navigation
+- Admins can approve (mark paid) or reject payment confirmations
+
+### Improved
+- Three-state payment display: Paid / Confirmation pending / Open
+- Clearer booking error messages when payment confirmation is pending
+
 ## [3.12] - 2026-01-18
 
 ### Improved

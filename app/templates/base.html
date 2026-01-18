@@ -86,9 +86,13 @@
                                         <span class="material-icons text-sm">calendar_month</span>
                                         <span>Kalenderansicht</span>
                                     </a>
-                                    <a href="{{ url_for('members.list_members') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <a href="{{ url_for('members.list_members') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                       x-data="pendingPaymentBadge()" x-init="init()">
                                         <span class="material-icons text-sm">people</span>
                                         <span>Mitglieder</span>
+                                        <span x-show="pendingCount > 0"
+                                              x-text="pendingCount"
+                                              class="ml-auto bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full"></span>
                                     </a>
                                     <a href="{{ url_for('admin.audit_log') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                         <span class="material-icons text-sm">history</span>
@@ -196,9 +200,13 @@
                                 <span class="material-icons text-sm">calendar_month</span>
                                 <span>Kalenderansicht</span>
                             </a>
-                            <a href="{{ url_for('members.list_members') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
+                            <a href="{{ url_for('members.list_members') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600"
+                               x-data="pendingPaymentBadge()" x-init="init()">
                                 <span class="material-icons text-sm">people</span>
                                 <span>Mitglieder</span>
+                                <span x-show="pendingCount > 0"
+                                      x-text="pendingCount"
+                                      class="ml-auto bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full"></span>
                             </a>
                             <a href="{{ url_for('admin.audit_log') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">history</span>
@@ -383,6 +391,26 @@
     
     function showInfoToast(message, options = {}) {
         return toastManager.show(message, 'info', options);
+    }
+
+    // Pending payment confirmation badge component for admin nav
+    function pendingPaymentBadge() {
+        return {
+            pendingCount: 0,
+
+            async init() {
+                try {
+                    const response = await fetch('/api/admin/members/pending-confirmations');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.pendingCount = data.count || 0;
+                    }
+                } catch (error) {
+                    // Silently fail - badge just won't show
+                    console.debug('Could not fetch pending confirmations count');
+                }
+            }
+        };
     }
     </script>
     

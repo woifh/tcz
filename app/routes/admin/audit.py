@@ -200,6 +200,14 @@ def format_member_details(operation, data, member_id=None):
         year = data.get('year', '')
         return f"Jährlicher Beitrags-Reset ({year}): {members_reset} Mitglieder zurückgesetzt"
 
+    elif operation == 'payment_confirmation_request':
+        member_name = data.get('member_name', name)
+        return f"Zahlungsbestätigung angefordert: {member_name}"
+
+    elif operation == 'payment_confirmation_reject':
+        member_name = data.get('member_name', name)
+        return f"Zahlungsbestätigung abgelehnt: {member_name}"
+
     return '-'
 
 

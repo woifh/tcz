@@ -743,3 +743,44 @@ def get_changelog():
         return jsonify({'success': False, 'error': error}), 500
 
     return jsonify({'success': True, 'entries': entries})
+
+
+# ----- Payment Confirmation Routes (Admin Only) -----
+
+@bp.route('/admin/members/pending-confirmations', methods=['GET'])
+@admin_required
+def get_pending_payment_confirmations():
+    """Get all members with pending payment confirmations."""
+    from app.services.member_service import MemberService
+
+    members = MemberService.get_members_with_pending_confirmations()
+
+    return jsonify({
+        'members': [
+            {
+                'id': m.id,
+                'name': m.name,
+                'email': m.email,
+                'payment_confirmation_requested_at': m.payment_confirmation_requested_at.isoformat() if m.payment_confirmation_requested_at else None
+            }
+            for m in members
+        ],
+        'count': len(members)
+    })
+
+
+@bp.route('/admin/members/<id>/reject-payment-confirmation', methods=['POST'])
+@admin_required
+def reject_payment_confirmation(id):
+    """Reject a payment confirmation request."""
+    from app.services.member_service import MemberService
+
+    try:
+        success, error = MemberService.reject_payment_confirmation(id, current_user.id)
+
+        if not success:
+            return jsonify({'error': error}), 400
+
+        return jsonify({'message': 'Zahlungsbestätigung wurde abgelehnt'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

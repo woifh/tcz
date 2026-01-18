@@ -376,3 +376,23 @@ def reactivate_member_by_admin(id):
         return jsonify({'message': 'Mitglied erfolgreich reaktiviert'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ----- Payment Confirmation Routes -----
+
+@bp.route('/members/me/confirm-payment', methods=['POST'])
+@jwt_or_session_required
+def confirm_payment():
+    """Request payment confirmation for current user."""
+    try:
+        success, error = MemberService.request_payment_confirmation(current_user.id)
+
+        if not success:
+            return jsonify({'error': error}), 400
+
+        return jsonify({
+            'message': 'Zahlungsbestätigung wurde angefordert',
+            'payment_confirmation_requested': True
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
