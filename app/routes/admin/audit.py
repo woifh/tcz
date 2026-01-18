@@ -129,7 +129,9 @@ def format_member_details(operation, data, member_id=None):
         if changes:
             change_texts = []
             for field, vals in changes.items():
-                if isinstance(vals, dict) and 'old' in vals and 'new' in vals:
+                if field == 'password' and vals == 'changed':
+                    change_texts.append("Passwort geändert")
+                elif isinstance(vals, dict) and 'old' in vals and 'new' in vals:
                     change_texts.append(f"{field}: {vals['old']} → {vals['new']}")
             if change_texts:
                 return f"Mitglied aktualisiert: {name} - {', '.join(change_texts)}"
