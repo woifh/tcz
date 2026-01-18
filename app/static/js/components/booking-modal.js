@@ -25,6 +25,7 @@ export function bookingModal() {
         favourites: [], // Initialize as empty array
         submitting: false,
         error: null,
+        _favouritesLoaded: false, // Prevent duplicate API calls
 
         // Member search state
         showSearch: false,
@@ -33,7 +34,7 @@ export function bookingModal() {
         searchLoading: false,
         searchError: null,
         searchHighlightIndex: -1,
-        
+
         // Lifecycle
         init() {
             // Register this component with Alpine store for external access
@@ -43,8 +44,12 @@ export function bookingModal() {
                     bookingStore.modalComponent = this;
                 }
             }
-            
-            this.loadFavourites();
+
+            // Only load favourites once per component instance
+            if (!this._favouritesLoaded) {
+                this._favouritesLoaded = true;
+                this.loadFavourites();
+            }
         },
         
         // Methods
