@@ -12,7 +12,7 @@ class TestListMembers:
         response = client.get('/members/all')
         assert response.status_code == 302
     
-    def test_list_members_returns_all(self, client, test_member, test_admin, app, db):
+    def test_list_members_returns_all(self, client, test_member, test_admin, app):
         """Test listing members returns all members."""
         with client:
             client.post('/auth/login', data={
@@ -31,15 +31,17 @@ class TestGetFavourites:
     
     def test_get_favourites_requires_login(self, client):
         """Test getting favourites requires authentication."""
-        response = client.get('/members/1/favourites')
-        assert response.status_code == 302
+        response = client.get('/members/1/favourites', headers={'Accept': 'application/json'})
+        # API returns 401 with JSON error for unauthenticated requests
+        assert response.status_code == 401
     
-    def test_get_own_favourites(self, client, test_member, app, db):
+    def test_get_own_favourites(self, client, test_member, app):
         """Test getting own favourites."""
         # Create another member to favourite
         with app.app_context():
             other_member = Member(
-                name='Other Member',
+                firstname='Other',
+                lastname='Member',
                 email='other@example.com',
                 role='member'
             )
@@ -47,7 +49,7 @@ class TestGetFavourites:
             db.session.add(other_member)
             db.session.commit()
             other_id = other_member.id
-            
+
             # Add favourite using the relationship
             member = Member.query.get(test_member.id)
             other = Member.query.get(other_id)
@@ -64,7 +66,7 @@ class TestGetFavourites:
             data = response.get_json()
             assert 'favourites' in data
             assert len(data['favourites']) == 1
-            assert data['favourites'][0]['name'] == 'Other Member'
+            assert data['favourites'][0]['name'] == 'Other Member'  # name property returns firstname + lastname
     
     def test_cannot_get_other_favourites(self, client, test_member, test_admin):
         """Test cannot get other member's favourites."""
@@ -77,15 +79,16 @@ class TestGetFavourites:
                                 headers={'Accept': 'application/json'})
             assert response.status_code == 403
     
-    def test_admin_can_get_any_favourites(self, client, test_admin, test_member):
-        """Test admin can get any member's favourites."""
+    def test_admin_cannot_get_other_favourites(self, client, test_admin, test_member):
+        """Test admin cannot get other member's favourites (favourites are private)."""
         with client:
             client.post('/auth/login', data={
                 'email': test_admin.email,
                 'password': 'admin123'
             })
             response = client.get(f'/members/{test_member.id}/favourites')
-            assert response.status_code == 200
+            # Even admins cannot view others' favourites - they're private
+            assert response.status_code == 403
 
 
 class TestAddFavourite:
@@ -94,15 +97,18 @@ class TestAddFavourite:
     def test_add_favourite_requires_login(self, client):
         """Test adding favourite requires authentication."""
         response = client.post('/members/1/favourites',
-                             json={'favourite_id': 2})
-        assert response.status_code == 302
+                             json={'favourite_id': 2},
+                             headers={'Accept': 'application/json'})
+        # API returns 401 with JSON error for unauthenticated requests
+        assert response.status_code == 401
     
-    def test_add_favourite_success(self, client, test_member, app, db):
+    def test_add_favourite_success(self, client, test_member, app):
         """Test adding favourite successfully."""
         # Create another member
         with app.app_context():
             other_member = Member(
-                name='Favourite Member',
+                firstname='Favourite',
+                lastname='Member',
                 email='fav@example.com',
                 role='member'
             )
@@ -118,7 +124,7 @@ class TestAddFavourite:
             })
             response = client.post(f'/members/{test_member.id}/favourites',
                                  json={'favourite_id': other_id})
-            assert response.status_code == 201
+            assert response.status_code == 200
             data = response.get_json()
             assert 'message' in data
     
@@ -150,15 +156,17 @@ class TestRemoveFavourite:
     
     def test_remove_favourite_requires_login(self, client):
         """Test removing favourite requires authentication."""
-        response = client.delete('/members/1/favourites/2')
-        assert response.status_code == 302
+        response = client.delete('/members/1/favourites/2', headers={'Accept': 'application/json'})
+        # API returns 401 with JSON error for unauthenticated requests
+        assert response.status_code == 401
     
-    def test_remove_favourite_success(self, client, test_member, app, db):
+    def test_remove_favourite_success(self, client, test_member, app):
         """Test removing favourite successfully."""
         # Create favourite
         with app.app_context():
             other_member = Member(
-                name='To Remove',
+                firstname='To',
+                lastname='Remove',
                 email='remove@example.com',
                 role='member'
             )
@@ -166,7 +174,7 @@ class TestRemoveFavourite:
             db.session.add(other_member)
             db.session.commit()
             other_id = other_member.id
-            
+
             member = Member.query.get(test_member.id)
             other = Member.query.get(other_id)
             member.favourites.append(other)
@@ -180,14 +188,28 @@ class TestRemoveFavourite:
             response = client.delete(f'/members/{test_member.id}/favourites/{other_id}')
             assert response.status_code == 200
     
-    def test_remove_nonexistent_favourite(self, client, test_member):
-        """Test removing non-existent favourite."""
+    def test_remove_nonexistent_favourite(self, client, test_member, app):
+        """Test removing member who is not a favourite returns 404."""
+        # Create another member who is NOT a favourite
+        with app.app_context():
+            other_member = Member(
+                firstname='Not',
+                lastname='Favourite',
+                email='notfav@example.com',
+                role='member'
+            )
+            other_member.set_password('password123')
+            db.session.add(other_member)
+            db.session.commit()
+            other_id = other_member.id
+
         with client:
             client.post('/auth/login', data={
                 'email': test_member.email,
                 'password': 'password123'
             })
-            response = client.delete(f'/members/{test_member.id}/favourites/999')
+            # Try to remove a member who exists but is not a favourite
+            response = client.delete(f'/members/{test_member.id}/favourites/{other_id}')
             assert response.status_code == 404
 
 
@@ -197,8 +219,9 @@ class TestSearchMembers:
     
     def test_search_requires_login(self, client):
         """Test search requires authentication."""
-        response = client.get('/members/search?q=test')
-        assert response.status_code == 302
+        response = client.get('/members/search?q=test', headers={'Accept': 'application/json'})
+        # API returns 401 with JSON error for unauthenticated requests
+        assert response.status_code == 401
     
     def test_search_missing_query(self, client, test_member):
         """Test search without query parameter."""

@@ -58,9 +58,24 @@ def runner(app):
     return app.test_cli_runner()
 
 
+class MemberData:
+    """Simple data holder for member info that doesn't require session."""
+    def __init__(self, id, email, firstname, lastname, role):
+        self.id = id
+        self.email = email
+        self.firstname = firstname
+        self.lastname = lastname
+        self.role = role
+
+    @property
+    def name(self):
+        """Return full name like the Member model does."""
+        return f"{self.firstname} {self.lastname}"
+
+
 @pytest.fixture
 def test_member(app):
-    """Create a test member."""
+    """Create a test member and return its data."""
     with app.app_context():
         member = Member(
             firstname='Test',
@@ -71,20 +86,20 @@ def test_member(app):
         member.set_password('password123')
         db.session.add(member)
         db.session.commit()
-        
-        # Refresh to get the ID
-        db.session.refresh(member)
-        member_id = member.id
-        member_email = member.email
-    
-    # Return a fresh instance
-    with app.app_context():
-        return Member.query.filter_by(email=member_email).first()
+
+        # Return a simple data object with member info
+        return MemberData(
+            id=member.id,
+            email=member.email,
+            firstname=member.firstname,
+            lastname=member.lastname,
+            role=member.role
+        )
 
 
 @pytest.fixture
 def test_admin(app):
-    """Create a test admin."""
+    """Create a test admin and return its data."""
     with app.app_context():
         admin = Member(
             firstname='Test',
@@ -95,14 +110,15 @@ def test_admin(app):
         admin.set_password('admin123')
         db.session.add(admin)
         db.session.commit()
-        
-        # Refresh to get the ID
-        db.session.refresh(admin)
-        admin_email = admin.email
-    
-    # Return a fresh instance
-    with app.app_context():
-        return Member.query.filter_by(email=admin_email).first()
+
+        # Return a simple data object with admin info
+        return MemberData(
+            id=admin.id,
+            email=admin.email,
+            firstname=admin.firstname,
+            lastname=admin.lastname,
+            role=admin.role
+        )
 
 
 @pytest.fixture
@@ -111,3 +127,9 @@ def mail(app):
     from flask_mail import Mail
     mail = Mail(app)
     return mail
+
+
+@pytest.fixture
+def database(app):
+    """Provide database access within app context."""
+    return db
