@@ -162,6 +162,11 @@ export class BlocksManager {
                                 von ${firstBlock.created_by_name}
                             </div>
                         ` : ''}
+                        ${firstBlock.is_temporary ? `
+                            <div class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                Vorübergehend
+                            </div>
+                        ` : ''}
                         ${group.blocks.length > 1 ? `
                             <div class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                 ${group.blocks.length} Plätze

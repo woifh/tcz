@@ -65,13 +65,14 @@ class ReservationQueryService:
             else:
                 member_filter = Reservation.booked_for_id == member_id
 
+            # Include both active and suspended reservations (suspended count toward limits)
             query = Reservation.query.options(
                 joinedload(Reservation.booked_for),
                 joinedload(Reservation.booked_by),
                 joinedload(Reservation.court)
             ).filter(
                 member_filter,
-                Reservation.status == 'active',
+                Reservation.status.in_(['active', 'suspended']),
                 time_filter
             )
 
@@ -106,13 +107,14 @@ class ReservationQueryService:
                 else:
                     member_filter = Reservation.booked_for_id == member_id
 
+                # Include both active and suspended reservations (suspended count toward limits)
                 query = Reservation.query.options(
                     joinedload(Reservation.booked_for),
                     joinedload(Reservation.booked_by),
                     joinedload(Reservation.court)
                 ).filter(
                     member_filter,
-                    Reservation.status == 'active',
+                    Reservation.status.in_(['active', 'suspended']),
                     Reservation.date >= today
                 )
 

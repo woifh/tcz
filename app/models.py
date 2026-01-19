@@ -270,10 +270,14 @@ class Reservation(db.Model):
     end_time = db.Column(db.Time, nullable=False)
     booked_for_id = db.Column(db.String(36), db.ForeignKey('member.id', ondelete='CASCADE'), nullable=False)
     booked_by_id = db.Column(db.String(36), db.ForeignKey('member.id', ondelete='CASCADE'), nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='active')
+    status = db.Column(db.String(20), nullable=False, default='active')  # 'active', 'cancelled', 'suspended'
     is_short_notice = db.Column(db.Boolean, nullable=False, default=False)
     reason = db.Column(db.String(255), nullable=True)
+    suspended_by_block_id = db.Column(db.Integer, db.ForeignKey('block.id', ondelete='SET NULL'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationship to the block that suspended this reservation
+    suspended_by_block = db.relationship('Block', backref='suspended_reservations', foreign_keys=[suspended_by_block_id])
     
     def __repr__(self):
         return f'<Reservation Court {self.court_id} on {self.date} at {self.start_time}>'
@@ -291,8 +295,14 @@ class Reservation(db.Model):
             'booked_for': self.booked_for.name if self.booked_for else None,
             'booked_by_id': self.booked_by_id,
             'status': self.status,
-            'is_short_notice': self.is_short_notice
+            'is_short_notice': self.is_short_notice,
+            'is_suspended': self.status == 'suspended',
+            'reason': self.reason
         }
+
+    def is_suspended(self):
+        """Check if reservation is currently suspended."""
+        return self.status == 'suspended'
 
 
 class BlockReason(db.Model):
@@ -309,6 +319,7 @@ class BlockReason(db.Model):
     name = db.Column(db.String(50), unique=True, nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     teamster_usable = db.Column(db.Boolean, nullable=False, default=False)
+    is_temporary = db.Column(db.Boolean, nullable=False, default=False)
     created_by_id = db.Column(db.String(36), db.ForeignKey('member.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
@@ -323,6 +334,7 @@ class BlockReason(db.Model):
             'name': self.name,
             'is_active': self.is_active,
             'teamster_usable': self.teamster_usable,
+            'is_temporary': self.is_temporary,
             'created_by': self.created_by.name,
             'created_at': self.created_at.isoformat()
         }
@@ -455,7 +467,7 @@ class ReservationAuditLog(db.Model):
     def __init__(self, **kwargs):
         """Initialize audit log with validation."""
         super(ReservationAuditLog, self).__init__(**kwargs)
-        valid_operations = ['create', 'cancel']
+        valid_operations = ['create', 'cancel', 'suspend', 'restore']
         if self.operation and self.operation not in valid_operations:
             raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
 
@@ -511,6 +523,7 @@ class Block(db.Model):
             'reason': self.reason,
             'reason_id': self.reason_id,
             'reason_name': self.reason_obj.name if self.reason_obj else None,
+            'is_temporary': self.reason_obj.is_temporary if self.reason_obj else False,
             'details': self.details,
             'created_by': self.created_by.name if self.created_by else None,
             'created_by_name': self.created_by.name if self.created_by else None,

@@ -539,6 +539,14 @@ export class BlockForm {
         if (reasonSelect) reasonSelect.value = blockData.reason_id;
         if (detailsInput) detailsInput.value = blockData.details || '';
         if (descriptionInput) descriptionInput.value = blockData.description || '';
+
+        // Show/hide temporary block hint based on selected reason
+        const temporaryHint = document.getElementById('temporary-block-hint');
+        if (temporaryHint && reasonSelect) {
+            const selectedOption = reasonSelect.options[reasonSelect.selectedIndex];
+            const isTemporary = selectedOption?.dataset?.isTemporary === 'true';
+            temporaryHint.classList.toggle('hidden', !isTemporary);
+        }
         
         // Set selected courts - use court_ids from batch data
         if (blockData.court_ids) {

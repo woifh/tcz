@@ -98,6 +98,12 @@ fetch('/api/courts/availability', { ... })
 - Property-based tests using Hypothesis in `tests/property/`
 - Fixtures in `tests/conftest.py`
 
+### Local Development Login
+
+For manual testing in the local development environment:
+- **User**: max@tcz.at
+- **Password**: max@tcz.at
+
 ## Deployment
 
 ### Production Environment (PythonAnywhere)
@@ -214,3 +220,9 @@ This codebase prioritizes flow, clarity, and fast iteration.
   2. Add German label mapping in `app/templates/admin/audit_log.html` (getActionBadge actionMap)
   3. Add detail field labels in `app/templates/admin/audit_log.html` (fieldLabels object)
   4. Add custom formatting in `formatDetails()` if the operation has structured data
+- **Audit log detail requirements** - Every audit log entry MUST include sufficient details to understand what changed:
+  - Reservations: member name, court number, date, time
+  - Blocks: court number(s), date, time range, reason
+  - Members: member name, changed fields with old/new values
+  - Never show just IDs (e.g., "Buchung 133") - always resolve to human-readable details
+  - Format functions in `app/routes/admin/audit.py` must handle ALL operations for each log type

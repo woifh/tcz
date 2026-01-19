@@ -213,7 +213,9 @@
             'annual_fee_reset': { label: 'Beitrags-Reset', class: 'bg-amber-100 text-amber-800' },
             'email_verification_sent': { label: 'E-Mail-Bestätigung gesendet', class: 'bg-blue-100 text-blue-800' },
             'email_verified': { label: 'E-Mail bestätigt', class: 'bg-green-100 text-green-800' },
-            'email_verification_reset': { label: 'E-Mail-Bestätigung zurückgesetzt', class: 'bg-orange-100 text-orange-800' }
+            'email_verification_reset': { label: 'E-Mail-Bestätigung zurückgesetzt', class: 'bg-orange-100 text-orange-800' },
+            'suspend': { label: 'Ausgesetzt', class: 'bg-yellow-100 text-yellow-800' },
+            'restore': { label: 'Wiederhergestellt', class: 'bg-green-100 text-green-800' }
         };
         return actionMap[action] || { label: action, class: 'bg-gray-100 text-gray-800' };
     }
@@ -267,7 +269,12 @@
         'changes': 'Änderungen',
         'triggered_by': 'Ausgelöst durch',
         'method': 'Methode',
-        'previous_verified_at': 'Zuvor bestätigt am'
+        'previous_verified_at': 'Zuvor bestätigt am',
+        'suspended_by_block': 'Von Sperre ausgesetzt',
+        'restored_after_block_removal': 'Nach Sperrungs-Aufhebung wiederhergestellt',
+        'block_id': 'Sperrungs-ID',
+        'block_reason': 'Sperrungsgrund',
+        'reservation_id': 'Buchungs-ID'
     };
 
     // Role translations
@@ -365,6 +372,31 @@
                 }
                 if (details.details) {
                     lines.push(`<div><span class="font-medium text-gray-700">Details:</span> ${escapeHtml(details.details)}</div>`);
+                }
+                lines.push('</div>');
+                return lines.join('');
+            }
+
+            // Handle reservation suspend/restore actions
+            if (action === 'suspend' || action === 'restore') {
+                lines.push('<div class="space-y-0.5">');
+                if (details.member_name) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Mitglied:</span> ${escapeHtml(details.member_name)}</div>`);
+                }
+                if (details.court_number) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Platz:</span> ${escapeHtml(details.court_number)}</div>`);
+                }
+                if (details.date) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Datum:</span> ${escapeHtml(details.date)}</div>`);
+                }
+                if (details.start_time && details.end_time) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Zeit:</span> ${escapeHtml(details.start_time)} - ${escapeHtml(details.end_time)}</div>`);
+                }
+                if (details.block_reason) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Sperrungsgrund:</span> ${escapeHtml(details.block_reason)}</div>`);
+                }
+                if (details.reason) {
+                    lines.push(`<div><span class="font-medium text-gray-700">Grund:</span> ${escapeHtml(details.reason)}</div>`);
                 }
                 lines.push('</div>');
                 return lines.join('');

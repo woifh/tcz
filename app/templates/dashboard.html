@@ -162,7 +162,11 @@
         </div>
         <div class="flex items-center gap-2">
             <div class="w-4 h-4 bg-gray-400 rounded"></div>
-            <span>Gesperrt</span>
+            <span>Blockiert</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-4 h-4 bg-yellow-400 rounded"></div>
+            <span>Vorübergehend gesperrt</span>
         </div>
         <div class="flex items-center gap-2">
             <div class="w-4 h-4 bg-gray-200 rounded"></div>
@@ -242,18 +246,33 @@
             
             <!-- Reservations list -->
             <template x-for="reservation in userReservations" :key="reservation.id">
-                <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <div :class="reservation.is_suspended
+                    ? 'bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-400'
+                    : 'bg-white rounded-lg p-4 border border-gray-200'">
                     <div class="flex justify-between items-start">
                         <div>
                             <h4 class="font-semibold" x-text="`Platz ${reservation.court_number}`"></h4>
                             <p class="text-sm text-gray-600" x-text="`${formatDate(reservation.date)} • ${reservation.start_time} - ${reservation.end_time}`"></p>
                             <p class="text-sm text-gray-500" x-text="`Gebucht für: ${reservation.booked_for}`"></p>
-                            <span x-show="reservation.is_short_notice" 
+                            <!-- Suspended badge -->
+                            <template x-if="reservation.is_suspended">
+                                <div class="mt-2">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                        </svg>
+                                        Vorübergehend gesperrt
+                                    </span>
+                                    <p class="text-xs text-yellow-700 mt-1" x-text="reservation.reason"></p>
+                                </div>
+                            </template>
+                            <span x-show="reservation.is_short_notice && !reservation.is_suspended"
                                   class="inline-block mt-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
                                 Kurzfristige Buchung
                             </span>
                         </div>
-                        <button x-show="!reservation.is_short_notice"
+                        <!-- Cancel button: show for suspended OR non-short-notice active -->
+                        <button x-show="reservation.is_suspended || !reservation.is_short_notice"
                                 @click="cancelReservation(reservation.id)"
                                 class="text-red-600 hover:text-red-900 p-1"
                                 title="Stornieren">
@@ -261,7 +280,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </button>
-                        <span x-show="reservation.is_short_notice"
+                        <span x-show="reservation.is_short_notice && !reservation.is_suspended"
                               class="text-gray-500 text-sm">
                             Nicht stornierbar
                         </span>

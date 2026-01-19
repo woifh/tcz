@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0] - 2026-01-19
+
+### Added
+- Temporary court blocks - non-destructive blocking that suspends reservations instead of cancelling them
+- Reservations are automatically restored when temporary blocks are removed
+- Block reasons can be marked as temporary in admin settings
+- Email notifications when bookings are suspended or restored
+- Dashboard shows suspended bookings with distinct yellow styling and reason
+- Users can cancel their suspended reservations at any time
+
+### Improved
+- Audit log now tracks suspension and restoration events
+- Dashboard legend now includes temporary block indicator
+
 ## [3.16] - 2026-01-19
 
 ### Added

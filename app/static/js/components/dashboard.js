@@ -368,6 +368,12 @@ export function dashboard() {
                 } else if (isPast) {
                     classes += ' opacity-60';
                 }
+            } else if (slot.status === 'blocked_temporary') {
+                // Temporary block - yellow/amber color with dark text for readability
+                classes += ' bg-yellow-400 text-yellow-900 min-h-16';
+                if (isPast) {
+                    classes += ' opacity-75';
+                }
             } else if (slot.status === 'blocked') {
                 classes += ' bg-gray-400 text-white min-h-16';
                 if (isPast) {
@@ -498,6 +504,21 @@ export function dashboard() {
                     return `${reservation.booked_for}<br>(von ${reservation.booked_by})`;
                 }
                 return 'Gebucht';
+            }
+
+            if (slot.status === 'blocked_temporary') {
+                const blockDetails = slot.details;
+                let content = blockDetails?.reason || 'Vorübergehend gesperrt';
+                if (blockDetails?.details?.trim()) {
+                    content += `<br><span style="font-size: 0.7em; opacity: 0.9;">${blockDetails.details}</span>`;
+                }
+                content += `<br><span style="font-size: 0.65em; font-style: italic;">(vorübergehend)</span>`;
+                // Show suspended reservation info if available
+                if (blockDetails?.suspended_reservation) {
+                    const suspended = blockDetails.suspended_reservation;
+                    content += `<br><span style="font-size: 0.65em; margin-top: 4px; display: inline-block; background: rgba(255,255,255,0.3); padding: 2px 4px; border-radius: 2px;">⏸ ${suspended.booked_for}</span>`;
+                }
+                return content;
             }
 
             if (slot.status === 'blocked') {

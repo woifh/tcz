@@ -9,7 +9,7 @@ from flask import request, jsonify, current_app
 from flask_login import current_user, login_user
 import jwt
 
-from app.models import Court
+from app.models import Court, Reservation
 from app.services.reservation_service import ReservationService
 from app.services.block_service import BlockService
 from app.decorators.auth import jwt_or_session_required
@@ -102,6 +102,20 @@ def get_availability():
             key = (block.court_id, hour)
             block_map[key] = block
 
+    # Build suspended reservation map for temporary blocks
+    # Key: (court_id, hour) -> suspended reservation
+    suspended_map = {}
+    from sqlalchemy.orm import joinedload
+    suspended_reservations = Reservation.query.options(
+        joinedload(Reservation.booked_for)
+    ).filter(
+        Reservation.date == query_date,
+        Reservation.status == 'suspended'
+    ).all()
+    for reservation in suspended_reservations:
+        key = (reservation.court_id, reservation.start_time.hour)
+        suspended_map[key] = reservation
+
     # Build sparse response - only include occupied slots
     courts_data = []
     for court in courts:
@@ -119,14 +133,27 @@ def get_availability():
             # Check for block first (blocks take priority)
             if key in block_map:
                 block = block_map[key]
+                is_temporary = block.reason_obj.is_temporary if block.reason_obj else False
+                block_details = {
+                    'reason': block.reason_obj.name if block.reason_obj else 'Unbekannt',
+                    'details': block.details if block.details else '',
+                    'block_id': block.id,
+                    'is_temporary': is_temporary
+                }
+
+                # For temporary blocks, include suspended reservation info if exists
+                if is_temporary and key in suspended_map and current_user.is_authenticated:
+                    suspended_res = suspended_map[key]
+                    block_details['suspended_reservation'] = {
+                        'booked_for': f"{suspended_res.booked_for.firstname} {suspended_res.booked_for.lastname}",
+                        'booked_for_id': suspended_res.booked_for_id,
+                        'reservation_id': suspended_res.id
+                    }
+
                 court_data['occupied'].append({
                     'time': slot_time.strftime('%H:%M'),
-                    'status': 'blocked',
-                    'details': {
-                        'reason': block.reason_obj.name if block.reason_obj else 'Unbekannt',
-                        'details': block.details if block.details else '',
-                        'block_id': block.id
-                    }
+                    'status': 'blocked_temporary' if is_temporary else 'blocked',
+                    'details': block_details
                 })
             # Check for reservation
             elif key in reservation_map:

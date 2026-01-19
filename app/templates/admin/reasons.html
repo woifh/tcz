@@ -144,6 +144,7 @@
                                             <div x-show="editingReason?.id !== reason.id" class="cursor-pointer" @click="reason.is_active && startEdit(reason)" @keydown="reason.is_active && handleKeyboardNavigation($event, reason)" :tabindex="reason.is_active ? 0 : -1" role="button" :aria-label="`Grund ${reason.name} ${reason.is_active ? 'bearbeiten' : '(inaktiv)'}`">
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-sm font-medium transition-colors truncate" :class="reason.is_active ? 'text-gray-900 hover:text-blue-600' : 'text-gray-500 line-through'" x-text="reason.name"></span>
+                                                    <span x-show="reason.is_temporary" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Vorübergehend</span>
                                                     <span x-show="!reason.is_active" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600">Inaktiv</span>
                                                 </div>
                                                 <div x-show="reason.description" class="text-sm text-gray-500 truncate" x-text="reason.description"></div>
@@ -325,8 +326,9 @@
                                     <div class="flex-1 min-w-0">
                                         <!-- Display Mode -->
                                         <div x-show="editingReason?.id !== reason.id" class="cursor-pointer" @click="reason.is_active && startEdit(reason)" @keydown="reason.is_active && handleKeyboardNavigation($event, reason)" :tabindex="reason.is_active ? 0 : -1" role="button" :aria-label="`Grund ${reason.name} ${reason.is_active ? 'bearbeiten' : '(inaktiv)'}`">
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-2 flex-wrap">
                                                 <h3 class="text-sm font-medium transition-colors truncate" :class="reason.is_active ? 'text-gray-900 hover:text-blue-600' : 'text-gray-500 line-through'" x-text="reason.name"></h3>
+                                                <span x-show="reason.is_temporary" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Vorübergehend</span>
                                                 <span x-show="!reason.is_active" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600">Inaktiv</span>
                                             </div>
                                             <p x-show="reason.description" class="text-sm text-gray-500 truncate mt-1" x-text="reason.description"></p>
@@ -596,6 +598,26 @@
                     </label>
                 </div>
 
+                <!-- Temporary Block Checkbox -->
+                <div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            x-model="createForm.is_temporary"
+                            class="w-4 h-4 text-yellow-500 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2"
+                            id="create-is-temporary"
+                        >
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">
+                                Vorübergehende Sperre
+                            </span>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                Wenn aktiviert, werden bestehende Buchungen pausiert statt storniert. Nach Aufhebung der Sperre werden sie automatisch wiederhergestellt.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
                 <!-- Error Display -->
                 <div x-show="createForm.errors.general" class="bg-red-50 border border-red-200 rounded-lg p-3">
                     <div class="flex items-center gap-2 text-red-700 text-sm">
@@ -792,6 +814,7 @@ function reasonsManager() {
             name: '',
             description: '',
             teamster_usable: false,
+            is_temporary: false,
             submitting: false,
             isValid: false,
             errors: {
@@ -1395,6 +1418,7 @@ function reasonsManager() {
                 name: '',
                 description: '',
                 teamster_usable: false,
+                is_temporary: false,
                 submitting: false,
                 isValid: false,
                 errors: {
@@ -1517,7 +1541,8 @@ function reasonsManager() {
                 const requestData = {
                     name: sanitizedName,
                     description: sanitizedDescription || null,
-                    teamster_usable: this.createForm.teamster_usable
+                    teamster_usable: this.createForm.teamster_usable,
+                    is_temporary: this.createForm.is_temporary
                 };
                 
                 // Validate data types

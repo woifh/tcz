@@ -388,22 +388,26 @@ class ValidationService:
             reservation = Reservation.query.get(reservation_id)
             if not reservation:
                 return False, "Buchung nicht gefunden"
-            
+
+            # Suspended reservations can be cancelled at any time without time restrictions
+            if reservation.status == 'suspended':
+                return True, ""
+
             # Short notice bookings can never be cancelled
             if reservation.is_short_notice:
                 return False, error_messages['SHORT_NOTICE_NO_CANCEL']
-            
+
             reservation_datetime = datetime.combine(reservation.date, reservation.start_time)
             time_until_start = reservation_datetime - berlin_time
-            
+
             # If reservation has already started
             if time_until_start <= timedelta(0):
                 return False, error_messages['CANCELLATION_STARTED']
-            
+
             # If reservation starts in less than 15 minutes
             if time_until_start < timedelta(minutes=15):
                 return False, error_messages['CANCELLATION_TOO_LATE']
-            
+
             return True, ""
             
         except Exception as e:

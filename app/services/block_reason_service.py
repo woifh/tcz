@@ -12,7 +12,7 @@ class BlockReasonService:
     """Service for managing customizable block reasons."""
     
     @staticmethod
-    def create_block_reason(name: str, admin_id: int, teamster_usable: bool = False) -> Tuple[Optional[BlockReason], Optional[str]]:
+    def create_block_reason(name: str, admin_id: int, teamster_usable: bool = False, is_temporary: bool = False) -> Tuple[Optional[BlockReason], Optional[str]]:
         """
         Create a new block reason.
 
@@ -20,6 +20,7 @@ class BlockReasonService:
             name: Name of the block reason
             admin_id: ID of the administrator creating the reason
             teamster_usable: Whether teamsters can use this reason (default: False)
+            is_temporary: Whether this is a temporary reason (suspends rather than cancels reservations)
 
         Returns:
             tuple: (BlockReason object or None, error message or None)
@@ -41,6 +42,7 @@ class BlockReasonService:
                 name=name,
                 is_active=True,
                 teamster_usable=teamster_usable,
+                is_temporary=is_temporary,
                 created_by_id=admin_id
             )
 
@@ -53,14 +55,15 @@ class BlockReasonService:
                 operation='create',
                 operation_data={
                     'name': name,
-                    'teamster_usable': teamster_usable
+                    'teamster_usable': teamster_usable,
+                    'is_temporary': is_temporary
                 },
                 performed_by_id=admin_id
             )
             db.session.add(audit_log)
             db.session.commit()
 
-            logger.info(f"Block reason created: {name} (teamster_usable={teamster_usable}) by admin {admin_id}")
+            logger.info(f"Block reason created: {name} (teamster_usable={teamster_usable}, is_temporary={is_temporary}) by admin {admin_id}")
             return reason, None
 
         except Exception as e:

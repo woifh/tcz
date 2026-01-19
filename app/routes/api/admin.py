@@ -195,9 +195,18 @@ def update_batch(batch_id):
         courts_to_delete = set(existing_court_ids) - set(new_court_ids)
         courts_to_add = set(new_court_ids) - set(existing_court_ids)
 
+        # Check if the NEW reason is temporary (for handling new blocks)
+        reason = BlockReason.query.get(new_reason_id)
+        is_temporary = reason.is_temporary if reason else False
+
         # Delete blocks for removed courts
+        # For temporary blocks, restore suspended reservations first
         for block in existing_blocks:
             if block.court_id in courts_to_delete:
+                # Check if the EXISTING block's reason is temporary
+                existing_is_temporary = block.reason_obj.is_temporary if block.reason_obj else False
+                if existing_is_temporary:
+                    BlockService.restore_suspended_reservations(block, current_user.id)
                 db.session.delete(block)
 
         # Update existing blocks (skip individual audit logs)
@@ -231,7 +240,11 @@ def update_batch(batch_id):
             )
             db.session.add(new_block)
             db.session.flush()
-            BlockService.cancel_conflicting_reservations(new_block)
+            # For temporary blocks, suspend reservations instead of cancelling
+            if is_temporary:
+                BlockService.suspend_conflicting_reservations(new_block)
+            else:
+                BlockService.cancel_conflicting_reservations(new_block)
 
         db.session.commit()
 
@@ -382,6 +395,7 @@ def list_block_reasons():
             'name': r.name,
             'is_active': r.is_active,
             'teamster_usable': r.teamster_usable,
+            'is_temporary': r.is_temporary,
             'usage_count': BlockReasonService.get_reason_usage_count(r.id),
             'created_by': r.created_by.name,
             'created_at': r.created_at.isoformat()
@@ -404,9 +418,12 @@ def create_block_reason():
 
     name = data.get('name', '').strip()
     teamster_usable = data.get('teamster_usable', False)
+    is_temporary = data.get('is_temporary', False)
 
     if isinstance(teamster_usable, str):
         teamster_usable = teamster_usable.lower() in ('true', '1', 'yes')
+    if isinstance(is_temporary, str):
+        is_temporary = is_temporary.lower() in ('true', '1', 'yes')
 
     if not name:
         return jsonify({'error': 'Name ist erforderlich'}), 400
@@ -418,7 +435,8 @@ def create_block_reason():
     reason, error = BlockReasonService.create_block_reason(
         name=name,
         admin_id=current_user.id,
-        teamster_usable=teamster_usable
+        teamster_usable=teamster_usable,
+        is_temporary=is_temporary
     )
 
     if error:
@@ -429,7 +447,8 @@ def create_block_reason():
         reason_id=reason.id,
         operation_data={
             'name': reason.name,
-            'teamster_usable': reason.teamster_usable
+            'teamster_usable': reason.teamster_usable,
+            'is_temporary': reason.is_temporary
         },
         performed_by_id=current_user.id
     )
@@ -440,7 +459,8 @@ def create_block_reason():
             'id': reason.id,
             'name': reason.name,
             'is_active': reason.is_active,
-            'teamster_usable': reason.teamster_usable
+            'teamster_usable': reason.teamster_usable,
+            'is_temporary': reason.is_temporary
         }
     }), 201
 

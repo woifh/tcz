@@ -4,6 +4,16 @@ module.exports = {
     "./app/templates/**/*.html",
     "./app/static/js/**/*.js",
   ],
+  safelist: [
+    // Temporary block colors (generated dynamically in dashboard.js and templates)
+    'bg-yellow-400',
+    'bg-yellow-100',
+    'bg-yellow-50',
+    'text-yellow-700',
+    'text-yellow-800',
+    'text-yellow-900',
+    'border-yellow-400',
+  ],
   theme: {
     extend: {
       colors: {

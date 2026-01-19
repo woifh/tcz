@@ -52,27 +52,38 @@ def format_block_details(operation, data):
         return result
 
     elif operation == 'update':
-        updates = data.get('updates', {})
-        if updates:
-            changes = []
-            for key, value in updates.items():
-                if key == 'date':
-                    changes.append(f"Datum: {value}")
-                elif key == 'start_time':
-                    changes.append(f"Start: {value}")
-                elif key == 'end_time':
-                    changes.append(f"Ende: {value}")
-                elif key == 'reason_id':
-                    changes.append(f"Grund geändert")
-                elif key == 'details':
-                    changes.append(f"Details: {value}")
-            return f"Sperrung aktualisiert: {', '.join(changes)}" if changes else "Sperrung aktualisiert"
-        return "Sperrung aktualisiert"
+        changes = []
+
+        # Handle date formatting
+        date = data.get('date', '')
+        if date:
+            try:
+                date_obj = datetime.fromisoformat(date)
+                date = date_obj.strftime('%d.%m.%Y')
+            except (ValueError, TypeError):
+                pass
+            changes.append(f"Datum: {date}")
+
+        if data.get('start_time'):
+            changes.append(f"Start: {data['start_time']}")
+        if data.get('end_time'):
+            changes.append(f"Ende: {data['end_time']}")
+        if data.get('court_numbers'):
+            courts = ', '.join(map(str, data['court_numbers']))
+            label = "Platz" if len(data['court_numbers']) == 1 else "Plätze"
+            changes.append(f"{label}: {courts}")
+        if data.get('reason_name'):
+            changes.append(f"Grund: {data['reason_name']}")
+        if data.get('details'):
+            changes.append(f"Details: {data['details']}")
+
+        return f"Sperrung aktualisiert: {', '.join(changes)}" if changes else "Sperrung aktualisiert"
 
     elif operation == 'delete':
         court_numbers = data.get('court_numbers', [])
         date = data.get('date', '')
-        batch_id = data.get('batch_id', '')
+        start_time = data.get('start_time', '')
+        end_time = data.get('end_time', '')
         blocks_deleted = data.get('blocks_deleted', 0)
 
         if date:
@@ -82,11 +93,21 @@ def format_block_details(operation, data):
             except (ValueError, TypeError):
                 pass
 
+        # Format time range if available
+        time_text = ""
+        if start_time and end_time:
+            # Remove seconds if present
+            if len(start_time) > 5:
+                start_time = start_time[:5]
+            if len(end_time) > 5:
+                end_time = end_time[:5]
+            time_text = f" {start_time}-{end_time}"
+
         if court_numbers:
             if len(court_numbers) == 1:
-                return f"Sperrung gelöscht: Platz {court_numbers[0]} am {date}"
+                return f"Sperrung gelöscht: Platz {court_numbers[0]} am {date}{time_text}"
             else:
-                return f"Sperrung gelöscht: Plätze {', '.join(map(str, court_numbers))} am {date}"
+                return f"Sperrung gelöscht: Plätze {', '.join(map(str, court_numbers))} am {date}{time_text}"
         elif blocks_deleted:
             return f"{blocks_deleted} Sperrung(en) gelöscht"
         return "Sperrung gelöscht"
@@ -365,5 +386,13 @@ def format_reservation_details(operation, data, reservation_id):
             admin_text = ""
         reason_text = f" - {reason}" if reason else ""
         return f"Buchung storniert: {court_name}, {date} {start_time}{booked_for_name}{admin_text}{reason_text}"
+
+    if operation == 'suspend':
+        reason = data.get('reason', '')
+        reason_text = f" - {reason}" if reason else ""
+        return f"Buchung ausgesetzt: {court_name}, {date} {start_time}{booked_for_name}{reason_text}"
+
+    if operation == 'restore':
+        return f"Buchung wiederhergestellt: {court_name}, {date} {start_time}{booked_for_name}"
 
     return f"Buchung {reservation_id}"

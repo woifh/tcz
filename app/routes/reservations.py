@@ -129,6 +129,8 @@ def list_reservations():
                         'booked_by_id': r.booked_by_id,
                         'status': r.status,
                         'is_short_notice': r.is_short_notice,
+                        'is_suspended': r.status == 'suspended',
+                        'reason': r.reason,
                         'is_active': ReservationService.is_reservation_currently_active(r, current_time),
                         'booking_status': 'active' if ReservationService.is_reservation_currently_active(r, current_time) else 'past'
                     }

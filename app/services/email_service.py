@@ -89,6 +89,40 @@ Falls du diese E-Mail nicht erwartet hast, kannst du sie ignorieren.
 
 Viele Grüße
 Dein TCZ-Team'''
+        },
+        'booking_suspended': {
+            'subject': 'Buchung vorübergehend ausgesetzt - Tennisplatz {court_number}',
+            'body': '''Hallo {recipient_name},
+
+deine Buchung wurde vorübergehend ausgesetzt:
+
+Platz: {court_number}
+Datum: {date}
+Uhrzeit: {start_time} - {end_time}
+{reason_text}
+
+Die Buchung wird automatisch wiederhergestellt, sobald die Sperre aufgehoben wird.
+
+Hinweis: Die Buchung zählt weiterhin zu deinem Buchungslimit.
+Du kannst sie jederzeit ohne Einschränkungen stornieren.
+
+Viele Grüße
+Dein TCZ-Team'''
+        },
+        'booking_restored': {
+            'subject': 'Buchung wiederhergestellt - Tennisplatz {court_number}',
+            'body': '''Hallo {recipient_name},
+
+gute Nachrichten! Deine zuvor ausgesetzte Buchung wurde wiederhergestellt:
+
+Platz: {court_number}
+Datum: {date}
+Uhrzeit: {start_time} - {end_time}
+
+Deine Buchung ist wieder aktiv.
+
+Viele Grüße
+Dein TCZ-Team'''
         }
     }
     
@@ -280,20 +314,54 @@ Dein TCZ-Team'''
     def send_booking_cancelled(reservation, reason=None):
         """
         Send booking cancelled notification to both parties.
-        
+
         Args:
             reservation: Reservation object
             reason: Optional cancellation reason
-            
+
         Returns:
             bool: True if both emails sent successfully
         """
         reason_text = f"Grund: {reason}" if reason else ""
         return EmailService._send_reservation_email(
-            reservation, 
+            reservation,
             'booking_cancelled',
             {'reason_text': reason_text}
         )
+
+    @staticmethod
+    def send_booking_suspended(reservation, reason=None):
+        """
+        Send booking suspended notification to both parties.
+        Used when a temporary block suspends a reservation.
+
+        Args:
+            reservation: Reservation object
+            reason: Optional suspension reason
+
+        Returns:
+            bool: True if both emails sent successfully
+        """
+        reason_text = f"Grund: {reason}" if reason else ""
+        return EmailService._send_reservation_email(
+            reservation,
+            'booking_suspended',
+            {'reason_text': reason_text}
+        )
+
+    @staticmethod
+    def send_booking_restored(reservation):
+        """
+        Send booking restored notification to both parties.
+        Used when a temporary block is removed and the reservation is restored.
+
+        Args:
+            reservation: Reservation object
+
+        Returns:
+            bool: True if both emails sent successfully
+        """
+        return EmailService._send_reservation_email(reservation, 'booking_restored')
     
     @staticmethod
     def send_admin_override(reservation, reason):

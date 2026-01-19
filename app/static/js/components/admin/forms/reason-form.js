@@ -210,12 +210,26 @@ export class ReasonForm {
                 const option = document.createElement('option');
                 option.value = reason.id;
                 option.textContent = reason.name;
+                option.dataset.isTemporary = reason.is_temporary ? 'true' : 'false';
                 select.appendChild(option);
             });
 
             // Restore previous value if it still exists in filtered list
             if (currentValue && availableReasons.some(r => r.id == currentValue)) {
                 select.value = currentValue;
+            }
+
+            // Add change listener to show/hide temporary block hint
+            if (!select.dataset.temporaryHintListenerAttached) {
+                select.addEventListener('change', (e) => {
+                    const hint = document.getElementById('temporary-block-hint');
+                    if (hint) {
+                        const selectedOption = e.target.options[e.target.selectedIndex];
+                        const isTemporary = selectedOption?.dataset?.isTemporary === 'true';
+                        hint.classList.toggle('hidden', !isTemporary);
+                    }
+                });
+                select.dataset.temporaryHintListenerAttached = 'true';
             }
         });
     }

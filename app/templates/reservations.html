@@ -35,8 +35,15 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-for="reservation in reservations" :key="reservation.id">
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap" x-text="`Platz ${reservation.court_number}`"></td>
+                        <tr :class="reservation.is_suspended ? 'bg-yellow-50' : ''">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span x-text="`Platz ${reservation.court_number}`"></span>
+                                <template x-if="reservation.is_suspended">
+                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        ⚠ Vorübergehend gesperrt
+                                    </span>
+                                </template>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap" x-text="formatDate(reservation.date)"></td>
                             <td class="px-6 py-4 whitespace-nowrap" x-text="`${reservation.start_time} - ${reservation.end_time}`"></td>
                             <td class="px-6 py-4 whitespace-nowrap" x-text="reservation.booked_for"></td>
@@ -99,8 +106,15 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <template x-for="reservation in bookingsForOthers" :key="reservation.id">
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap" x-text="`Platz ${reservation.court_number}`"></td>
+                            <tr :class="reservation.is_suspended ? 'bg-yellow-50' : ''">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span x-text="`Platz ${reservation.court_number}`"></span>
+                                    <template x-if="reservation.is_suspended">
+                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            ⚠ Vorübergehend gesperrt
+                                        </span>
+                                    </template>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap" x-text="formatDate(reservation.date)"></td>
                                 <td class="px-6 py-4 whitespace-nowrap" x-text="`${reservation.start_time} - ${reservation.end_time}`"></td>
                                 <td class="px-6 py-4 whitespace-nowrap" x-text="reservation.booked_for"></td>
