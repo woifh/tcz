@@ -258,7 +258,7 @@ class ValidationService:
         return block is None
     
     @staticmethod
-    def validate_all_booking_constraints(court_id, date, start_time, member_id, is_short_notice=False, current_time=None, member=None):
+    def validate_all_booking_constraints(court_id, date, start_time, member_id, is_short_notice=False, current_time=None, member=None, booked_by_id=None):
         """
         Validate all booking constraints.
 
@@ -266,10 +266,11 @@ class ValidationService:
             court_id: ID of the court
             date: date object
             start_time: time object
-            member_id: ID of the member making the booking
+            member_id: ID of the member the booking is for
             is_short_notice: Whether this is a short notice booking (default False)
             current_time: Current datetime for testing (defaults to Europe/Berlin now)
             member: Optional pre-loaded Member object to avoid redundant query
+            booked_by_id: ID of the member creating the booking (for personalized error messages)
 
         Returns:
             tuple: (bool, str, list|None) - (is_valid, error_message, active_sessions)
@@ -294,6 +295,11 @@ class ValidationService:
                 member = Member.query.get(member_id)
             if not member:
                 return False, ErrorMessages.MEMBER_NOT_FOUND, None
+
+            # Determine display name: "Du" for self-booking, member name for others
+            is_self_booking = booked_by_id is not None and str(member_id) == str(booked_by_id)
+            display_name = "Du" if is_self_booking else member.name
+
             if not member.can_reserve_courts():
                 return False, ErrorMessages.SUSTAINING_MEMBER_NO_ACCESS, None
 
@@ -301,8 +307,8 @@ class ValidationService:
             if member.is_payment_restricted():
                 # Use different message if member has pending confirmation
                 if member.has_pending_payment_confirmation():
-                    return False, ErrorMessages.PAYMENT_CONFIRMATION_PENDING, None
-                return False, ErrorMessages.PAYMENT_DEADLINE_PASSED, None
+                    return False, ErrorMessages.PAYMENT_CONFIRMATION_PENDING.format(name=display_name), None
+                return False, ErrorMessages.PAYMENT_DEADLINE_PASSED.format(name=display_name), None
 
             # Validate not in the past (with special handling for short notice bookings)
             booking_datetime = datetime.combine(date, start_time)
@@ -327,12 +333,12 @@ class ValidationService:
             # Pass berlin_time for time-based validation
             can_book, active_sessions = ValidationService.validate_member_reservation_limit(member_id, is_short_notice, berlin_time)
             if not can_book:
-                return False, error_messages['RESERVATION_LIMIT_REGULAR'], active_sessions
+                return False, error_messages['RESERVATION_LIMIT_REGULAR'].format(name=display_name), active_sessions
 
             # Validate short notice booking limit (only for short notice bookings)
             # Pass berlin_time for time-based validation
             if is_short_notice and not ValidationService.validate_member_short_notice_limit(member_id, berlin_time):
-                return False, error_messages['RESERVATION_LIMIT_SHORT_NOTICE'], None
+                return False, error_messages['RESERVATION_LIMIT_SHORT_NOTICE'].format(name=display_name), None
 
             # Validate no conflict using time-based logic
             if not ValidationService.validate_no_conflict_with_time_logic(court_id, date, start_time, berlin_time):

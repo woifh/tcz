@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - Cancellation eligibility is now determined server-side for consistent behavior across all clients
+- Error messages when booking for others now show member name instead of "you"
 
 ### Fixed
 - Past reservations on current day now visible after temporary block removal

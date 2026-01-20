@@ -56,8 +56,10 @@ class ReservationCreationService:
 
             # Validate all constraints (pass short notice flag and current_time for proper validation)
             # Pass pre-loaded member to avoid redundant query
+            # Pass booked_by_id for personalized error messages
             is_valid, error_msg, active_sessions = ValidationService.validate_all_booking_constraints(
-                court_id, date, start_time, booked_for_id, is_short_notice, berlin_time, member=booked_for_member
+                court_id, date, start_time, booked_for_id, is_short_notice, berlin_time,
+                member=booked_for_member, booked_by_id=booked_by_id
             )
 
             if not is_valid:
