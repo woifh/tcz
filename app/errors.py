@@ -4,7 +4,7 @@
 VALIDATION_ERRORS = {
     'BOOKING_CONFLICT': 'Dieser Platz ist bereits für diese Zeit gebucht',
     'RESERVATION_LIMIT': 'Du hast bereits 2 aktive Buchungen.',
-    'RESERVATION_LIMIT_SHORT_NOTICE': 'Du hast bereits eine aktive kurzfristige Buchung (zukünftige oder laufende Reservierung). Nur eine kurzfristige Buchung pro Mitglied ist erlaubt.',
+    'RESERVATION_LIMIT_SHORT_NOTICE': 'Du hast bereits eine aktive kurzfristige Buchung. Nur eine kurzfristige Buchung pro Mitglied ist erlaubt.',
     'BLOCKED_SLOT': 'Dieser Platz ist für diese Zeit gesperrt',
     'INVALID_TIME': 'Buchungen sind nur zwischen 08:00 und 22:00 Uhr möglich',
     'INVALID_DURATION': 'Buchungen müssen genau eine Stunde dauern',

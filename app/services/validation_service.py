@@ -296,9 +296,8 @@ class ValidationService:
             if not member:
                 return False, ErrorMessages.MEMBER_NOT_FOUND, None
 
-            # Determine display name: "Du" for self-booking, member name for others
+            # Determine if this is a self-booking (for correct German verb conjugation)
             is_self_booking = booked_by_id is not None and str(member_id) == str(booked_by_id)
-            display_name = "Du" if is_self_booking else member.name
 
             if not member.can_reserve_courts():
                 return False, ErrorMessages.SUSTAINING_MEMBER_NO_ACCESS, None
@@ -307,8 +306,12 @@ class ValidationService:
             if member.is_payment_restricted():
                 # Use different message if member has pending confirmation
                 if member.has_pending_payment_confirmation():
-                    return False, ErrorMessages.PAYMENT_CONFIRMATION_PENDING.format(name=display_name), None
-                return False, ErrorMessages.PAYMENT_DEADLINE_PASSED.format(name=display_name), None
+                    if is_self_booking:
+                        return False, ErrorMessages.PAYMENT_CONFIRMATION_PENDING_SELF, None
+                    return False, ErrorMessages.PAYMENT_CONFIRMATION_PENDING.format(name=member.name), None
+                if is_self_booking:
+                    return False, ErrorMessages.PAYMENT_DEADLINE_PASSED_SELF, None
+                return False, ErrorMessages.PAYMENT_DEADLINE_PASSED.format(name=member.name), None
 
             # Validate not in the past (with special handling for short notice bookings)
             booking_datetime = datetime.combine(date, start_time)
@@ -333,12 +336,16 @@ class ValidationService:
             # Pass berlin_time for time-based validation
             can_book, active_sessions = ValidationService.validate_member_reservation_limit(member_id, is_short_notice, berlin_time)
             if not can_book:
-                return False, error_messages['RESERVATION_LIMIT_REGULAR'].format(name=display_name), active_sessions
+                if is_self_booking:
+                    return False, ErrorMessages.RESERVATION_LIMIT_REGULAR_SELF, active_sessions
+                return False, ErrorMessages.RESERVATION_LIMIT_REGULAR.format(name=member.name), active_sessions
 
             # Validate short notice booking limit (only for short notice bookings)
             # Pass berlin_time for time-based validation
             if is_short_notice and not ValidationService.validate_member_short_notice_limit(member_id, berlin_time):
-                return False, error_messages['RESERVATION_LIMIT_SHORT_NOTICE'].format(name=display_name), None
+                if is_self_booking:
+                    return False, ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE_SELF, None
+                return False, ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE.format(name=member.name), None
 
             # Validate no conflict using time-based logic
             if not ValidationService.validate_no_conflict_with_time_logic(court_id, date, start_time, berlin_time):

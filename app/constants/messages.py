@@ -4,10 +4,16 @@
 class ErrorMessages:
     """Error messages used throughout the application."""
 
-    # Reservation errors
+    # Reservation errors (for others - uses {name} placeholder)
     RESERVATION_LIMIT_REGULAR = "{name} hat bereits 2 aktive Buchungen."
     RESERVATION_LIMIT_SHORT_NOTICE = (
-        "{name} hat bereits eine aktive kurzfristige Buchung (zukünftige oder laufende Reservierung). "
+        "{name} hat bereits eine aktive kurzfristige Buchung. "
+        "Nur eine kurzfristige Buchung pro Mitglied ist erlaubt."
+    )
+    # Reservation errors (for self - correct German verb conjugation)
+    RESERVATION_LIMIT_REGULAR_SELF = "Du hast bereits 2 aktive Buchungen."
+    RESERVATION_LIMIT_SHORT_NOTICE_SELF = (
+        "Du hast bereits eine aktive kurzfristige Buchung. "
         "Nur eine kurzfristige Buchung pro Mitglied ist erlaubt."
     )
     RESERVATION_NOT_FOUND = "Buchung nicht gefunden"
@@ -66,9 +72,12 @@ class ErrorMessages:
     # Payment errors
     MEMBER_FEE_UNPAID_BOOKING_WARNING = "Hinweis: Dein Mitgliedsbeitrag ist noch nicht bezahlt."
 
-    # Payment deadline errors
+    # Payment deadline errors (for others - uses {name} placeholder)
     PAYMENT_DEADLINE_PASSED = "Die Zahlungsfrist für {name} ist abgelaufen. Bitte den Beitrag zahlen, um wieder buchen zu können."
     PAYMENT_CONFIRMATION_PENDING = "Die Zahlungsbestätigung für {name} wird geprüft. Buchungen sind bis zur Bestätigung gesperrt."
+    # Payment deadline errors (for self)
+    PAYMENT_DEADLINE_PASSED_SELF = "Deine Zahlungsfrist ist abgelaufen. Bitte den Beitrag zahlen, um wieder buchen zu können."
+    PAYMENT_CONFIRMATION_PENDING_SELF = "Deine Zahlungsbestätigung wird geprüft. Buchungen sind bis zur Bestätigung gesperrt."
     PAYMENT_DEADLINE_INVALID_DATE = "Ungültiges Datum für Zahlungsfrist"
 
 class SuccessMessages:

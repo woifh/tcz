@@ -186,6 +186,9 @@ export function bookingModal() {
                     // Select this member for booking
                     this.bookedFor = member.id;
 
+                    // Clear any previous booking error since member changed
+                    this.error = null;
+
                     // Close search UI
                     this.resetSearch();
                 } else {
