@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - Error messages now clear when selecting a different member in booking modal
 - Admin member search now supports multi-word queries
 - Members with overdue payments can no longer book courts for other members
+- Test stability improvements for property-based block service tests
+- Performance test no longer flaky due to warmup request timing
 
 ## [4.3] - 2026-01-20
 
