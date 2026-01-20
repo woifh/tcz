@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.3] - 2026-01-20
+
+### Fixed
+- Member search now supports multi-word queries (e.g., "Marie A" finds "Marie Altmann")
+
 ## [4.2] - 2026-01-20
 
 ### Fixed

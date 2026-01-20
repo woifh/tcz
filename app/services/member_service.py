@@ -1,6 +1,6 @@
 """Member service for business logic."""
 from datetime import datetime
-from sqlalchemy import or_, func
+from sqlalchemy import or_, and_, func
 from app import db
 from app.models import Member, MemberAuditLog, Reservation, favourites
 from app.constants.messages import ErrorMessages, SuccessMessages
@@ -719,29 +719,31 @@ class MemberService:
             favourites.c.member_id == current_member_id
         ).subquery()
 
-        # Build the search query
-        search_pattern = f"%{query.strip()}%"
+        # Split query into tokens for multi-word search
+        tokens = query.strip().lower().split()
+
+        # Build filter: ALL tokens must appear in firstname, lastname, or email
+        token_filters = []
+        for token in tokens:
+            search_pattern = f"%{token}%"
+            token_filters.append(
+                or_(
+                    func.lower(Member.firstname).like(search_pattern),
+                    func.lower(Member.lastname).like(search_pattern),
+                    func.lower(Member.email).like(search_pattern)
+                )
+            )
 
         results = db.session.query(Member).filter(
-            # Search in firstname, lastname, or email (case-insensitive)
-            or_(
-                func.lower(Member.firstname).like(func.lower(search_pattern)),
-                func.lower(Member.lastname).like(func.lower(search_pattern)),
-                func.lower(Member.email).like(func.lower(search_pattern))
-            ),
-            # Exclude current member
+            and_(*token_filters),
             Member.id != current_member_id,
-            # Exclude existing favourites
             ~Member.id.in_(favourite_ids_subquery),
-            # Only active members
             Member.is_active == True,
-            # Only full members (exclude sustaining members who cannot book)
             Member.membership_type == 'full'
         ).order_by(
-            # Order alphabetically by lastname, then firstname
             Member.lastname,
             Member.firstname
-        ).limit(50).all()  # Limit to 50 members
+        ).limit(50).all()
 
         return results
 
