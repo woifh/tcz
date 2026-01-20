@@ -4,6 +4,7 @@
  */
 
 import { getToday, toBerlinDateString } from '../utils/date-utils.js';
+import { availabilityService, availabilityCache } from '../utils/availability-service.js';
 
 /**
  * Get CSRF token from meta tag
@@ -49,8 +50,8 @@ export function dashboard() {
                 }
             }
 
-            // Load initial availability
-            this.loadAvailability();
+            // Load initial availability with caching
+            this.loadWithCache(true);
 
             // Only load user reservations for authenticated users
             if (this.isAuthenticated) {
@@ -100,6 +101,116 @@ export function dashboard() {
                 this.error = 'Fehler beim Laden der Verfügbarkeit';
             } finally {
                 this.loading = false;
+            }
+        },
+
+        /**
+         * Load availability with cache-first strategy.
+         * Shows cached data immediately if available, fetches fresh data in background if stale.
+         * @param {boolean} isInitialLoad - True for first load, triggers range prefetch
+         */
+        async loadWithCache(isInitialLoad = false) {
+            // Generate time slots if not already set
+            if (this.timeSlots.length === 0) {
+                this.timeSlots = this.generateTimeSlots();
+            }
+
+            // Check cache first
+            const cached = availabilityCache.get(this.selectedDate);
+
+            if (cached) {
+                // Show cached data immediately
+                this.applyAvailabilityData(cached.data);
+                this.loading = false;
+
+                // Always refresh in background to ensure data is current
+                this.refreshInBackground();
+
+                // Prefetch surrounding dates
+                availabilityService.prefetchAround(this.selectedDate);
+                return;
+            }
+
+            // No cache - need to fetch
+            this.loading = true;
+            this.error = null;
+
+            try {
+                if (isInitialLoad) {
+                    // Initial load: fetch range for better UX
+                    await availabilityService.initialLoad();
+                    const freshCached = availabilityCache.get(this.selectedDate);
+                    if (freshCached) {
+                        this.applyAvailabilityData(freshCached.data);
+                    }
+                } else {
+                    // Single date fetch
+                    const { data } = await availabilityService.getForDate(this.selectedDate);
+                    this.applyAvailabilityData(data);
+                }
+            } catch (err) {
+                console.error('Error loading availability:', err);
+                this.error = 'Fehler beim Laden der Verfügbarkeit';
+                // Fall back to direct fetch
+                await this.loadAvailability();
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        /**
+         * Apply availability data to component state.
+         * @param {Object} data - Availability data from API or cache
+         */
+        applyAvailabilityData(data) {
+            if (!data) return;
+
+            // Handle sparse format (has 'courts' with 'occupied' arrays)
+            if (data.courts && data.courts[0]?.occupied !== undefined) {
+                this.availability = data;
+                this.courts = this.transformSparseResponse(data);
+            }
+            // Handle legacy full format (has 'grid' with 'slots' arrays)
+            else if (data.grid) {
+                this.availability = data;
+                this.courts = data.grid;
+            }
+            // Handle test data format
+            else if (data.slots) {
+                this.availability = data;
+                this.courts = data.slots;
+            }
+            else if (data.error) {
+                this.error = data.error;
+            }
+        },
+
+        /**
+         * Refresh current date in background without UI blocking.
+         * Always fetches fresh data from API to ensure accuracy.
+         */
+        async refreshInBackground() {
+            const dateToRefresh = this.selectedDate;
+            try {
+                const data = await availabilityService.fetchFresh(dateToRefresh);
+
+                // Only update if we're still viewing the same date
+                if (data && this.selectedDate === dateToRefresh) {
+                    const newCourts = this.transformSparseResponse(data);
+                    // Merge updates without full re-render
+                    newCourts.forEach((newCourt, courtIndex) => {
+                        if (this.courts[courtIndex]) {
+                            newCourt.slots.forEach((newSlot, slotIndex) => {
+                                const oldSlot = this.courts[courtIndex].slots[slotIndex];
+                                if (oldSlot && this.slotHasChanged(oldSlot, newSlot)) {
+                                    Object.assign(this.courts[courtIndex].slots[slotIndex], newSlot);
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('Background refresh failed:', err);
             }
         },
 
@@ -233,12 +344,12 @@ export function dashboard() {
             const date = new Date(this.selectedDate + 'T12:00:00'); // Use noon to avoid DST issues
             date.setDate(date.getDate() + offset);
             this.selectedDate = toBerlinDateString(date);
-            this.loadAvailability();
+            this.loadWithCache();
         },
 
         goToToday() {
             this.selectedDate = getToday();
-            this.loadAvailability();
+            this.loadWithCache();
         },
         
         handleSlotClick(court, time, slot) {

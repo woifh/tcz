@@ -257,6 +257,9 @@ export function bookingModal() {
                     }
 
                     this.error = errorMsg;
+
+                    // Refresh grid to show current state (e.g., slot was booked by someone else)
+                    this.reloadDashboard();
                 }
             } catch (err) {
                 console.error('Error creating booking:', err);

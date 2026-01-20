@@ -309,3 +309,204 @@ class TestRateLimiting:
             assert 'error' in data
             assert 'retry_after' in data
             assert data['retry_after'] == 3600
+
+
+class TestGetAvailabilityRange:
+    """Test get availability range endpoint."""
+
+    def test_range_requires_start_parameter(self, client):
+        """Test range endpoint requires start parameter."""
+        response = client.get('/api/courts/availability/range?days=7')
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'error' in data
+
+    def test_range_requires_days_parameter(self, client):
+        """Test range endpoint requires days parameter."""
+        response = client.get('/api/courts/availability/range?start=2026-12-05')
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'error' in data
+
+    def test_range_validates_date_format(self, client):
+        """Test range endpoint validates date format."""
+        response = client.get('/api/courts/availability/range?start=invalid&days=7')
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'error' in data
+        assert 'Datumsformat' in data['error']
+
+    def test_range_validates_days_min(self, client):
+        """Test range endpoint requires days >= 1."""
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=0')
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'error' in data
+
+    def test_range_validates_days_max(self, client):
+        """Test range endpoint requires days <= 30."""
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=31')
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'error' in data
+
+    def test_range_returns_multiple_days(self, client):
+        """Test range endpoint returns data for multiple days."""
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=7')
+        assert response.status_code == 200
+        data = response.get_json()
+
+        assert 'range' in data
+        assert data['range']['start'] == '2026-12-05'
+        assert data['range']['end'] == '2026-12-11'
+        assert data['range']['days_requested'] == 7
+
+        assert 'days' in data
+        assert len(data['days']) == 7
+
+        # Check each day has correct structure
+        for date_str, day_data in data['days'].items():
+            assert 'courts' in day_data
+            assert 'current_hour' in day_data
+            # Each court has sparse format
+            for court in day_data['courts']:
+                assert 'court_id' in court
+                assert 'court_number' in court
+                assert 'occupied' in court
+
+    def test_range_includes_metadata(self, client):
+        """Test range endpoint includes metadata with cache hint."""
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=3')
+        assert response.status_code == 200
+        data = response.get_json()
+
+        assert 'metadata' in data
+        assert 'generated_at' in data['metadata']
+        assert 'timezone' in data['metadata']
+        assert data['metadata']['timezone'] == 'Europe/Berlin'
+        assert 'cache_hint_seconds' in data['metadata']
+        assert data['metadata']['cache_hint_seconds'] == 30
+
+    def test_range_shows_reservations_to_authenticated_users(self, client, test_member, app):
+        """Test range endpoint shows reservation details to authenticated users."""
+        court_id = None
+        with app.app_context():
+            court = Court.query.first()
+            court_id = court.id
+            reservation = Reservation(
+                court_id=court.id,
+                date=date(2026, 12, 6),
+                start_time=time(10, 0),
+                end_time=time(11, 0),
+                booked_for_id=test_member.id,
+                booked_by_id=test_member.id,
+                status='active'
+            )
+            db.session.add(reservation)
+            db.session.commit()
+
+        with client:
+            client.post('/auth/login', data={
+                'email': test_member.email,
+                'password': 'password123'
+            })
+            response = client.get('/api/courts/availability/range?start=2026-12-05&days=3')
+            assert response.status_code == 200
+            data = response.get_json()
+
+            # Check the date with reservation
+            day_data = data['days'].get('2026-12-06')
+            assert day_data is not None
+
+            court_data = next((c for c in day_data['courts'] if c['court_id'] == court_id), None)
+            assert court_data is not None
+            slot_10 = next((s for s in court_data['occupied'] if s['time'] == '10:00'), None)
+            assert slot_10 is not None
+            assert slot_10['status'] == 'reserved'
+            assert slot_10['details'] is not None
+            assert 'booked_for' in slot_10['details']
+
+    def test_range_hides_details_from_anonymous_users(self, client, test_member, app):
+        """Test range endpoint hides reservation details from anonymous users."""
+        court_id = None
+        with app.app_context():
+            court = Court.query.first()
+            court_id = court.id
+            reservation = Reservation(
+                court_id=court.id,
+                date=date(2026, 12, 6),
+                start_time=time(10, 0),
+                end_time=time(11, 0),
+                booked_for_id=test_member.id,
+                booked_by_id=test_member.id,
+                status='active'
+            )
+            db.session.add(reservation)
+            db.session.commit()
+
+        # Anonymous request
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=3')
+        assert response.status_code == 200
+        data = response.get_json()
+
+        day_data = data['days'].get('2026-12-06')
+        assert day_data is not None
+
+        court_data = next((c for c in day_data['courts'] if c['court_id'] == court_id), None)
+        assert court_data is not None
+        slot_10 = next((s for s in court_data['occupied'] if s['time'] == '10:00'), None)
+        assert slot_10 is not None
+        assert slot_10['status'] == 'reserved'
+        assert slot_10['details'] is None
+
+    def test_range_shows_blocks(self, client, test_admin, app):
+        """Test range endpoint shows blocks correctly."""
+        court_id = None
+        with app.app_context():
+            block_reason = BlockReason.query.filter_by(name='Maintenance').first()
+            court = Court.query.first()
+            court_id = court.id
+            block = Block(
+                court_id=court.id,
+                date=date(2026, 12, 7),
+                start_time=time(14, 0),
+                end_time=time(16, 0),
+                reason_id=block_reason.id,
+                created_by_id=test_admin.id,
+                details='Range test block'
+            )
+            db.session.add(block)
+            db.session.commit()
+
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=5')
+        assert response.status_code == 200
+        data = response.get_json()
+
+        day_data = data['days'].get('2026-12-07')
+        assert day_data is not None
+
+        court_data = next((c for c in day_data['courts'] if c['court_id'] == court_id), None)
+        assert court_data is not None
+        slot_14 = next((s for s in court_data['occupied'] if s['time'] == '14:00'), None)
+        assert slot_14 is not None
+        assert slot_14['status'] == 'blocked'
+        assert slot_14['details']['reason'] == 'Maintenance'
+
+    def test_range_single_day_works(self, client):
+        """Test range endpoint works with days=1."""
+        response = client.get('/api/courts/availability/range?start=2026-12-05&days=1')
+        assert response.status_code == 200
+        data = response.get_json()
+
+        assert data['range']['days_requested'] == 1
+        assert len(data['days']) == 1
+        assert '2026-12-05' in data['days']
+
+    def test_range_max_days_works(self, client):
+        """Test range endpoint works with max days (30)."""
+        response = client.get('/api/courts/availability/range?start=2026-12-01&days=30')
+        assert response.status_code == 200
+        data = response.get_json()
+
+        assert data['range']['days_requested'] == 30
+        assert len(data['days']) == 30

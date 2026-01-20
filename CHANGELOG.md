@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1] - 2026-01-20
+
+### Improved
+- Faster date navigation with client-side caching - availability data is prefetched and cached for instant display when switching dates
+- Availability grid now refreshes automatically when booking errors occur
+
 ## [5.0] - 2026-01-20
 
 ### Added
