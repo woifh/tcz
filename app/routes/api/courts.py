@@ -12,6 +12,7 @@ import jwt
 from app.models import Court, Reservation
 from app.services.reservation_service import ReservationService
 from app.services.block_service import BlockService
+from app.services.validation_service import ValidationService
 from app.decorators.auth import jwt_or_session_required
 from . import bp
 
@@ -148,7 +149,10 @@ def get_availability():
                         'booked_for_id': suspended_res.booked_for_id,
                         'booked_by_id': suspended_res.booked_by_id,
                         'reservation_id': suspended_res.id,
-                        'is_short_notice': suspended_res.is_short_notice
+                        'is_short_notice': suspended_res.is_short_notice,
+                        'can_cancel': ValidationService.get_cancellation_eligibility(
+                            suspended_res, current_user.id, current_time
+                        )
                     }
 
                 court_data['occupied'].append({
@@ -173,7 +177,10 @@ def get_availability():
                         'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
                         'booked_by_id': reservation.booked_by_id,
                         'reservation_id': reservation.id,
-                        'is_short_notice': reservation.is_short_notice
+                        'is_short_notice': reservation.is_short_notice,
+                        'can_cancel': ValidationService.get_cancellation_eligibility(
+                            reservation, current_user.id, current_time
+                        )
                     }
                 else:
                     # Anonymous users see slot is reserved but without member names

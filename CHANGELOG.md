@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.4] - 2026-01-20
+
+### Improved
+- Cancellation eligibility is now determined server-side for consistent behavior across all clients
+
 ## [4.3] - 2026-01-20
 
 ### Fixed

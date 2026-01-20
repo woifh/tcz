@@ -10,6 +10,7 @@ from flask_login import current_user
 
 from app.models import Reservation
 from app.services.reservation_service import ReservationService
+from app.services.validation_service import ValidationService
 from app.decorators.auth import jwt_or_session_required
 from app.utils.validators import (
     ValidationError,
@@ -60,9 +61,16 @@ def list_reservations():
     regular_active = [r for r in my_active if not r.is_short_notice]
     short_notice_active = [r for r in my_active if r.is_short_notice]
 
+    def add_cancellation_info(r):
+        data = r.to_dict()
+        data['can_cancel'] = ValidationService.get_cancellation_eligibility(
+            r, current_user.id, current_time
+        )
+        return data
+
     return jsonify({
         'current_time': current_time.isoformat(),
-        'reservations': [r.to_dict() for r in reservations],
+        'reservations': [add_cancellation_info(r) for r in reservations],
         'statistics': {
             'total_count': len(reservations),
             'active_count': len(active_reservations),

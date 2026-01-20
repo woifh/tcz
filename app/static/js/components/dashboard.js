@@ -403,49 +403,18 @@ export function dashboard() {
         },
         
         canCancelSlot(slot) {
-            // Anonymous users cannot cancel any slots
+            // Anonymous users cannot cancel
             if (!this.isAuthenticated) {
                 return false;
             }
 
             // Handle suspended reservations in temporary blocks
             if (slot.status === 'blocked_temporary') {
-                const suspended = slot.details?.suspended_reservation;
-                if (!suspended) {
-                    return false;
-                }
-                // Short-notice bookings can never be cancelled, even when suspended
-                if (suspended.is_short_notice) {
-                    return false;
-                }
-                // User can cancel their suspended non-short-notice reservation
-                return this.currentUserId && (
-                    suspended.booked_for_id === this.currentUserId ||
-                    suspended.booked_by_id === this.currentUserId
-                );
+                return slot.details?.suspended_reservation?.can_cancel === true;
             }
 
-            if (slot.status !== 'reserved' && slot.status !== 'short_notice') {
-                return false;
-            }
-
-            // Handle both test format (reservation) and production format (details)
-            const reservation = slot.reservation || slot.details;
-            if (!reservation) {
-                return false;
-            }
-
-            // Short notice bookings cannot be cancelled (per business rules)
-            if (slot.status === 'short_notice' || reservation.is_short_notice) {
-                return false;
-            }
-
-            // User can cancel if they booked it or if it's booked for them
-            return this.currentUserId && (
-                reservation.booked_for_id === this.currentUserId ||
-                reservation.booked_by_id === this.currentUserId ||
-                reservation.member_id === this.currentUserId
-            );
+            // Use server-computed flag for regular reservations
+            return slot.details?.can_cancel === true;
         },
         
         isSlotInPast(time) {

@@ -409,7 +409,7 @@ class ValidationService:
                 return False, error_messages['CANCELLATION_TOO_LATE']
 
             return True, ""
-            
+
         except Exception as e:
             # Enhanced error handling with comprehensive logging
             context = {
@@ -417,7 +417,31 @@ class ValidationService:
                 'current_time': current_time
             }
             log_error_with_context(e, context, "validate_cancellation_allowed")
-            
+
             # Try to provide a more specific error message
             error_messages = get_time_based_error_messages()
             return False, error_messages['TIME_CALCULATION_ERROR']
+
+    @staticmethod
+    def get_cancellation_eligibility(reservation, user_id, current_time=None):
+        """
+        Check if a user can cancel a specific reservation.
+        Combines ownership check with time-based validation rules.
+
+        Args:
+            reservation: Reservation object
+            user_id: ID of the user attempting to cancel
+            current_time: Current datetime (defaults to Europe/Berlin now)
+
+        Returns:
+            bool: True if user can cancel, False otherwise
+        """
+        # Ownership check - user must be booked_for or booked_by
+        if user_id != reservation.booked_for_id and user_id != reservation.booked_by_id:
+            return False
+
+        # Delegate to existing validation for time-based rules
+        can_cancel, _ = ValidationService.validate_cancellation_allowed(
+            reservation.id, current_time
+        )
+        return can_cancel
