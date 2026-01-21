@@ -85,6 +85,13 @@ def profile_edit():
     return render_template('profile.html', member=current_user)
 
 
+@bp.route('/statistics', methods=['GET'])
+@login_required
+def statistics():
+    """Show statistics page for current user."""
+    return render_template('statistics.html', member=current_user)
+
+
 @bp.route('/', methods=['POST'])
 @login_required
 @admin_required

@@ -132,6 +132,10 @@
                                         <span class="material-icons text-sm">star</span>
                                         <span>Favoriten</span>
                                     </a>
+                                    <a href="{{ url_for('members.statistics') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <span class="material-icons text-sm">bar_chart</span>
+                                        <span>Meine Statistiken</span>
+                                    </a>
                                     <a href="{{ url_for('members.profile_edit') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                         <span class="material-icons text-sm">person</span>
                                         <span>Mein Profil</span>
@@ -249,6 +253,10 @@
                             <a href="{{ url_for('members.favourites_page') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">star</span>
                                 <span>Favoriten</span>
+                            </a>
+                            <a href="{{ url_for('members.statistics') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
+                                <span class="material-icons text-sm">bar_chart</span>
+                                <span>Meine Statistiken</span>
                             </a>
                             <a href="{{ url_for('members.profile_edit') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">person</span>

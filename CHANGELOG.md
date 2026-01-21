@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.0] - 2026-01-21
+
+### Added
+- Personal statistics page for members showing booking history and insights
+- Summary cards: total bookings, bookings by others, cancellation rate
+- Top playing partners with profile pictures and play count
+- Monthly breakdown chart with year filter for comparison
+- Court and time slot preferences with percentage breakdown
+- Statistics accessible via "Mein Konto" menu
+
 ## [5.2] - 2026-01-21
 
 ### Added

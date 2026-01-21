@@ -11,6 +11,7 @@ from sqlalchemy import func
 from app import db
 from app.models import Member, Reservation
 from app.services.member_service import MemberService
+from app.services.statistics_service import StatisticsService
 from app.decorators.auth import jwt_or_session_required
 from . import bp
 
@@ -512,5 +513,43 @@ def delete_profile_picture(id):
             'message': 'Profilbild erfolgreich gelöscht',
             'has_profile_picture': False
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ----- Statistics Routes -----
+
+@bp.route('/members/<id>/statistics', methods=['GET'])
+@jwt_or_session_required
+def get_member_statistics(id):
+    """
+    Get statistics for a member.
+
+    Privacy: Users can only view their own statistics.
+
+    Query params:
+        year (optional): Filter by year (e.g., 2025). Omit for all-time stats.
+    """
+    try:
+        member = Member.query.get_or_404(id)
+
+        # Users can only view their own statistics
+        if member.id != current_user.id:
+            return jsonify({'error': 'Du hast keine Berechtigung für diese Aktion'}), 403
+
+        # Parse optional year filter
+        year = request.args.get('year')
+        if year:
+            try:
+                year = int(year)
+            except ValueError:
+                return jsonify({'error': 'Ungültiges Jahr'}), 400
+
+        stats, error = StatisticsService.get_member_statistics(id, year)
+
+        if error:
+            return jsonify({'error': error}), 400
+
+        return jsonify(stats)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
