@@ -51,8 +51,32 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap" x-text="formatDate(reservation.date)"></td>
                             <td class="px-6 py-4 whitespace-nowrap" x-text="`${reservation.start_time} - ${reservation.end_time}`"></td>
-                            <td class="px-6 py-4 whitespace-nowrap" x-text="reservation.booked_for"></td>
-                            <td class="px-6 py-4 whitespace-nowrap" x-text="reservation.booked_by"></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <template x-if="reservation.booked_for_has_profile_picture">
+                                        <img :src="`/api/members/${reservation.booked_for_id}/profile-picture?v=${reservation.booked_for_profile_picture_version}`"
+                                             alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0" loading="lazy">
+                                    </template>
+                                    <template x-if="!reservation.booked_for_has_profile_picture">
+                                        <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center justify-center flex-shrink-0"
+                                              x-text="getInitials(reservation.booked_for)"></span>
+                                    </template>
+                                    <span x-text="reservation.booked_for"></span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <template x-if="reservation.booked_by_has_profile_picture">
+                                        <img :src="`/api/members/${reservation.booked_by_id}/profile-picture?v=${reservation.booked_by_profile_picture_version}`"
+                                             alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0" loading="lazy">
+                                    </template>
+                                    <template x-if="!reservation.booked_by_has_profile_picture">
+                                        <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center justify-center flex-shrink-0"
+                                              x-text="getInitials(reservation.booked_by)"></span>
+                                    </template>
+                                    <span x-text="reservation.booked_by"></span>
+                                </div>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <!-- Short-notice bookings can never be cancelled, even when suspended -->
@@ -129,7 +153,19 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap" x-text="formatDate(reservation.date)"></td>
                                 <td class="px-6 py-4 whitespace-nowrap" x-text="`${reservation.start_time} - ${reservation.end_time}`"></td>
-                                <td class="px-6 py-4 whitespace-nowrap" x-text="reservation.booked_for"></td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="reservation.booked_for_has_profile_picture">
+                                            <img :src="`/api/members/${reservation.booked_for_id}/profile-picture?v=${reservation.booked_for_profile_picture_version}`"
+                                                 alt="" class="w-7 h-7 rounded-full object-cover flex-shrink-0" loading="lazy">
+                                        </template>
+                                        <template x-if="!reservation.booked_for_has_profile_picture">
+                                            <span class="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center justify-center flex-shrink-0"
+                                                  x-text="getInitials(reservation.booked_for)"></span>
+                                        </template>
+                                        <span x-text="reservation.booked_for"></span>
+                                    </div>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <!-- Short-notice bookings can never be cancelled, even when suspended -->
@@ -247,6 +283,15 @@ function reservationsList() {
             return `${day}.${month}.${year}`;
         }
     };
+}
+
+// Get initials from a full name
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.charAt(0)?.toUpperCase() || '';
+    const last = parts.length > 1 ? parts[parts.length - 1]?.charAt(0)?.toUpperCase() : '';
+    return first + last;
 }
 
 // Toast notification helper

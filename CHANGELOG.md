@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.2] - 2026-01-21
+
+### Added
+- Profile pictures now displayed in favorites list, reservations overview, and court availability grid
+- Shows member's photo with initials fallback when no picture is uploaded
+- Court grid shows booker name in smaller font when booking was made for someone else
+
 ## [5.1] - 2026-01-20
 
 ### Improved

@@ -76,6 +76,8 @@ def _build_day_availability(courts, reservation_map, block_map, suspended_map, c
                     block_details['suspended_reservation'] = {
                         'booked_for': f"{suspended_res.booked_for.firstname} {suspended_res.booked_for.lastname}",
                         'booked_for_id': suspended_res.booked_for_id,
+                        'booked_for_has_profile_picture': suspended_res.booked_for.has_profile_picture,
+                        'booked_for_profile_picture_version': suspended_res.booked_for.profile_picture_version,
                         'booked_by_id': suspended_res.booked_by_id,
                         'reservation_id': suspended_res.id,
                         'is_short_notice': suspended_res.is_short_notice,
@@ -101,8 +103,12 @@ def _build_day_availability(courts, reservation_map, block_map, suspended_map, c
                     slot_data['details'] = {
                         'booked_for': f"{reservation.booked_for.firstname} {reservation.booked_for.lastname}",
                         'booked_for_id': reservation.booked_for_id,
+                        'booked_for_has_profile_picture': reservation.booked_for.has_profile_picture,
+                        'booked_for_profile_picture_version': reservation.booked_for.profile_picture_version,
                         'booked_by': f"{reservation.booked_by.firstname} {reservation.booked_by.lastname}",
                         'booked_by_id': reservation.booked_by_id,
+                        'booked_by_has_profile_picture': reservation.booked_by.has_profile_picture,
+                        'booked_by_profile_picture_version': reservation.booked_by.profile_picture_version,
                         'reservation_id': reservation.id,
                         'is_short_notice': reservation.is_short_notice,
                         'can_cancel': ValidationService.get_cancellation_eligibility(

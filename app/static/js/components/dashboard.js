@@ -613,10 +613,23 @@ export function dashboard() {
             if (slot.status === 'short_notice' || slot.status === 'reserved') {
                 const reservation = slot.reservation || slot.details;
                 if (reservation && this.isAuthenticated) {
-                    if (reservation.booked_for_id === reservation.booked_by_id) {
-                        return reservation.booked_for;
+                    const hasProfilePic = reservation.booked_for_has_profile_picture;
+
+                    if (hasProfilePic) {
+                        // Show avatar (40x40) on left + name(s) on right
+                        const avatar = `<img src="/api/members/${reservation.booked_for_id}/profile-picture?v=${reservation.booked_for_profile_picture_version || 0}" alt="" style="width: 40px; height: 40px; border-radius: 9999px; object-fit: cover; flex-shrink: 0;" loading="lazy">`;
+
+                        if (reservation.booked_for_id === reservation.booked_by_id) {
+                            return `<div class="flex items-center justify-center gap-3">${avatar}<span class="truncate">${reservation.booked_for}</span></div>`;
+                        }
+                        return `<div class="flex items-center justify-center gap-3">${avatar}<div class="flex flex-col min-w-0"><span class="truncate">${reservation.booked_for}</span><span style="font-size: 9px; opacity: 0.8;" class="truncate">(${reservation.booked_by})</span></div></div>`;
+                    } else {
+                        // No profile picture - show only name(s)
+                        if (reservation.booked_for_id === reservation.booked_by_id) {
+                            return reservation.booked_for;
+                        }
+                        return `${reservation.booked_for}<br><span style="font-size: 9px; opacity: 0.8;">(${reservation.booked_by})</span>`;
                     }
-                    return `${reservation.booked_for}<br>(von ${reservation.booked_by})`;
                 }
                 return 'Gebucht';
             }
@@ -631,7 +644,12 @@ export function dashboard() {
                 // Show suspended reservation info if available
                 if (blockDetails?.suspended_reservation) {
                     const suspended = blockDetails.suspended_reservation;
-                    content += `<br><span style="font-size: 0.65em; margin-top: 4px; display: inline-block; background: rgba(255,255,255,0.3); padding: 2px 4px; border-radius: 2px;">⏸ ${suspended.booked_for}</span>`;
+                    if (suspended.booked_for_has_profile_picture) {
+                        const suspendedAvatar = `<img src="/api/members/${suspended.booked_for_id}/profile-picture?v=${suspended.booked_for_profile_picture_version || 0}" alt="" style="width: 16px; height: 16px; border-radius: 9999px; object-fit: cover;" loading="lazy">`;
+                        content += `<br><span style="font-size: 0.65em; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.3); padding: 2px 4px; border-radius: 2px;">⏸ ${suspendedAvatar} ${suspended.booked_for}</span>`;
+                    } else {
+                        content += `<br><span style="font-size: 0.65em; margin-top: 4px; display: inline-block; background: rgba(255,255,255,0.3); padding: 2px 4px; border-radius: 2px;">⏸ ${suspended.booked_for}</span>`;
+                    }
                 }
                 return content;
             }
@@ -668,7 +686,7 @@ export function dashboard() {
         
         getShortNoticeSlots() {
             if (!this.userReservations) return 1;
-            
+
             // Count short notice active booking sessions
             const shortNoticeBookings = this.userReservations.filter(r => r.is_short_notice);
             return Math.max(0, 1 - shortNoticeBookings.length);
