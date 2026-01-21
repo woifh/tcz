@@ -4,6 +4,16 @@
 
 {% block content %}
 <style>
+    /* Equal width for court columns (6% for time, 15.67% each for 6 courts = 100%) */
+    #availability-grid th:first-child,
+    #availability-grid td:first-child {
+        width: 6%;
+    }
+    #availability-grid th:not(:first-child),
+    #availability-grid td:not(:first-child) {
+        width: 15.67%;
+    }
+
     /* Floating time column - shown only when scrolled */
     #floating-time-column {
         display: none;

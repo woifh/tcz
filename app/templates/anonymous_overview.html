@@ -3,6 +3,17 @@
 {% block title %}Platzübersicht - Tennisclub{% endblock %}
 
 {% block content %}
+<style>
+    /* Equal width for court columns (6% for time, 15.67% each for 6 courts = 100%) */
+    #availability-grid th:first-child,
+    #availability-grid td:first-child {
+        width: 6%;
+    }
+    #availability-grid th:not(:first-child),
+    #availability-grid td:not(:first-child) {
+        width: 15.67%;
+    }
+</style>
 <div class="bg-white rounded-lg shadow-md p-6" x-data="dashboard()" x-init="init()">
     <div class="flex justify-between items-center mb-6">
         <h2 class="hidden lg:flex text-2xl font-bold items-center gap-2">
