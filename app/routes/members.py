@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Member
 from app.services.member_service import MemberService
-from app.decorators.auth import admin_required, member_or_admin_required, jwt_or_session_required
+from app.decorators.auth import admin_required, member_or_admin_required, jwt_or_session_required, feature_required
 from app.constants.messages import SuccessMessages
 
 bp = Blueprint('members', __name__, url_prefix='/members')
@@ -95,6 +95,7 @@ def statistics():
 @bp.route('/help', methods=['GET'])
 @bp.route('/help/<path:article>', methods=['GET'])
 @login_required
+@feature_required('help_center')
 def help_center(article=None):
     """Show help center page."""
     from app.services.help_service import HelpService

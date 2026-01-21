@@ -4,6 +4,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import db
+from app.utils.timezone_utils import get_current_berlin_time
 
 
 def generate_uuid():
@@ -614,3 +615,46 @@ class SystemSetting(db.Model):
 
     def __repr__(self):
         return f'<SystemSetting {self.key}={self.value}>'
+
+
+class FeatureFlag(db.Model):
+    """FeatureFlag model for controlling feature visibility by role."""
+
+    __tablename__ = 'feature_flag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)  # German display name
+    description = db.Column(db.String(255), nullable=True)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    allowed_roles = db.Column(db.JSON, nullable=True)  # null = all roles when enabled
+    created_at = db.Column(db.DateTime, nullable=False, default=get_current_berlin_time)
+    updated_at = db.Column(db.DateTime, nullable=False, default=get_current_berlin_time, onupdate=get_current_berlin_time)
+
+    def __repr__(self):
+        return f'<FeatureFlag {self.key} enabled={self.is_enabled}>'
+
+
+class FeatureFlagAuditLog(db.Model):
+    """Audit log for feature flag changes."""
+
+    __tablename__ = 'feature_flag_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    flag_id = db.Column(db.Integer, nullable=False)
+    flag_key = db.Column(db.String(50), nullable=False)  # Denormalized for readability
+    operation = db.Column(db.String(20), nullable=False)
+    operation_data = db.Column(db.JSON, nullable=True)
+    performed_by_id = db.Column(db.String(36), db.ForeignKey('member.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=get_current_berlin_time, index=True)
+
+    performed_by = db.relationship('Member')
+
+    def __init__(self, **kwargs):
+        valid_operations = ['update']
+        if kwargs.get('operation') and kwargs['operation'] not in valid_operations:
+            raise ValueError(f"Operation must be one of: {valid_operations}")
+        super().__init__(**kwargs)
+
+    def __repr__(self):
+        return f'<FeatureFlagAuditLog {self.flag_key} {self.operation}>'

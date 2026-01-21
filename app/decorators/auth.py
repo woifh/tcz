@@ -285,3 +285,27 @@ def block_owner_or_admin_required(f):
 
         return f(*args, **kwargs)
     return decorated_function
+
+
+def feature_required(flag_key):
+    """
+    Decorator that requires a feature flag to be enabled for the current user.
+    Returns 404 if the feature is disabled (to not reveal the feature exists).
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from flask import abort
+            from app.services.feature_flag_service import FeatureFlagService
+
+            # If not authenticated, let @login_required handle it
+            if not current_user.is_authenticated:
+                return f(*args, **kwargs)
+
+            # Check feature flag
+            if not FeatureFlagService.is_enabled_for_user(flag_key, current_user):
+                abort(404)
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator

@@ -804,3 +804,54 @@ def reject_payment_confirmation(id):
         return jsonify({'message': 'Zahlungsbestätigung wurde abgelehnt'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ----- Feature Flags Routes -----
+
+@bp.route('/admin/feature-flags', methods=['GET'])
+@admin_required
+def list_feature_flags():
+    """Get all feature flags."""
+    from app.services.feature_flag_service import FeatureFlagService
+
+    flags = FeatureFlagService.get_all_flags()
+    return jsonify({
+        'flags': [{
+            'id': f.id,
+            'key': f.key,
+            'name': f.name,
+            'description': f.description,
+            'is_enabled': f.is_enabled,
+            'allowed_roles': f.allowed_roles or [],
+            'updated_at': f.updated_at.isoformat() if f.updated_at else None
+        } for f in flags]
+    })
+
+
+@bp.route('/admin/feature-flags/<int:flag_id>', methods=['PUT'])
+@admin_required
+def update_feature_flag(flag_id):
+    """Update a feature flag."""
+    from app.services.feature_flag_service import FeatureFlagService
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    is_enabled = data.get('is_enabled')
+    allowed_roles = data.get('allowed_roles', [])
+
+    if is_enabled is None:
+        return jsonify({'error': 'is_enabled ist erforderlich'}), 400
+
+    success, error = FeatureFlagService.update_flag(
+        flag_id=flag_id,
+        is_enabled=is_enabled,
+        allowed_roles=allowed_roles,
+        admin_id=current_user.id
+    )
+
+    if not success:
+        return jsonify({'error': error}), 400
+
+    return jsonify({'message': 'Feature-Flag erfolgreich aktualisiert'})

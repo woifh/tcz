@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Feature-Flags - Admin - Tennisclub{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">Feature-Flags</h2>
+    </div>
+
+    <p class="text-gray-600 mb-6">Aktivieren oder deaktivieren Sie Features und legen Sie fest, welche Benutzerrollen Zugriff haben.</p>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-8">
+        <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-2"></div>
+        <p class="text-gray-500">Feature-Flags werden geladen...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center gap-2 text-red-700">
+            <span class="material-icons">error</span>
+            <span id="error-message">Fehler beim Laden der Feature-Flags</span>
+        </div>
+        <button onclick="loadFlags()" class="mt-2 text-red-600 hover:text-red-800 underline">
+            Erneut versuchen
+        </button>
+    </div>
+
+    <!-- Flags Container -->
+    <div id="flags-container" class="hidden">
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-8 text-gray-500">
+            <span class="material-icons text-4xl mb-2">toggle_off</span>
+            <p>Keine Feature-Flags vorhanden.</p>
+        </div>
+
+        <!-- Flags Table -->
+        <div id="flags-table" class="hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 px-4 font-semibold text-gray-700">Feature</th>
+                            <th class="text-center py-3 px-4 font-semibold text-gray-700">Aktiviert</th>
+                            <th class="text-left py-3 px-4 font-semibold text-gray-700">Erlaubte Rollen</th>
+                            <th class="text-right py-3 px-4 font-semibold text-gray-700">Zuletzt geändert</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flags-tbody">
+                        <!-- Rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Toast -->
+    <div id="success-toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg hidden transition-opacity duration-300">
+        <div class="flex items-center gap-2">
+            <span class="material-icons">check_circle</span>
+            <span>Änderungen gespeichert</span>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    const ROLE_LABELS = {
+        'member': 'Mitglied',
+        'teamster': 'Mannschaftsführer',
+        'administrator': 'Administrator'
+    };
+
+    const ROLE_ORDER = ['member', 'teamster', 'administrator'];
+
+    let flags = [];
+
+    async function loadFlags() {
+        const loadingState = document.getElementById('loading-state');
+        const errorState = document.getElementById('error-state');
+        const flagsContainer = document.getElementById('flags-container');
+
+        loadingState.classList.remove('hidden');
+        errorState.classList.add('hidden');
+        flagsContainer.classList.add('hidden');
+
+        try {
+            const response = await fetch('/api/admin/feature-flags');
+            if (!response.ok) {
+                throw new Error('Fehler beim Laden');
+            }
+            const data = await response.json();
+            flags = data.flags;
+            renderFlags();
+        } catch (error) {
+            loadingState.classList.add('hidden');
+            errorState.classList.remove('hidden');
+            document.getElementById('error-message').textContent = error.message || 'Fehler beim Laden der Feature-Flags';
+        }
+    }
+
+    function renderFlags() {
+        const loadingState = document.getElementById('loading-state');
+        const flagsContainer = document.getElementById('flags-container');
+        const emptyState = document.getElementById('empty-state');
+        const flagsTable = document.getElementById('flags-table');
+        const tbody = document.getElementById('flags-tbody');
+
+        loadingState.classList.add('hidden');
+        flagsContainer.classList.remove('hidden');
+
+        if (flags.length === 0) {
+            emptyState.classList.remove('hidden');
+            flagsTable.classList.add('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        flagsTable.classList.remove('hidden');
+
+        tbody.innerHTML = flags.map(flag => `
+            <tr class="border-b border-gray-100 hover:bg-gray-50" data-flag-id="${flag.id}">
+                <td class="py-4 px-4">
+                    <div class="font-medium text-gray-900">${escapeHtml(flag.name)}</div>
+                    <div class="text-sm text-gray-500">${escapeHtml(flag.description || '')}</div>
+                    <div class="text-xs text-gray-400 mt-1">Key: ${escapeHtml(flag.key)}</div>
+                </td>
+                <td class="py-4 px-4 text-center">
+                    <button type="button"
+                            class="toggle-switch relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            style="background-color: ${flag.is_enabled ? '#16a34a' : '#d1d5db'};"
+                            data-flag-id="${flag.id}"
+                            data-enabled="${flag.is_enabled}">
+                        <span class="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
+                              style="transform: translateX(${flag.is_enabled ? '22px' : '2px'});"></span>
+                    </button>
+                </td>
+                <td class="py-4 px-4">
+                    <div class="flex flex-wrap gap-2">
+                        ${ROLE_ORDER.map(role => `
+                            <label class="inline-flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox"
+                                       class="rounded border-gray-300 text-green-600 focus:ring-green-500 role-checkbox"
+                                       data-flag-id="${flag.id}"
+                                       data-role="${role}"
+                                       ${(flag.allowed_roles || []).includes(role) ? 'checked' : ''}
+                                       ${!flag.is_enabled ? 'disabled' : ''}>
+                                <span class="text-sm text-gray-700 ${!flag.is_enabled ? 'text-gray-400' : ''}">${ROLE_LABELS[role]}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">
+                        ${(flag.allowed_roles || []).length === 0 ? 'Alle Benutzer (keine Einschränkung)' : ''}
+                    </div>
+                </td>
+                <td class="py-4 px-4 text-right text-sm text-gray-500">
+                    ${flag.updated_at ? formatDate(flag.updated_at) : '-'}
+                </td>
+            </tr>
+        `).join('');
+
+        // Add event listeners
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', handleToggleClick);
+        });
+
+        document.querySelectorAll('.role-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', handleRoleChange);
+        });
+    }
+
+    async function handleToggleClick(event) {
+        const button = event.currentTarget;
+        const flagId = button.dataset.flagId;
+        const currentEnabled = button.dataset.enabled === 'true';
+        const newEnabled = !currentEnabled;
+        const flag = flags.find(f => f.id == flagId);
+
+        if (!flag) return;
+
+        // Update UI immediately for responsiveness
+        button.dataset.enabled = newEnabled;
+        button.style.backgroundColor = newEnabled ? '#16a34a' : '#d1d5db';
+        button.querySelector('span').style.transform = newEnabled ? 'translateX(22px)' : 'translateX(2px)';
+
+        updateRoleCheckboxState(flagId, newEnabled);
+
+        await saveFlag(flagId, newEnabled, flag.allowed_roles || []);
+    }
+
+    async function handleRoleChange(event) {
+        const flagId = event.target.dataset.flagId;
+        const flag = flags.find(f => f.id == flagId);
+
+        if (!flag) return;
+
+        // Collect all checked roles for this flag
+        const checkboxes = document.querySelectorAll(`.role-checkbox[data-flag-id="${flagId}"]`);
+        const allowedRoles = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.dataset.role);
+
+        await saveFlag(flagId, flag.is_enabled, allowedRoles);
+    }
+
+    function updateRoleCheckboxState(flagId, isEnabled) {
+        const checkboxes = document.querySelectorAll(`.role-checkbox[data-flag-id="${flagId}"]`);
+        checkboxes.forEach(cb => {
+            cb.disabled = !isEnabled;
+            cb.parentElement.querySelector('span').classList.toggle('text-gray-400', !isEnabled);
+        });
+    }
+
+    async function saveFlag(flagId, isEnabled, allowedRoles) {
+        try {
+            const response = await fetch(`/api/admin/feature-flags/${flagId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    is_enabled: isEnabled,
+                    allowed_roles: allowedRoles
+                })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Fehler beim Speichern');
+            }
+
+            // Update local state
+            const flag = flags.find(f => f.id == flagId);
+            if (flag) {
+                flag.is_enabled = isEnabled;
+                flag.allowed_roles = allowedRoles;
+                flag.updated_at = new Date().toISOString();
+            }
+
+            showSuccessToast();
+
+        } catch (error) {
+            alert('Fehler: ' + error.message);
+            // Reload to reset state
+            loadFlags();
+        }
+    }
+
+    function showSuccessToast() {
+        const toast = document.getElementById('success-toast');
+        toast.classList.remove('hidden');
+        toast.classList.add('opacity-100');
+
+        setTimeout(() => {
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('opacity-0');
+            }, 300);
+        }, 2000);
+    }
+
+    function formatDate(isoString) {
+        // Parse as local time (timestamps stored in Vienna time)
+        const parts = isoString.split('T');
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        return `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}, ${timeParts[0]}:${timeParts[1]}`;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initial load
+    loadFlags();
+</script>
+{% endblock %}

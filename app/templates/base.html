@@ -98,6 +98,10 @@
                                         <span class="material-icons text-sm">history</span>
                                         <span>Audit-Protokoll</span>
                                     </a>
+                                    <a href="{{ url_for('admin.feature_flags') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <span class="material-icons text-sm">toggle_on</span>
+                                        <span>Feature-Flags</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -140,10 +144,12 @@
                                         <span class="material-icons text-sm">person</span>
                                         <span>Mein Profil</span>
                                     </a>
+                                    {% if is_feature_enabled('help_center') %}
                                     <a href="{{ url_for('members.help_center') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                         <span class="material-icons text-sm">help_outline</span>
                                         <span>Hilfe</span>
                                     </a>
+                                    {% endif %}
                                     <hr class="my-1">
                                     <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                         <span class="material-icons text-sm">logout</span>
@@ -224,6 +230,10 @@
                                 <span class="material-icons text-sm">history</span>
                                 <span>Audit-Protokoll</span>
                             </a>
+                            <a href="{{ url_for('admin.feature_flags') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
+                                <span class="material-icons text-sm">toggle_on</span>
+                                <span>Feature-Flags</span>
+                            </a>
                         </div>
                     </div>
                     {% endif %}
@@ -266,10 +276,12 @@
                                 <span class="material-icons text-sm">person</span>
                                 <span>Mein Profil</span>
                             </a>
+                            {% if is_feature_enabled('help_center') %}
                             <a href="{{ url_for('members.help_center') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">help_outline</span>
                                 <span>Hilfe</span>
                             </a>
+                            {% endif %}
                             <a href="{{ url_for('auth.logout') }}" class="block w-full flex items-center gap-2 px-4 py-3 pl-12 hover:bg-green-600">
                                 <span class="material-icons text-sm">logout</span>
                                 <span>Abmelden</span>

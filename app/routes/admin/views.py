@@ -192,3 +192,11 @@ def member_edit(member_id):
     """Member edit page."""
     # Just pass the member_id; data will be fetched via API
     return render_template('admin/member.html', member_id=member_id)
+
+
+@bp.route('/feature-flags')
+@login_required
+@admin_required
+def feature_flags():
+    """Feature flags management page."""
+    return render_template('admin/feature_flags.html')

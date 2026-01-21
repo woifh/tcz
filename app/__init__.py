@@ -153,6 +153,20 @@ def create_app(config_name=None):
     from app import cli
     cli.init_app(app)
 
+    # Context processor for feature flags
+    @app.context_processor
+    def inject_feature_flags():
+        """Make feature flag check available in templates."""
+        from flask_login import current_user
+        from app.services.feature_flag_service import FeatureFlagService
+
+        def is_feature_enabled(flag_key):
+            if not current_user.is_authenticated:
+                return False
+            return FeatureFlagService.is_enabled_for_user(flag_key, current_user)
+
+        return {'is_feature_enabled': is_feature_enabled}
+
     # Auto-reset payment status on January 1st
     with app.app_context():
         _check_annual_payment_reset(app)

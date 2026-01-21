@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.1] - 2026-01-21
+
+### Added
+- Feature flags for controlled rollout of new features
+- Admin panel to manage feature flags with role-based access control
+- Help Center now initially visible only to administrators
+
 ## [7.0] - 2026-01-21
 
 ### Added
