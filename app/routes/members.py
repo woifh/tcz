@@ -92,6 +92,29 @@ def statistics():
     return render_template('statistics.html', member=current_user)
 
 
+@bp.route('/help', methods=['GET'])
+@bp.route('/help/<path:article>', methods=['GET'])
+@login_required
+def help_center(article=None):
+    """Show help center page."""
+    from app.services.help_service import HelpService
+    help_service = HelpService()
+
+    if article:
+        content = help_service.get_article(article)
+        title = help_service.get_article_title(article)
+    else:
+        content = help_service.get_article('index')
+        title = 'Hilfe-Center'
+
+    navigation = help_service.get_navigation()
+    return render_template('help_center.html',
+                           content=content,
+                           title=title,
+                           navigation=navigation,
+                           current_article=article)
+
+
 @bp.route('/', methods=['POST'])
 @login_required
 @admin_required

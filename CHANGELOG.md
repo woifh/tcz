@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.1] - 2026-01-21
+
+### Added
+- Help center with comprehensive documentation for members
+- Accessible via "Hilfe" in the "Mein Konto" dropdown menu
+- Includes guides for bookings, profile management, membership, and troubleshooting
+- Sidebar navigation with collapsible sections
+
 ## [6.0] - 2026-01-21
 
 ### Added
