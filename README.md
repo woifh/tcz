@@ -18,8 +18,8 @@ The application will be available at http://127.0.0.1:5000
 ### Manual Setup
 ```bash
 # Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 
 # Install dependencies (Python 3.13 compatible versions)
 pip install -r requirements.txt
@@ -37,35 +37,44 @@ python wsgi.py
 - **One-Click Cancellation**: Cancel reservations directly from the dashboard by clicking on your bookings
 - **Favourites System**: Maintain a list of preferred playing partners for quick booking
 - **Booking on Behalf**: Book courts for yourself or any of your favourite members
+- **Push Notifications**: Receive iOS alerts for bookings (opt-in via app)
 - **Email Notifications**: Receive German-language emails for all booking events
+- **Profile Management**: Upload profile pictures, manage notification preferences
+- **Help Center**: Access comprehensive documentation for all features
 - **Responsive Design**: Access from desktop, tablet, or mobile devices
 - **Flexible Booking**: Reserve courts for 1-hour slots between 08:00-22:00
-- **Booking Management**: View, modify, and cancel your reservations from multiple locations
 
 ### For Administrators
 - **Member Management**: Create, update, and delete member accounts
 - **Court Blocking**: Block courts for maintenance, weather, or events
 - **Override Capabilities**: Cancel any reservation with reason tracking
+- **Feature Flags**: Control rollout of new features to users
+- **Audit Logging**: Track all system changes with detailed logs
 - **Full Visibility**: View all reservations and blocks across the system
 - **Role-Based Access**: Separate permissions for members and administrators
 
 ### Technical Features
-- **Property-Based Testing**: Comprehensive test coverage using Hypothesis
+- **Mobile API**: REST API with JWT authentication for iOS/Android apps
+- **Push Notifications**: APNs integration for iOS booking alerts
+- **Feature Flags**: Controlled rollout of new features
+- **Profile Pictures**: Upload and manage member photos
+- **Help Center**: Comprehensive in-app documentation
 - **Secure Authentication**: Password hashing with Flask-Login
-- **Email Integration**: SMTP support for notifications
+- **Email Integration**: SMTP support for German notifications
 - **Database Migrations**: Flask-Migrate for schema management
 - **German Localization**: All interface text and messages in German
-- **Modern UI**: Tailwind CSS for responsive, attractive design
+- **Modern UI**: Tailwind CSS + Alpine.js for reactive, responsive design
 
 ## 🛠️ Technology Stack
 
 - **Backend**: Flask 3.0+, Python 3.10+
 - **Database**: SQLAlchemy 2.0+ (MySQL/SQLite)
-- **Authentication**: Flask-Login
-- **Email**: Flask-Mail
-- **Frontend**: HTML5, Tailwind CSS 3.0+, Vanilla JavaScript
-- **Testing**: Pytest, Hypothesis (Property-Based Testing)
-- **Deployment**: PythonAnywhere (WSGI)
+- **Authentication**: Flask-Login (web), JWT (mobile API)
+- **Email**: Flask-Mail (SMTP)
+- **Push Notifications**: APNs (iOS)
+- **Frontend**: HTML5, Tailwind CSS 3.0+, Alpine.js
+- **Testing**: Pytest, Playwright (E2E)
+- **Deployment**: PythonAnywhere (uWSGI)
 
 ## 📋 Prerequisites
 
@@ -85,8 +94,8 @@ cd tennis-club-reservation
 ### 2. Create Virtual Environment
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 ### 3. Install Dependencies
@@ -186,30 +195,32 @@ Visit `http://localhost:5000` in your browser.
 
 ## 🧪 Testing
 
-The system includes comprehensive property-based tests using Hypothesis:
+The system includes comprehensive tests:
 
 ```bash
-# Run all tests
-pytest
+# Run all Python tests
+source .venv/bin/activate && pytest
 
 # Run specific test modules
-pytest tests/test_auth.py
 pytest tests/test_reservation_service.py
 pytest tests/test_validation_service.py
 
 # Run with coverage
 pytest --cov=app tests/
+
+# Run E2E tests (Playwright)
+npx playwright test
 ```
 
-### Property-Based Testing
+### Test Coverage
 
-The system uses Hypothesis for property-based testing, which validates correctness properties across many randomly generated inputs:
-
+- **Unit Tests**: Service layer, models, validation logic
+- **Integration Tests**: API endpoints, route handlers
+- **E2E Tests**: Browser-based workflow testing with Playwright
 - **Authentication**: Login, logout, session management
 - **Reservations**: Creation, modification, cancellation, access control
 - **Validation**: Time slots, reservation limits, conflicts, blocks
 - **Member Management**: CRUD operations, favourites
-- **Email**: Notifications in German for all events
 
 ## 🔧 Utility Scripts
 
@@ -250,43 +261,45 @@ flask test-email your-email@example.com
 ## 📁 Project Structure
 
 ```
-tcz/
+tcz-web/
 ├── app/                      # Main application package
 │   ├── __init__.py          # Flask app factory
 │   ├── models.py            # Database models
 │   ├── routes/              # Route blueprints
 │   │   ├── auth.py         # Authentication
-│   │   ├── main.py         # Main routes
-│   │   └── admin.py        # Admin dashboard
+│   │   ├── dashboard.py    # Main dashboard
+│   │   ├── courts.py       # Court views
+│   │   ├── reservations.py # Booking management
+│   │   ├── members.py      # Member management
+│   │   ├── admin/          # Admin panel
+│   │   │   ├── views.py   # Admin views
+│   │   │   └── audit.py   # Audit logging
+│   │   └── api/            # REST API (mobile apps)
 │   ├── services/            # Business logic
 │   │   ├── reservation_service.py
+│   │   ├── member_service.py
+│   │   ├── block_service.py
 │   │   ├── email_service.py
-│   │   └── blocking_service.py
-│   ├── forms/               # WTForms definitions
+│   │   ├── push_notification_service.py
+│   │   ├── feature_flag_service.py
+│   │   └── ...             # + more services
+│   ├── constants/           # Business rules
+│   ├── decorators/          # Auth decorators
+│   ├── utils/               # Utilities
 │   ├── templates/           # Jinja2 templates
 │   └── static/              # CSS, JS, images
-├── tests/                   # Official test suite
+├── tests/                   # Test suite
+│   ├── test_*.py           # Python tests (flat)
+│   ├── unit/               # JS unit tests
+│   ├── e2e/                # Playwright E2E tests
+│   └── conftest.py         # Test fixtures
 ├── migrations/              # Database migrations
 ├── scripts/                 # Utility scripts
 │   ├── deploy/             # Deployment scripts
-│   │   ├── pythonanywhere.sh
-│   │   └── README.md
 │   ├── setup/              # Initial setup
-│   │   ├── create_admin.py
-│   │   ├── init_database.py
-│   │   └── setup_*.sh
 │   ├── database/           # Database tools
-│   │   ├── seed.py
-│   │   ├── recreate.py
-│   │   ├── fix_migration.py
-│   │   └── README.md
 │   └── dev/                # Development utilities
-│       ├── debug/          # Archived debug scripts
-│       └── archived_tests/ # Archived ad-hoc tests
 ├── docs/                    # Documentation
-│   ├── DEPLOYMENT.md       # Deployment guide
-│   ├── ARCHITECTURE.md     # System architecture
-│   └── archive/            # Historical docs
 ├── config.py               # Configuration
 ├── wsgi.py                 # WSGI entry point
 ├── requirements.txt        # Dependencies
@@ -414,23 +427,3 @@ For issues or questions:
 ## 🔄 Version History
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete version history.
-
-**Current Version: v3.6.0** (2026-01-14)
-
-Recent highlights:
-- Mobile API with JWT authentication
-- Email notification preferences per member
-- Member profile editing
-- Teamster (Team Leader) role
-- CSRF protection for all forms
-- Performance optimizations
-- Enhanced admin dashboard with audit logging
-
-- **v1.0.0** - Initial release
-  - Complete booking system
-  - Member and admin management
-  - Email notifications
-  - Property-based testing
-  - German localization
-  - Responsive design
-  - PythonAnywhere deployment ready
