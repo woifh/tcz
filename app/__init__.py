@@ -141,9 +141,15 @@ def create_app(config_name=None):
         db.session.rollback()
         return render_template('errors/500.html'), 500
     
-    # Disable caching in development
+    # Disable caching in development (but respect explicit cache headers)
     @app.after_request
     def add_header(response):
+        # Don't override cache headers for responses that explicitly set caching
+        # (e.g., profile pictures with immutable cache)
+        existing_cache = response.headers.get('Cache-Control', '')
+        if 'max-age' in existing_cache or 'immutable' in existing_cache:
+            return response
+
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '-1'

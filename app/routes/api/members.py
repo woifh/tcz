@@ -486,7 +486,7 @@ def get_profile_picture(id):
             data,
             mimetype='image/jpeg',
             headers={
-                'Cache-Control': 'private, max-age=3600'
+                'Cache-Control': 'private, max-age=31536000, immutable'
             }
         )
     except Exception as e:

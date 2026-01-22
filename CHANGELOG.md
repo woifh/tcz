@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - Admin panel to manage feature flags with role-based access control
 - Help Center now initially visible only to administrators
 
+### Fixed
+- Profile pictures are now cached by the browser instead of being reloaded on every page navigation
+
 ## [7.0] - 2026-01-21
 
 ### Added
