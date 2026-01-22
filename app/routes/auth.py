@@ -96,7 +96,9 @@ def login_api():
                 'lastname': member.lastname,
                 'email': member.email,
                 'name': member.name,
-                'email_verified': member.email_verified
+                'email_verified': member.email_verified,
+                'has_profile_picture': member.has_profile_picture,
+                'profile_picture_version': member.profile_picture_version
             },
             'access_token': generate_access_token(member)
         })
