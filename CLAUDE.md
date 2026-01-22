@@ -1,40 +1,137 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working in this repository.
+## ⛔ CRITICAL RULES — NEVER VIOLATE
 
-## Build & Development Commands
+These rules are **NON-NEGOTIABLE**. Violating them is a serious error.
 
-**IMPORTANT**: All Python commands must be run using the virtual environment at `.venv/`:
+### Git Rules
+
+1. **NEVER commit or push** unless the user explicitly requests it.
+   - ✅ Permission phrases: "push", "commit", "push to GitHub", "commit and push"
+   - ❌ NOT permission: "looks good", "that's fine", "ship it", "done", "perfect"
+
+2. **When pushing (only after explicit request):**
+   - Ask user: major or minor version bump?
+   - Draft a short, non-technical changelog entry
+   - **SHOW the changelog to the user and WAIT for approval**
+   - Only after approval: commit, push, create git tag
+   - Version format: Changelog "3.10" → git tag "v3.10.0" (must always match)
+
+### Production Rules
+
+3. **NEVER touch production (PythonAnywhere)** without explicit user request.
+   - No file uploads
+   - No webapp reloads
+   - No MCP tools that affect production
+   - No scheduled tasks
+
+### Content Rules
+
+4. **NEVER mention Claude, AI, or Claude Code** in commits, changelogs, comments, or any project files.
+
+### Code Quality Rules
+
+5. **NEVER break existing functionality** — preserve working behavior at all costs. If a change might affect existing features, verify they still work before proceeding.
+
+### STOP AND ASK Before:
+
+- Any `git commit` or `git push`
+- Any MCP tool that touches production
+- Deleting any file
+- Running database migrations on production
+- Any destructive or irreversible action
+- When in doubt about anything — ask, don't guess
+
+---
+
+## 🧠 How to Work With Me (Vibe Coding Style)
+
+### Think Before You Code
+
+Before writing any code, take a moment to:
+1. **Understand the goal** — What problem are we actually solving?
+2. **Identify the minimal change** — What's the smallest modification that achieves this?
+3. **Consider side effects** — What else might this touch? Check for dependencies.
+4. **Plan verification** — How will we know it works?
+
+If the task is ambiguous, ask a clarifying question BEFORE starting. One good question beats three wrong attempts.
+
+### Work Incrementally
+
+- **Small steps**: Make one logical change at a time
+- **Verify often**: Run tests after meaningful changes, not just at the end
+- **Show progress**: For multi-step tasks, briefly confirm after each step
+- **Pause at decision points**: If there are multiple valid approaches, present options
+
+### Communication Style
+
+- **Be concise**: Skip preamble. Get to the point.
+- **No fluff**: Don't explain what you're "about to do" — just do it
+- **Announce risks**: If something might break, say so BEFORE doing it
+- **Summarize changes**: After edits, briefly list what changed (files, functions)
+- **Ask, don't assume**: When requirements are unclear, ask one focused question
+
+### When Things Go Wrong
+
+If tests fail or something breaks:
+1. **STOP** — Don't pile on more changes
+2. **Diagnose** — Read the error carefully, identify root cause
+3. **Explain** — Tell me what broke and why, in plain language
+4. **Propose fix** — Suggest the minimal fix, wait for approval if uncertain
+5. **Verify** — Run tests again to confirm the fix worked
+
+If you're stuck or unsure, say so. "I'm not sure how to approach this" is a valid response.
+
+### Scope Control
+
+- **Do what's asked** — Not more, not less
+- **Resist gold-plating** — Don't add features, improvements, or refactors I didn't request
+- **Flag scope creep** — If you notice the task growing, pause and check in
+- **One thing at a time** — Finish the current task before suggesting the next
+
+### Code Style Preferences
+
+- **Match existing patterns** — Look at nearby code and follow its style
+- **Boring is good** — Prefer obvious, straightforward solutions
+- **No premature abstraction** — Duplicate a little before extracting
+- **Explicit over implicit** — Clear is better than clever
+- **Names matter** — Spend time on good names; they're documentation
+
+---
+
+## ✅ Testing Workflow
+
+### When to Run Tests
+
+- **After every meaningful code change** — Don't wait until the end
+- **Before declaring a task complete** — Always verify
+- **After fixing a bug** — Confirm it's actually fixed
+- **When touching shared code** — Services, models, utilities
+
+### Test Commands
 
 ```bash
-# Run all tests (ALWAYS use this exact command)
+# Run all tests (default choice)
 source .venv/bin/activate && pytest
 
-# Run tests with coverage
-source .venv/bin/activate && pytest --cov=app --cov-report=html
-
-# Run specific test file
+# Run specific test file (when working on one area)
 source .venv/bin/activate && pytest tests/test_reservations.py -v
 
-# Run property-based tests
-source .venv/bin/activate && pytest tests/property/ -v
-
-# Start development server
-source .venv/bin/activate && flask run --debug
-
-# Run Flask CLI commands
-source .venv/bin/activate && flask <command>
-
-# Lint and format (JavaScript)
-npm run lint          # ESLint for JavaScript
-npm run format        # Prettier formatting
-
-# Build CSS (Tailwind)
-npm run build:css
-npm run watch:css     # Watch mode
+# Run with coverage (before major releases)
+source .venv/bin/activate && pytest --cov=app --cov-report=html
 ```
 
-## Project Architecture
+### If Tests Fail
+
+1. Read the failure message carefully
+2. Identify if it's a real bug or a test that needs updating
+3. Fix the root cause, not the symptom
+4. Run tests again to confirm
+5. Tell me what was wrong and how you fixed it
+
+---
+
+## 🏗️ Project Architecture
 
 This is a Flask web application for tennis court reservation management (TCZ - Tennis Club Zellerndorf).
 
@@ -55,17 +152,58 @@ This is a Flask web application for tennis court reservation management (TCZ - T
   - `notification_service.py` - Email notifications
 - **Models**: SQLAlchemy models in `app/models/`
 
+### Where to Put Things
+
+| Type of code | Location | Example |
+|--------------|----------|---------|
+| Business logic | `app/services/` | Validation rules, calculations |
+| Database queries | `app/models/` or services | Complex queries in services |
+| Route handlers | `app/routes/` | Thin controllers, delegate to services |
+| Reusable utilities | `app/utils/` | Date formatting, timezone handling |
+| Constants/config | `app/constants/` | Booking limits, time windows |
+| Frontend components | `app/static/js/components/` | Alpine.js components |
+
+### Code Patterns to Follow
+
+```python
+# ✅ GOOD: Thin route, logic in service
+@bp.route('/reservations', methods=['POST'])
+@login_required
+def create_reservation():
+    result = reservation_service.create(current_user, request.json)
+    if result.error:
+        return jsonify(error=result.error), 400
+    return jsonify(result.data), 201
+
+# ❌ BAD: Business logic in route
+@bp.route('/reservations', methods=['POST'])
+@login_required
+def create_reservation():
+    # 50 lines of validation and database calls here...
+```
+
+```python
+# ✅ GOOD: Explicit error handling
+def get_member(member_id):
+    member = Member.query.get(member_id)
+    if not member:
+        raise MemberNotFoundError(f"Member {member_id} not found")
+    return member
+
+# ❌ BAD: Silent failure
+def get_member(member_id):
+    return Member.query.get(member_id)  # Returns None silently
+```
+
 ### Frontend Structure
 
 - **Alpine.js**: Client-side reactivity (no build step for JS)
 - **Tailwind CSS**: Utility-first styling
 - **Components**: `app/static/js/components/`
-  - `dashboard.js` - Main reservation grid
-  - `admin/` - Admin panel modules
 
 ### API Pattern
 
-All API endpoints use `/api/` prefix. Frontend fetches use this convention:
+All API endpoints use `/api/` prefix:
 ```javascript
 fetch('/api/reservations/...', { ... })
 fetch('/api/members/...', { ... })
@@ -78,20 +216,30 @@ fetch('/api/courts/availability', { ... })
 - JWT Bearer tokens for mobile app API access
 - Decorator `@jwt_or_session_required` supports both
 
-## Key Files
+---
 
-- `config.py` - Environment-based configuration
-- `app/constants/` - Business rules (booking limits, time windows)
-- `app/decorators/auth.py` - Authorization decorators
-- `app/utils/timezone_utils.py` - Berlin timezone handling
-
-## Database
+## 🗄️ Database
 
 - SQLite for development (`instance/app.db`)
 - MySQL for production (PythonAnywhere)
-- Migrations via Flask-Migrate: `flask db migrate`, `flask db upgrade`
+- Migrations via Flask-Migrate
 
-## Testing
+### Migration Workflow
+
+```bash
+# After changing models
+source .venv/bin/activate && flask db migrate -m "Description of change"
+
+# Review the generated migration in migrations/versions/
+# Then apply it:
+source .venv/bin/activate && flask db upgrade
+```
+
+⚠️ **Always review generated migrations before applying** — they can be wrong.
+
+---
+
+## 🧪 Testing
 
 - Unit tests in `tests/unit/`
 - Integration tests in `tests/integration/`
@@ -100,11 +248,13 @@ fetch('/api/courts/availability', { ... })
 
 ### Local Development Login
 
-For manual testing in the local development environment:
+For manual testing:
 - **User**: max@tcz.at
 - **Password**: max@tcz.at
 
-## Deployment
+---
+
+## 🚀 Deployment
 
 ### Production Environment (PythonAnywhere)
 
@@ -114,117 +264,85 @@ For manual testing in the local development environment:
 | Python Version | 3.10 |
 | Virtualenv | `/home/woifh/.virtualenvs/tennisclub` |
 | Project Path | `/home/woifh/tcz` |
-| WSGI Entry | `/home/woifh/tcz/wsgi.py` |
 
 ### Production Commands (PythonAnywhere Console)
 
-**IMPORTANT**: Always activate the virtualenv first, or commands will fail with import errors.
-
 ```bash
-# Activate virtualenv (REQUIRED before any Python/Flask command)
+# Activate virtualenv (REQUIRED first)
 source ~/.virtualenvs/tennisclub/bin/activate
-
-# Pull latest code
-cd /home/woifh/tcz && git pull origin main
-
-# Run database migrations
-cd /home/woifh/tcz && flask db upgrade
-
-# Install new dependencies
-pip install -r /home/woifh/tcz/requirements.txt
 
 # Full deployment (pull + migrate + reload)
 cd /home/woifh/tcz && git pull origin main && flask db upgrade
 # Then reload webapp via MCP or dashboard
 ```
 
-### Using MCP Tools
+### MCP Tools
 
 ```
-# Reload webapp after code changes
 mcp__pythonanywhere__reload_webapp with domain="woifh.pythonanywhere.com"
-
-# Read production files
 mcp__pythonanywhere__read_file_or_directory with path="/home/woifh/tcz/..."
-
-# List deployed webapps
-mcp__pythonanywhere__list_webapps
 ```
 
-### Deployment Scripts (on PythonAnywhere)
+---
 
-The project includes deployment scripts in `scripts/deploy/`:
-- `pythonanywhere.sh` - Full deployment (git pull, pip install, migrate, instructions)
+## 🇩🇪 German Language
 
-Run from project root: `./scripts/deploy/pythonanywhere.sh`
-
-**IMPORTANT**: Never create scheduled tasks on PythonAnywhere. Ask the user to run deployment commands manually via the PythonAnywhere Bash console.
-
-## Important Rules
-
-- **NEVER deploy to production without explicit user approval** - NEVER use MCP tools to upload files, reload the webapp, or make ANY changes to production (PythonAnywhere) without the user explicitly requesting it. This is NON-NEGOTIABLE. Always ask for approval before touching production.
-- **NEVER push to GitHub without explicit user request** - always wait for the user to ask before pushing commits. This is NON-NEGOTIABLE. Do not commit or push under any circumstances unless the user explicitly says "push" or "commit".
-- **When pushing to GitHub**:
-  - Ask the user whether to increase major or minor version
-  - Add a short, non-technical changelog entry to CHANGELOG.md (version format: major.minor)
-  - **ALWAYS show the changelog entry to the user for review before committing** - this is MANDATORY. Never commit without explicit user approval of the changelog text.
-  - Create a meaningful commit message
-  - Push to GitHub
-  - Create and push a git tag matching the changelog version (format: vX.Y.0, e.g., v3.9.0 for changelog version 3.9)
-  - **Version sync rule**: CHANGELOG.md version and git tag MUST always match (e.g., changelog 3.10 → tag v3.10.0)
-
-## German Language
-
-UI text is in German. Common terms:
+UI text is in German:
 - Platz = Court
 - Sperrung = Block (court blocking)
 - Buchung = Booking/Reservation
 - Mitglied = Member
 
-## Vibe Coding Principles
+---
 
-This codebase prioritizes flow, clarity, and fast iteration.
+## 📋 Audit Log Checklist
 
-### General Guidelines
-- Prefer simple, readable code over clever abstractions
-- Optimize for local reasoning: a reader should understand code in under a minute
-- Keep changes small, reversible, and easy to delete
-- Avoid premature abstraction; duplicate a little before extracting
-- Make failures loud and obvious—no silent magic
+When adding new audit log operations:
 
-### Naming & Structure
-- Use clear, descriptive names; naming is more important than comments
-- Keep related logic close together
-- Avoid deep inheritance or excessive indirection
+1. ☐ Add operation to `valid_operations` in `app/models.py`
+2. ☐ Add German label in `app/templates/admin/audit_log.html` (actionMap)
+3. ☐ Add field labels in `app/templates/admin/audit_log.html` (fieldLabels)
+4. ☐ Add formatting in `formatDetails()` if needed
 
-### Comments & Intent
-- Comment *why* something exists, not *what the code does*
-- Explain tradeoffs, constraints, or non-obvious decisions
+### Required Details by Type
 
-### Testing Philosophy
-- Write tests that increase confidence without slowing momentum
-- Focus on behavior, not implementation details
-- Prefer a few high-signal tests over exhaustive coverage
+| Type | Required fields |
+|------|-----------------|
+| Reservations | member name, court, date, time |
+| Blocks | court(s), date, time range, reason |
+| Members | name, changed fields with old/new values |
 
-### Refactoring
-- Refactor opportunistically when it improves clarity
-- Do not refactor solely for architectural purity
-- It should feel safe to rewrite or delete code
+**Never show raw IDs** — always resolve to human-readable names.
 
-## Mandatory Rules
+---
 
-- **NEVER break existing functionality** - preserve working behavior at all costs
-- **When in doubt, ask the user** - don't guess or assume; clarify before proceeding
-- **Respect software development principles** - follow SOLID, DRY, KISS
-- **Never mention Claude Code** - no references to Claude, AI, or this tool in changelogs, commits, or any project files
-- **Audit log completeness** - When adding features that create new audit log operations:
-  1. Add the operation to `valid_operations` in `app/models.py` (MemberAuditLog.__init__)
-  2. Add German label mapping in `app/templates/admin/audit_log.html` (getActionBadge actionMap)
-  3. Add detail field labels in `app/templates/admin/audit_log.html` (fieldLabels object)
-  4. Add custom formatting in `formatDetails()` if the operation has structured data
-- **Audit log detail requirements** - Every audit log entry MUST include sufficient details to understand what changed:
-  - Reservations: member name, court number, date, time
-  - Blocks: court number(s), date, time range, reason
-  - Members: member name, changed fields with old/new values
-  - Never show just IDs (e.g., "Buchung 133") - always resolve to human-readable details
-  - Format functions in `app/routes/admin/audit.py` must handle ALL operations for each log type
+## 🔧 Build Commands Reference
+
+```bash
+# Python (always activate venv first)
+source .venv/bin/activate && pytest              # Run tests
+source .venv/bin/activate && flask run --debug   # Dev server
+source .venv/bin/activate && flask db migrate    # Create migration
+source .venv/bin/activate && flask db upgrade    # Apply migration
+
+# JavaScript
+npm run lint          # ESLint
+npm run format        # Prettier
+
+# CSS
+npm run build:css     # Build Tailwind
+npm run watch:css     # Watch mode
+```
+
+---
+
+## 📚 Key Files Quick Reference
+
+| File | Purpose |
+|------|---------|
+| `config.py` | Environment configuration |
+| `app/__init__.py` | App factory (`create_app()`) |
+| `app/constants/` | Business rules, limits |
+| `app/decorators/auth.py` | Auth decorators |
+| `app/utils/timezone_utils.py` | Berlin timezone handling |
+| `tests/conftest.py` | Test fixtures |
