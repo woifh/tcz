@@ -185,11 +185,20 @@ class Member(db.Model, UserMixin):
         """Check if member's email address has been verified."""
         return self.email_verified
 
+    def has_active_device_tokens(self):
+        """Check if member has at least one active device token for push notifications."""
+        return self.device_tokens.filter_by(is_active=True).count() > 0
+
     def __repr__(self):
         return f'<Member {self.name} ({self.email})>'
 
-    def to_dict(self, include_admin_fields=False):
-        """Convert member to dictionary for API responses."""
+    def to_dict(self, include_admin_fields=False, include_own_profile_fields=False):
+        """Convert member to dictionary for API responses.
+
+        Args:
+            include_admin_fields: Include admin-only fields (role, membership_type, etc.)
+            include_own_profile_fields: Include fields users can edit on their own profile
+        """
         data = {
             'id': self.id,
             'firstname': self.firstname,
@@ -200,16 +209,10 @@ class Member(db.Model, UserMixin):
             'has_profile_picture': self.has_profile_picture,
             'profile_picture_version': self.profile_picture_version
         }
-        if include_admin_fields:
+
+        # Include fields users can edit on their own profile
+        if include_own_profile_fields or include_admin_fields:
             data.update({
-                'role': self.role,
-                'membership_type': self.membership_type,
-                'is_active': self.is_active,
-                'fee_paid': self.fee_paid,
-                'payment_confirmation_requested': self.payment_confirmation_requested,
-                'payment_confirmation_requested_at': self.payment_confirmation_requested_at.isoformat() if self.payment_confirmation_requested_at else None,
-                'email_verified': self.email_verified,
-                'email_verified_at': self.email_verified_at.isoformat() if self.email_verified_at else None,
                 'phone': self.phone,
                 'street': self.street,
                 'city': self.city,
@@ -224,6 +227,18 @@ class Member(db.Model, UserMixin):
                 'push_notify_other_bookings': self.push_notify_other_bookings,
                 'push_notify_court_blocked': self.push_notify_court_blocked,
                 'push_notify_booking_overridden': self.push_notify_booking_overridden
+            })
+
+        # Include admin-only fields
+        if include_admin_fields:
+            data.update({
+                'role': self.role,
+                'membership_type': self.membership_type,
+                'is_active': self.is_active,
+                'fee_paid': self.fee_paid,
+                'payment_confirmation_requested': self.payment_confirmation_requested,
+                'payment_confirmation_requested_at': self.payment_confirmation_requested_at.isoformat() if self.payment_confirmation_requested_at else None,
+                'email_verified_at': self.email_verified_at.isoformat() if self.email_verified_at else None,
             })
         return data
 

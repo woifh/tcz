@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- API now returns address and notification preferences when users view their own profile
+- Push notifications can only be enabled when a device is registered
+
 ## [7.1] - 2026-01-21
 
 ### Added

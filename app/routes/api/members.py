@@ -209,8 +209,12 @@ def get_member_profile(id):
         if member.id != current_user.id and not current_user.is_admin():
             return jsonify({'error': 'Du hast keine Berechtigung für diese Aktion'}), 403
 
+        is_own_profile = (member.id == current_user.id)
         include_admin = current_user.is_admin()
-        return jsonify(member.to_dict(include_admin_fields=include_admin))
+        return jsonify(member.to_dict(
+            include_admin_fields=include_admin,
+            include_own_profile_fields=is_own_profile
+        ))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -266,7 +270,10 @@ def update_member_profile(id):
 
         return jsonify({
             'message': 'Profil erfolgreich aktualisiert',
-            'member': member_result.to_dict(include_admin_fields=current_user.is_admin())
+            'member': member_result.to_dict(
+                include_admin_fields=current_user.is_admin(),
+                include_own_profile_fields=True
+            )
         })
     except Exception as e:
         db.session.rollback()

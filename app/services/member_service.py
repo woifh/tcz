@@ -388,6 +388,9 @@ class MemberService:
             # Update push notification preferences
             if 'push_notifications_enabled' in updates:
                 new_push_enabled = to_bool(updates['push_notifications_enabled'])
+                # Validate: can only enable push if device is registered
+                if new_push_enabled and not member.has_active_device_tokens():
+                    return None, 'Push-Benachrichtigungen können nur aktiviert werden, wenn ein Gerät registriert ist'
                 if member.push_notifications_enabled != new_push_enabled:
                     changes['push_notifications_enabled'] = {'old': member.push_notifications_enabled, 'new': new_push_enabled}
                     member.push_notifications_enabled = new_push_enabled

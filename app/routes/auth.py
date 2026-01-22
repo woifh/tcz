@@ -90,16 +90,7 @@ def login_api():
 
         login_user(member)
         return jsonify({
-            'user': {
-                'id': member.id,
-                'firstname': member.firstname,
-                'lastname': member.lastname,
-                'email': member.email,
-                'name': member.name,
-                'email_verified': member.email_verified,
-                'has_profile_picture': member.has_profile_picture,
-                'profile_picture_version': member.profile_picture_version
-            },
+            'user': member.to_dict(include_own_profile_fields=True),
             'access_token': generate_access_token(member)
         })
 
