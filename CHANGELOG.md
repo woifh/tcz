@@ -13,6 +13,11 @@ All notable changes to this project will be documented in this file.
 - Arrow navigation to move one day at a time
 - Date header with native date picker dropdown
 
+### Changed
+- Anonymous court overview now matches logged-in view style (rounded corners, spacing between slots)
+- Anonymous view now uses iOS-style day cards navigation
+- Updated anonymous legend to match logged-in color coding
+
 ### Fixed
 - API now returns address and notification preferences when users view their own profile
 - Push notifications can only be enabled when a device is registered
