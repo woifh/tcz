@@ -26,19 +26,19 @@ def _is_slot_in_past(slot_time, query_date, current_time):
 
 
 def _compute_slot_class(slot, is_past, is_authenticated, current_user_id=None):
-    """Pre-compute CSS classes for a slot."""
-    classes = 'border border-gray-300 px-2 py-4 text-center text-xs'
+    """Pre-compute CSS classes for a slot (tile style with rounded corners)."""
+    classes = 'px-2 py-3 text-center text-xs rounded-lg'
     status = slot['status']
 
     if status == 'available':
         if is_past:
-            classes += ' bg-gray-200 text-gray-500'
+            classes += ' bg-gray-100 text-gray-400 border border-gray-200'
         else:
-            classes += ' bg-white text-gray-700'
+            classes += ' bg-white text-gray-500 border border-gray-200'
             if is_authenticated:
                 classes += ' cursor-pointer hover:bg-gray-50'
     elif status == 'short_notice':
-        classes += ' bg-orange-400 text-white'
+        classes += ' bg-orange-400 text-black'
         if is_past:
             classes += ' opacity-60'
         elif is_authenticated and _can_cancel_slot(slot, current_user_id):
@@ -46,9 +46,9 @@ def _compute_slot_class(slot, is_past, is_authenticated, current_user_id=None):
     elif status == 'reserved':
         details = slot.get('details')
         if details and details.get('is_short_notice'):
-            classes += ' bg-orange-400 text-white'
+            classes += ' bg-orange-400 text-black'
         else:
-            classes += ' bg-red-500 text-white'
+            classes += ' bg-green-500 text-black'
         if is_past:
             classes += ' opacity-60'
         elif is_authenticated and _can_cancel_slot(slot, current_user_id):

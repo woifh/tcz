@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [7.2] - 2026-01-23
+
 ### Added
 - iOS-style calendar navigation with day cards for quick date selection
 - Responsive design: 7 days on desktop, 5 days on mobile

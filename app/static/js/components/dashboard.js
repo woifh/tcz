@@ -30,7 +30,7 @@ export function dashboard() {
         error: null,
         currentUserId: null,
         isAuthenticated: true, // Default to authenticated, will be overridden for anonymous users
-        defaultCellClass: 'border border-gray-300 px-2 py-4 text-center text-xs bg-gray-100', // Default class for cells before data loads
+        defaultCellClass: 'px-2 py-3 text-center text-xs rounded-lg bg-gray-100 border border-gray-200', // Default class for cells before data loads
 
         // Date navigation state
         dateRange: [],
@@ -574,21 +574,21 @@ export function dashboard() {
                 return slot.cssClass;
             }
 
-            // Compute classes from status
-            let classes = 'border border-gray-300 px-2 py-4 text-center text-xs';
+            // Compute classes from status - tile style with rounded corners
+            let classes = 'px-2 py-3 text-center text-xs rounded-lg';
             const isPast = this.isSlotInPast(time);
 
             if (slot.status === 'available') {
                 if (isPast) {
-                    classes += ' bg-gray-200 text-gray-500';
+                    classes += ' bg-gray-100 text-gray-400 border border-gray-200';
                 } else {
-                    classes += ' bg-white text-gray-700';
+                    classes += ' bg-white text-gray-500 border border-gray-200';
                     if (this.isAuthenticated) {
                         classes += ' cursor-pointer hover:bg-gray-50';
                     }
                 }
             } else if (slot.status === 'short_notice') {
-                classes += ' bg-orange-400 text-white';
+                classes += ' bg-orange-400 text-black';
                 if (!isPast && this.isAuthenticated && this.canCancelSlot(slot)) {
                     classes += ' cursor-pointer hover:opacity-80';
                 } else if (isPast) {
@@ -597,9 +597,9 @@ export function dashboard() {
             } else if (slot.status === 'reserved') {
                 const reservation = slot.reservation || slot.details;
                 if (reservation && reservation.is_short_notice) {
-                    classes += ' bg-orange-400 text-white';
+                    classes += ' bg-orange-400 text-black';
                 } else {
-                    classes += ' bg-red-500 text-white';
+                    classes += ' bg-green-500 text-black';
                 }
                 if (!isPast && this.isAuthenticated && this.canCancelSlot(slot)) {
                     classes += ' cursor-pointer hover:opacity-80';
@@ -727,19 +727,19 @@ export function dashboard() {
                     const hasProfilePic = reservation.booked_for_has_profile_picture;
 
                     if (hasProfilePic) {
-                        // Show avatar (40x40) on left + name(s) on right
-                        const avatar = `<img src="/api/members/${reservation.booked_for_id}/profile-picture?v=${reservation.booked_for_profile_picture_version || 0}" alt="" style="width: 40px; height: 40px; border-radius: 9999px; object-fit: cover; flex-shrink: 0;" loading="lazy">`;
+                        // Vertical stack: avatar centered on top, name below (iOS style)
+                        const avatar = `<img src="/api/members/${reservation.booked_for_id}/profile-picture?v=${reservation.booked_for_profile_picture_version || 0}" alt="" style="width: 28px; height: 28px; border-radius: 9999px; object-fit: cover;" loading="lazy">`;
 
                         if (reservation.booked_for_id === reservation.booked_by_id) {
-                            return `<div class="flex items-center justify-center gap-3">${avatar}<span class="truncate">${reservation.booked_for}</span></div>`;
+                            return `<div class="flex flex-col items-center gap-1">${avatar}<span class="truncate text-[10px] leading-tight">${reservation.booked_for}</span></div>`;
                         }
-                        return `<div class="flex items-center justify-center gap-3">${avatar}<div class="flex flex-col min-w-0"><span class="truncate">${reservation.booked_for}</span><span style="font-size: 9px; opacity: 0.8;" class="truncate">(${reservation.booked_by})</span></div></div>`;
+                        return `<div class="flex flex-col items-center gap-1">${avatar}<span class="truncate text-[10px] leading-tight">${reservation.booked_for}</span><span class="truncate text-[8px] opacity-70 leading-tight">(${reservation.booked_by})</span></div>`;
                     } else {
-                        // No profile picture - show only name(s)
+                        // No profile picture - show only name(s) centered
                         if (reservation.booked_for_id === reservation.booked_by_id) {
-                            return reservation.booked_for;
+                            return `<span class="text-[11px]">${reservation.booked_for}</span>`;
                         }
-                        return `${reservation.booked_for}<br><span style="font-size: 9px; opacity: 0.8;">(${reservation.booked_by})</span>`;
+                        return `<div class="flex flex-col items-center"><span class="text-[11px]">${reservation.booked_for}</span><span class="text-[8px] opacity-70">(${reservation.booked_by})</span></div>`;
                     }
                 }
                 return 'Gebucht';
