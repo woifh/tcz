@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Favorites list now sorted alphabetically by name
+
 ## [7.4] - 2026-01-24
 
 ### Added

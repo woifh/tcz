@@ -97,7 +97,7 @@ def get_favourites(id):
         if member.id != current_user.id:
             return jsonify({'error': 'Du hast keine Berechtigung für diese Aktion'}), 403
 
-        favourites = member.favourites.all()
+        favourites = member.favourites.order_by(Member.firstname, Member.lastname).all()
 
         return jsonify({
             'favourites': [
