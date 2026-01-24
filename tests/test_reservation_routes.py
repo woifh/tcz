@@ -259,3 +259,191 @@ class TestDeleteReservation:
 
         response = client.delete(f'/reservations/{reservation_id}')
         assert response.status_code == 403
+
+
+class TestAutoAddFavourite:
+    """Tests for auto-adding favourites when booking for another member."""
+
+    def test_booking_for_other_member_adds_favourite(self, client, test_member, app):
+        """Booking for another member should auto-add them to favourites."""
+        with app.app_context():
+            # Create another member to book for
+            other_member = Member(
+                firstname='Other',
+                lastname='User',
+                email='other@example.com',
+                role='member'
+            )
+            other_member.set_password('password123')
+            db.session.add(other_member)
+            db.session.commit()
+            other_member_id = other_member.id
+
+            # Get test_member from DB
+            member = Member.query.filter_by(email=test_member.email).first()
+            member_id = member.id
+
+            # Verify no favourites initially
+            assert other_member not in member.favourites.all()
+
+        # Login as test member
+        client.post('/auth/login', data={
+            'email': test_member.email,
+            'password': 'password123'
+        })
+
+        # Create booking for the other member
+        future_date = date.today() + timedelta(days=5)
+        response = client.post('/reservations/', json={
+            'court_id': 1,
+            'date': future_date.isoformat(),
+            'start_time': '11:00',
+            'booked_for_id': other_member_id
+        })
+
+        # Booking should succeed
+        assert response.status_code == 201
+
+        # Verify favourite was added
+        with app.app_context():
+            member = Member.query.get(member_id)
+            other = Member.query.get(other_member_id)
+            assert other in member.favourites.all()
+
+    def test_booking_for_self_does_not_add_favourite(self, client, test_member, app):
+        """Booking for yourself should not affect favourites."""
+        with app.app_context():
+            member = Member.query.filter_by(email=test_member.email).first()
+            member_id = member.id
+            initial_favourites_count = member.favourites.count()
+
+        # Login
+        client.post('/auth/login', data={
+            'email': test_member.email,
+            'password': 'password123'
+        })
+
+        # Create booking for self
+        future_date = date.today() + timedelta(days=6)
+        response = client.post('/reservations/', json={
+            'court_id': 1,
+            'date': future_date.isoformat(),
+            'start_time': '12:00',
+            'booked_for_id': member_id
+        })
+
+        # Booking should succeed
+        assert response.status_code == 201
+
+        # Verify favourites unchanged
+        with app.app_context():
+            member = Member.query.get(member_id)
+            assert member.favourites.count() == initial_favourites_count
+
+    def test_duplicate_favourite_not_created(self, client, test_member, app):
+        """Booking for the same member twice should not create duplicate favourite."""
+        with app.app_context():
+            # Create another member
+            other_member = Member(
+                firstname='Dup',
+                lastname='Test',
+                email='dup@example.com',
+                role='member'
+            )
+            other_member.set_password('password123')
+            db.session.add(other_member)
+            db.session.commit()
+            other_member_id = other_member.id
+
+            # Get test_member and add the other as favourite manually
+            member = Member.query.filter_by(email=test_member.email).first()
+            member.favourites.append(other_member)
+            db.session.commit()
+            member_id = member.id
+
+            # Verify one favourite
+            assert member.favourites.count() == 1
+
+        # Login
+        client.post('/auth/login', data={
+            'email': test_member.email,
+            'password': 'password123'
+        })
+
+        # Create booking for the other member (already a favourite)
+        future_date = date.today() + timedelta(days=7)
+        response = client.post('/reservations/', json={
+            'court_id': 1,
+            'date': future_date.isoformat(),
+            'start_time': '13:00',
+            'booked_for_id': other_member_id
+        })
+
+        # Booking should succeed
+        assert response.status_code == 201
+
+        # Verify still only one favourite (no duplicate)
+        with app.app_context():
+            member = Member.query.get(member_id)
+            assert member.favourites.count() == 1
+
+    def test_favourite_added_even_when_booking_fails(self, client, test_member, app):
+        """Favourite should be added even if booking fails (e.g., limit reached)."""
+        with app.app_context():
+            # Create another member with 2 active bookings (at limit)
+            other_member = Member(
+                firstname='Limited',
+                lastname='User',
+                email='limited@example.com',
+                role='member'
+            )
+            other_member.set_password('password123')
+            db.session.add(other_member)
+            db.session.commit()
+            other_member_id = other_member.id
+
+            # Create 2 reservations for the other member (reaching limit)
+            court = Court.query.filter_by(number=1).first()
+            for i in range(2):
+                future_date = date.today() + timedelta(days=10 + i)
+                reservation = Reservation(
+                    court_id=court.id,
+                    date=future_date,
+                    start_time=time(10 + i, 0),
+                    end_time=time(11 + i, 0),
+                    booked_for_id=other_member_id,
+                    booked_by_id=other_member_id
+                )
+                db.session.add(reservation)
+            db.session.commit()
+
+            # Get test_member from DB
+            member = Member.query.filter_by(email=test_member.email).first()
+            member_id = member.id
+
+            # Verify no favourites initially
+            assert member.favourites.count() == 0
+
+        # Login as test member
+        client.post('/auth/login', data={
+            'email': test_member.email,
+            'password': 'password123'
+        })
+
+        # Try to book for the limited member (should fail due to their limit)
+        future_date = date.today() + timedelta(days=15)
+        response = client.post('/reservations/', json={
+            'court_id': 1,
+            'date': future_date.isoformat(),
+            'start_time': '14:00',
+            'booked_for_id': other_member_id
+        })
+
+        # Booking should fail (limit reached for that member)
+        assert response.status_code == 400
+
+        # But favourite should still be added
+        with app.app_context():
+            member = Member.query.get(member_id)
+            other = Member.query.get(other_member_id)
+            assert other in member.favourites.all()

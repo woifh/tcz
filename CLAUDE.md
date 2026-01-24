@@ -234,6 +234,44 @@ source .venv/bin/activate && flask run --host=0.0.0.0 --port=5001
 
 ---
 
+## 💻 Local IDE Setup (VS Code)
+
+### Virtual Environment
+
+- **Location**: `.venv/` in project root
+- **Python**: 3.13.3
+- **Activation**: `source .venv/bin/activate`
+
+VS Code is configured to use this environment via `.vscode/settings.json`.
+
+### Running the Flask Server
+
+**Option 1: VS Code Debugger (Recommended)**
+- Open Run and Debug panel (Cmd+Shift+D)
+- Select "Python: Flask" from dropdown
+- Click the green play button
+- Server runs on `http://0.0.0.0:5001`
+
+**Option 2: Terminal**
+```bash
+source .venv/bin/activate && flask run --host=0.0.0.0 --port=5001
+```
+
+### VS Code Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `.vscode/settings.json` | Python interpreter path |
+| `.vscode/launch.json` | Debug configurations |
+
+### Troubleshooting
+
+If the VS Code debugger doesn't start:
+1. Reload VS Code: Cmd+Shift+P → "Developer: Reload Window"
+2. Or manually select interpreter: Cmd+Shift+P → "Python: Select Interpreter" → choose `.venv`
+
+---
+
 ## 🚀 Deployment (PythonAnywhere)
 
 | Setting | Value |
@@ -354,3 +392,5 @@ npm run watch:css     # Watch mode
 | `app/services/` | Business logic |
 | `app/constants/` | Business rules, limits |
 | `tests/conftest.py` | Test fixtures |
+| `.vscode/launch.json` | VS Code debug configurations |
+| `.vscode/settings.json` | VS Code Python interpreter settings |

@@ -1,9 +1,11 @@
 """Reservation routes."""
+import logging
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime, date
 from app import db  # Removed limiter import for local development
-from app.models import Reservation
+from app.models import Reservation, Member
 from app.services.reservation_service import ReservationService
 from app.decorators.auth import jwt_or_session_required
 from app.utils.validators import (
@@ -14,7 +16,52 @@ from app.utils.validators import (
     validate_uuid
 )
 
+logger = logging.getLogger(__name__)
+
 bp = Blueprint('reservations', __name__, url_prefix='/reservations')
+
+
+def _auto_add_favourite(booked_by_id, booked_for_id):
+    """
+    Auto-add booked_for member to booked_by member's favourites.
+
+    Called when booking for someone else, regardless of booking success.
+    This is a silent operation - failures are logged but don't affect the request.
+    """
+    try:
+        booked_by = Member.query.get(booked_by_id)
+        booked_for = Member.query.get(booked_for_id)
+
+        if not booked_by or not booked_for:
+            return
+
+        # Check if already a favourite
+        if booked_for in booked_by.favourites.all():
+            return
+
+        # Add to favourites
+        booked_by.favourites.append(booked_for)
+        db.session.commit()
+
+        # Log the operation
+        from app.services.member_service import MemberService
+        MemberService.log_member_operation(
+            operation='add_favourite',
+            member_id=booked_by.id,
+            operation_data={
+                'member_name': booked_by.name,
+                'favourite_name': booked_for.name,
+                'favourite_id': booked_for.id,
+                'triggered_by': 'reservation_attempt'
+            },
+            performed_by_id=booked_by_id
+        )
+
+        logger.info(f"Auto-added favourite: {booked_for.name} for {booked_by.name}")
+
+    except Exception as e:
+        logger.warning(f"Auto-add favourite failed: {e}")
+        # Don't fail the request if favourites fails
 
 
 @bp.route('/', methods=['GET'])
@@ -273,6 +320,10 @@ def create_reservation():
             flash(str(e), 'error')
             return redirect(url_for('dashboard.index'))
         
+        # Auto-add booked_for member to favourites if booking for someone else
+        if booked_for_id != current_user.id:
+            _auto_add_favourite(current_user.id, booked_for_id)
+
         # Create reservation
         # Pass current_user as booked_for_member when booking for self to avoid redundant query
         booked_for_member = current_user if booked_for_id == current_user.id else None

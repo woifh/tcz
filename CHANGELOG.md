@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [7.4] - 2026-01-24
+
+### Added
+- Auto-add members to favorites when booking for them (server-side, consistent across all platforms)
+
 ### Technical
 - Migrated from Flask-Mail to Flask-Mailman for better async support
 

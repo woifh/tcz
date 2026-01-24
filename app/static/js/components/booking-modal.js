@@ -153,52 +153,23 @@ export function bookingModal() {
             }
         },
 
-        async selectSearchResult(member) {
-            // Get current user ID
-            const bookingForSelect = document.getElementById('booking-for');
-            const firstOption = bookingForSelect ? bookingForSelect.querySelector('option') : null;
-            const currentUserId = firstOption ? firstOption.value : null;
+        selectSearchResult(member) {
+            // Add to local favourites array for immediate UI display
+            // Server will persist the favourite when booking is created
+            this.favourites.push({
+                id: member.id,
+                name: member.name,
+                email: member.email
+            });
 
-            if (!currentUserId) {
-                this.searchError = 'Benutzer-ID nicht gefunden';
-                return;
-            }
+            // Select this member for booking
+            this.bookedFor = member.id;
 
-            try {
-                // Add member to favourites
-                const response = await fetch(`/api/members/${currentUserId}/favourites`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    body: JSON.stringify({ favourite_id: member.id })
-                });
+            // Clear any previous booking error since member changed
+            this.error = null;
 
-                if (response.ok) {
-                    // Add to local favourites array
-                    this.favourites.push({
-                        id: member.id,
-                        name: member.name,
-                        email: member.email
-                    });
-
-                    // Select this member for booking
-                    this.bookedFor = member.id;
-
-                    // Clear any previous booking error since member changed
-                    this.error = null;
-
-                    // Close search UI
-                    this.resetSearch();
-                } else {
-                    const data = await response.json();
-                    this.searchError = data.error || 'Fehler beim Hinzufügen zu Favoriten';
-                }
-            } catch (err) {
-                console.error('Error adding to favourites:', err);
-                this.searchError = 'Netzwerkfehler beim Hinzufügen';
-            }
+            // Close search UI
+            this.resetSearch();
         },
         
         async submit() {
@@ -231,6 +202,9 @@ export function bookingModal() {
                 if (response.ok) {
                     this.close();
                     this.showSuccess('Buchung erfolgreich erstellt!');
+
+                    // Refresh favourites (server may have added new favourite)
+                    this.loadFavourites();
 
                     // Trigger dashboard reload
                     this.reloadDashboard();
