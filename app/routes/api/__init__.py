@@ -172,9 +172,12 @@ def create_reservation():
             if active_sessions:
                 response['active_sessions'] = [
                     {
+                        'reservation_id': s.id,
                         'date': s.date.isoformat(),
                         'start_time': s.start_time.strftime('%H:%M'),
-                        'court_number': s.court.number if s.court else None
+                        'court_number': s.court.number if s.court else None,
+                        'booked_by_id': s.booked_by_id if s.booked_by_id != s.booked_for_id else None,
+                        'booked_by_name': s.booked_by.name if s.booked_by_id != s.booked_for_id and s.booked_by else None
                     } for s in active_sessions
                 ]
             return jsonify(response), 400

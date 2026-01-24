@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Favorites list now sorted alphabetically by name
+- Active booking session warning now shows who booked on your behalf
+
+### Technical
+- Added Factory Boy for test data generation (`tests/factories.py`)
+- Enhanced CLAUDE.md with API endpoints, models, decorators, and debugging sections
+- Cleaned up README.md (removed duplicate sections, updated tech stack)
 
 ## [7.4] - 2026-01-24
 

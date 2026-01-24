@@ -38,6 +38,42 @@ When modifying an API endpoint:
 - JS unit tests: `tests/unit/`
 - E2E tests: `tests/e2e/` (Playwright)
 - Fixtures: `tests/conftest.py`
+- **Factories**: `tests/factories.py` (Factory Boy)
+
+### Factory Boy (Test Data)
+
+**Always use Factory Boy** for creating test data instead of manual model instantiation.
+
+```python
+from tests.factories import MemberFactory, CourtFactory, ReservationFactory
+
+# Basic usage
+member = MemberFactory()                        # Creates member with unique email
+admin = MemberFactory(admin=True)               # Admin trait
+teamster = MemberFactory(teamster=True)         # Teamster trait
+
+# Override any field
+member = MemberFactory(email='custom@example.com', firstname='Alice')
+
+# Related models
+reservation = ReservationFactory()              # Auto-creates court and member
+reservation = ReservationFactory(booked_by=existing_member)  # Use existing member
+
+# Available traits
+MemberFactory(admin=True)       # administrator role
+MemberFactory(teamster=True)    # teamster role
+MemberFactory(inactive=True)    # is_active=False
+MemberFactory(sustaining=True)  # sustaining membership
+MemberFactory(unpaid=True)      # fee_paid=False
+
+ReservationFactory(cancelled=True)   # status='cancelled'
+ReservationFactory(suspended=True)   # status='suspended'
+ReservationFactory(short_notice=True) # is_short_notice=True
+```
+
+**Available Factories:** `MemberFactory`, `CourtFactory`, `ReservationFactory`, `BlockFactory`, `BlockReasonFactory`, `NotificationFactory`, `DeviceTokenFactory`
+
+**Default password:** All members created by `MemberFactory` have password `password123`.
 
 ### When to Run Tests
 
@@ -142,6 +178,45 @@ def get_member(member_id):
 - JWT Bearer tokens for mobile API
 - Decorator `@jwt_or_session_required` supports both
 
+### Auth Decorators
+
+| Decorator | Use Case |
+|-----------|----------|
+| `@login_required` | Web routes requiring any logged-in user |
+| `@admin_required` | Web routes requiring admin role |
+| `@jwt_required` | API routes requiring valid JWT |
+| `@jwt_admin_required` | API routes requiring admin JWT |
+| `@jwt_or_session_required` | Routes supporting both auth methods |
+| `@session_or_jwt_teamster_or_admin_required` | Routes for teamsters/admins |
+
+---
+
+## 📡 API Endpoints (Mobile Apps)
+
+API routes are in `app/routes/api/`. All return JSON.
+
+### Key Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/auth/login` | POST | Get JWT token |
+| `/api/courts/availability` | GET | Get court availability for date |
+| `/api/reservations` | GET/POST | List/create reservations |
+| `/api/reservations/<id>` | DELETE | Cancel reservation |
+| `/api/members/me` | GET/PATCH | Current user profile |
+| `/api/members/favourites` | GET/POST/DELETE | Manage favourites |
+| `/api/blocks` | GET | Get court blocks |
+
+### API Response Pattern
+
+```python
+# Success
+return jsonify({'data': result}), 200
+
+# Error
+return jsonify({'error': 'German error message'}), 400
+```
+
 ---
 
 ## 🗄️ Database
@@ -160,6 +235,32 @@ source .venv/bin/activate && flask db upgrade
 ```
 
 ⚠️ **Always review generated migrations** — they can be wrong.
+
+### Core Models
+
+| Model | Primary Key | Key Relationships |
+|-------|-------------|-------------------|
+| `Member` | UUID (string) | `reservations_made`, `reservations_for`, `favourites` |
+| `Court` | Integer | `reservations`, `blocks` |
+| `Reservation` | Integer | `booked_by` → Member, `booked_for` → Member, `court` → Court |
+| `Block` | Integer | `court` → Court, `reason_obj` → BlockReason, `created_by` → Member |
+| `BlockReason` | Integer | `created_by` → Member, `blocks` |
+
+### Member Roles
+
+| Role | Permissions |
+|------|-------------|
+| `member` | Book courts, manage own reservations, manage favourites |
+| `teamster` | + Create/edit own blocks with teamster-allowed reasons |
+| `administrator` | Full access: all members, all blocks, audit logs, feature flags |
+
+### Reservation Status
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Current valid reservation |
+| `cancelled` | User cancelled |
+| `suspended` | Temporarily suspended by a block |
 
 ---
 
@@ -352,6 +453,47 @@ When adding new audit log operations:
 
 ---
 
+## 🐛 Debugging Tips
+
+### Common Issues
+
+**"Member not found" errors:**
+- Check if using correct ID type (UUID string for members, integer for courts)
+- Verify member is active (`is_active=True`)
+
+**API returns 401/403:**
+- Check JWT token is valid and not expired
+- Verify user has required role for endpoint
+- For sustaining members: they can't access booking endpoints
+
+**Reservation validation fails:**
+- Check court isn't blocked for that time
+- Check member doesn't exceed 2-reservation limit
+- Check slot is within operating hours (08:00-22:00)
+
+**Email not sending:**
+- Check `MAIL_*` environment variables
+- In development, check `DEV_EMAIL_RECIPIENT` redirect
+- Verify member has `notifications_enabled=True`
+
+### Useful Debug Queries
+
+```python
+# In flask shell: source .venv/bin/activate && flask shell
+
+# Find member by email
+Member.query.filter_by(email='test@example.com').first()
+
+# Get today's reservations
+from datetime import date
+Reservation.query.filter_by(date=date.today(), status='active').all()
+
+# Check court blocks
+Block.query.filter_by(court_id=1, date=date.today()).all()
+```
+
+---
+
 ## ⚠️ Common Mistakes to Avoid
 
 - Don't put business logic in route handlers — use services
@@ -392,5 +534,6 @@ npm run watch:css     # Watch mode
 | `app/services/` | Business logic |
 | `app/constants/` | Business rules, limits |
 | `tests/conftest.py` | Test fixtures |
+| `tests/factories.py` | Factory Boy factories for test data |
 | `.vscode/launch.json` | VS Code debug configurations |
 | `.vscode/settings.json` | VS Code Python interpreter settings |

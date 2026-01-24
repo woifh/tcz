@@ -4,7 +4,7 @@ A comprehensive web-based court reservation system for tennis clubs, built with 
 
 ## 🚀 Quick Start
 
-### Python 3.13 Compatible Setup
+### Option 1: Automated Setup (Recommended)
 ```bash
 # One-time setup (handles Python 3.13 compatibility)
 ./scripts/setup/setup_env.sh
@@ -15,19 +15,36 @@ A comprehensive web-based court reservation system for tennis clubs, built with 
 
 The application will be available at http://127.0.0.1:5000
 
-### Manual Setup
+### Option 2: Manual Setup
 ```bash
 # Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies (Python 3.13 compatible versions)
+# Install dependencies
 pip install -r requirements.txt
 
+# Create .env file (copy from example)
+cp .env.example .env
+
+# Initialize database
+flask db upgrade
+
 # Start development server
-export FLASK_ENV=development
-python wsgi.py
+flask run
 ```
+
+### Environment Variables
+
+Create a `.env` file (or copy `.env.example`):
+
+```env
+SECRET_KEY=any-random-string-for-local-dev
+DATABASE_URL=sqlite:///instance/tennis_club.db
+RATELIMIT_ENABLED=false
+```
+
+See `.env.example` for all available options.
 
 ## 🎾 Features
 
@@ -73,7 +90,8 @@ python wsgi.py
 - **Email**: Flask-Mailman (SMTP)
 - **Push Notifications**: APNs (iOS)
 - **Frontend**: HTML5, Tailwind CSS 3.0+, Alpine.js
-- **Testing**: Pytest, Playwright (E2E)
+- **Testing**: Pytest, Factory Boy, Hypothesis, Playwright (E2E)
+- **Code Quality**: ESLint, Prettier (frontend)
 - **Deployment**: PythonAnywhere (uWSGI)
 
 ## 📋 Prerequisites
@@ -81,71 +99,6 @@ python wsgi.py
 - Python 3.10 or higher
 - MySQL (for production) or SQLite (for development)
 - SMTP server credentials (Gmail, SendGrid, etc.)
-
-## 🚀 Quick Start
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd tennis-club-reservation
-```
-
-### 2. Create Virtual Environment
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Flask Configuration
-SECRET_KEY=your-secret-key-here
-FLASK_ENV=development
-
-# Database (SQLite for development)
-DATABASE_URL=sqlite:///instance/tennis_club.db
-
-# Email Configuration (optional for development)
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=true
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_DEFAULT_SENDER=noreply@tennisclub.de
-```
-
-### 5. Initialize Database
-
-```bash
-# Option 1: Using the initialization script
-python scripts/setup/init_database.py
-
-# Option 2: Using Flask CLI commands
-flask db upgrade
-python scripts/database/seed.py
-
-# Option 3: Create admin separately
-python scripts/setup/create_admin.py
-```
-
-### 6. Run the Application
-
-```bash
-flask run
-```
-
-Visit `http://localhost:5000` in your browser.
 
 ## 🎯 Key User Workflows
 
@@ -210,6 +163,19 @@ pytest --cov=app tests/
 
 # Run E2E tests (Playwright)
 npx playwright test
+```
+
+### Factory Boy (Test Data)
+
+Tests use [Factory Boy](https://factoryboy.readthedocs.io/) for generating test data. See `tests/factories.py` for available factories.
+
+```python
+from tests.factories import MemberFactory, ReservationFactory
+
+# Create test data
+member = MemberFactory()                      # Basic member
+admin = MemberFactory(admin=True)             # Admin user
+reservation = ReservationFactory()            # With auto-created court and member
 ```
 
 ### Test Coverage
@@ -292,7 +258,8 @@ tcz-web/
 │   ├── test_*.py           # Python tests (flat)
 │   ├── unit/               # JS unit tests
 │   ├── e2e/                # Playwright E2E tests
-│   └── conftest.py         # Test fixtures
+│   ├── conftest.py         # Test fixtures
+│   └── factories.py        # Factory Boy test data factories
 ├── migrations/              # Database migrations
 ├── scripts/                 # Utility scripts
 │   ├── deploy/             # Deployment scripts
@@ -412,9 +379,10 @@ This is a complete, production-ready system. For modifications:
 
 ## 🙏 Acknowledgments
 
-- Built with Flask and SQLAlchemy
-- UI styled with Tailwind CSS
-- Testing powered by Pytest and Hypothesis
+- Built with Flask 3.0 and SQLAlchemy 2.0
+- UI styled with Tailwind CSS and Alpine.js
+- Testing powered by Pytest, Factory Boy, Hypothesis, and Playwright
+- Code quality via ESLint and Prettier
 - Deployed on PythonAnywhere
 
 ## 📞 Support
