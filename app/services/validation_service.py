@@ -117,47 +117,51 @@ class ValidationService:
         """
         Validate member has not exceeded the 1 short notice booking limit using time-based logic.
         Only counts active short notice bookings (future or currently in progress).
-        
+
         Args:
             member_id: ID of the member
             current_time: Current datetime for testing (defaults to Europe/Berlin now)
-            
+
         Returns:
-            bool: True if member can make another short notice booking, False otherwise
+            tuple: (bool, list|None) - (can_make_booking, active_short_notice_sessions_if_limit_exceeded)
+                   Returns (True, None) if member can book
+                   Returns (False, [list of active short notice reservations]) if limit exceeded
         """
         try:
             # Ensure consistent Europe/Berlin timezone handling
             berlin_time = ensure_berlin_timezone(current_time)
             log_timezone_operation("validate_member_short_notice_limit", current_time, berlin_time)
-            
+
             from app.services.reservation_service import ReservationService
             from app.utils.error_handling import get_fallback_active_reservations_date_based
-            
+
             # Use the enhanced ReservationService to get active short notice bookings
             # This uses time-based logic instead of date-only comparison
             active_short_notice_bookings = ReservationService.get_member_active_short_notice_bookings(
                 member_id,
                 current_time=berlin_time
             )
-            
+
             active_short_notice_count = len(active_short_notice_bookings)
-            
-            return active_short_notice_count < 1
-            
+
+            if active_short_notice_count < 1:
+                return True, None
+            return False, active_short_notice_bookings
+
         except Exception as e:
             # Use enhanced error handling with fallback
             context = {
                 'member_id': member_id,
                 'current_time': current_time
             }
-            
+
             try:
                 # Attempt fallback to date-based logic for short notice bookings
                 logger.warning("validate_member_short_notice_limit: Falling back to date-based logic")
-                
+
                 from datetime import date as date_class
                 from app.models import Reservation
-                
+
                 today = date_class.today()
                 fallback_short_notice = Reservation.query.filter(
                     Reservation.booked_for_id == member_id,
@@ -165,20 +169,22 @@ class ValidationService:
                     Reservation.is_short_notice == True,
                     Reservation.date >= today
                 ).all()
-                
+
                 fallback_count = len(fallback_short_notice)
                 logger.info(f"Fallback short notice validation successful: {fallback_count} active short notice bookings")
-                return fallback_count < 1
-                
+                if fallback_count < 1:
+                    return True, None
+                return False, fallback_short_notice
+
             except Exception as fallback_error:
                 # Log both errors
                 logger.error(f"Primary short notice validation error: {e}")
                 logger.error(f"Fallback short notice validation error: {fallback_error}")
                 logger.error(f"Context: {context}")
-                
+
                 # Ultimate fallback: allow the booking to be safe
                 logger.warning("Ultimate fallback: allowing short notice booking due to validation errors")
-                return True
+                return True, None
     
     @staticmethod
     def validate_no_conflict(court_id, date, start_time):
@@ -351,10 +357,12 @@ class ValidationService:
 
             # Validate short notice booking limit (only for short notice bookings)
             # Pass berlin_time for time-based validation
-            if is_short_notice and not ValidationService.validate_member_short_notice_limit(member_id, berlin_time):
-                if is_self_booking:
-                    return False, ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE_SELF, None
-                return False, ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE.format(name=member.name), None
+            if is_short_notice:
+                can_book_short, short_notice_sessions = ValidationService.validate_member_short_notice_limit(member_id, berlin_time)
+                if not can_book_short:
+                    if is_self_booking:
+                        return False, ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE_SELF, short_notice_sessions
+                    return False, ErrorMessages.RESERVATION_LIMIT_SHORT_NOTICE.format(name=member.name), short_notice_sessions
 
             # Validate no conflict using time-based logic
             if not ValidationService.validate_no_conflict_with_time_logic(court_id, date, start_time, berlin_time):

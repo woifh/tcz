@@ -177,7 +177,8 @@ def create_reservation():
                         'start_time': s.start_time.strftime('%H:%M'),
                         'court_number': s.court.number if s.court else None,
                         'booked_by_id': s.booked_by_id if s.booked_by_id != s.booked_for_id else None,
-                        'booked_by_name': s.booked_by.name if s.booked_by_id != s.booked_for_id and s.booked_by else None
+                        'booked_by_name': s.booked_by.name if s.booked_by_id != s.booked_for_id and s.booked_by else None,
+                        'is_short_notice': s.is_short_notice
                     } for s in active_sessions
                 ]
             return jsonify(response), 400

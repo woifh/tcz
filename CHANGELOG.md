@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Favorites list now sorted alphabetically by name
 - Active booking session warning now shows who booked on your behalf
+- Short notice booking limit error now shows existing short notice booking details
 
 ### Technical
 - Added Factory Boy for test data generation (`tests/factories.py`)
