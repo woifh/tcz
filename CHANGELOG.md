@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 - Added Factory Boy for test data generation (`tests/factories.py`)
 - Enhanced CLAUDE.md with API endpoints, models, decorators, and debugging sections
 - Cleaned up README.md (removed duplicate sections, updated tech stack)
-- Added CORS support for React frontend (localhost:5173, tcz-web.pages.dev)
+- Added CORS support for React frontend (localhost:5173, tcz-web.wolfgang-hacker.workers.dev)
 - JWT authentication now supports httpOnly cookies (for web app)
 - Cross-origin cookie support for Cloudflare Pages deployment (SameSite=None)
 - Admin API routes now accessible via JWT authentication (not just session)
