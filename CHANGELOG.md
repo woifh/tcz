@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Removed
+- Admin calendar view feature (monthly block overview)
+
 ### Changed
 - Profile picture GET endpoint now public (no auth required) for cross-origin compatibility
 

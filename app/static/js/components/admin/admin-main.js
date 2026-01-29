@@ -17,9 +17,6 @@ import { reasonForm } from './forms/reason-form.js';
 // Filtering imports
 import { blockFilters } from './filtering/block-filters.js';
 
-// Calendar imports
-import { calendarView } from './calendar/calendar-view.js';
-
 export class AdminPanel {
     constructor() {
         this.isInitialized = false;
@@ -78,12 +75,6 @@ export class AdminPanel {
         // Forms are already initialized via imports
         // Bulk operations are already initialized via imports
         // Filters are already initialized via imports
-
-        // Initialize calendar if container exists
-        const calendarContainer = document.getElementById('calendar-container');
-        if (calendarContainer) {
-            calendarView.initialize();
-        }
     }
 
     setupGlobalEventListeners() {
@@ -114,9 +105,6 @@ export class AdminPanel {
 
         // Filter functions
         window.blockFilters = blockFilters;
-
-        // Calendar functions
-        window.calendarView = calendarView;
 
         // UI helper functions
         window.showTab = showTab;

@@ -99,14 +99,6 @@ def edit_single_block(block_id):
                              error=f"Fehler beim Laden der Sperrung: {str(e)}")
 
 
-@bp.route('/calendar')
-@login_required
-@admin_required
-def calendar():
-    """Admin calendar view."""
-    return render_template('admin/calendar.html')
-
-
 @bp.route('/audit-log')
 @login_required
 @admin_required

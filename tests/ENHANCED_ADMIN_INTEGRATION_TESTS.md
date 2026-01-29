@@ -130,27 +130,6 @@ This document describes the comprehensive integration tests implemented for the 
   - Verifies complete operation data
   - Tests JSON data structure
 
-### 7. Calendar View Functionality (`TestCalendarViewFunctionality`)
-
-**Requirements Validated:** 19.9, 19.17
-
-#### Tests Implemented:
-
-- **`test_calendar_rendering_with_blocks`**: Tests calendar data preparation
-  - Creates blocks with different properties
-  - Verifies data availability for calendar display
-  - Tests single and series block differentiation
-
-- **`test_hover_tooltips_and_click_interactions`**: Tests tooltip data
-  - Verifies all tooltip information is available
-  - Tests series modification indicators
-  - Validates click interaction data
-
-- **`test_color_coding_and_visual_indicators`**: Tests visual display data
-  - Reason-based color coding data
-  - Series pattern indicators
-  - Modified instance indicators
-
 ## Test Structure and Quality
 
 ### Test Organization
@@ -173,7 +152,7 @@ This document describes the comprehensive integration tests implemented for the 
 
 The integration tests validate the following requirements:
 
-- **19.1-19.19**: Advanced block management features
+- **19.1-19.8, 19.10-19.19**: Advanced block management features
 - **20.1-20.15**: Customizable block reasons
 - **9.1-9.5**: Responsive design considerations
 - **10.1-10.5**: German language support
@@ -201,7 +180,7 @@ The test suite can be extended with:
 
 1. **Performance tests**: For large datasets
 2. **Concurrent access tests**: For multi-admin scenarios
-3. **UI integration tests**: For frontend calendar and form interactions
+3. **UI integration tests**: For frontend form interactions
 4. **API endpoint tests**: For REST API validation
 
 ## Conclusion
