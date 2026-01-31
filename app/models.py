@@ -230,6 +230,8 @@ class Member(db.Model, UserMixin):
                 # Users need to know their own role (for admin menu) and payment status
                 'role': self.role,
                 'fee_paid': self.fee_paid,
+                'payment_confirmation_requested': self.payment_confirmation_requested,
+                'payment_confirmation_requested_at': self.payment_confirmation_requested_at.isoformat() if self.payment_confirmation_requested_at else None,
             })
 
         # Include admin-only fields

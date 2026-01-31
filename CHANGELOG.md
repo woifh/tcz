@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Profile picture GET endpoint now public (no auth required) for cross-origin compatibility
 - Block reasons: Add immutability warning for "temporary" setting during creation
+- API: Member profile now includes payment confirmation status for own profile
 
 ### Added
 - Booking conflict resolution modal: when booking limit is exceeded, users can now cancel existing bookings directly from a modal and auto-retry the new booking
